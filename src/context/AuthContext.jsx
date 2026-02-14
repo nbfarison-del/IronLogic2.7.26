@@ -1,39 +1,73 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import {
+    createUserWithEmailAndPassword,
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
+} from 'firebase/auth';
+import { auth } from '../config/firebaseConfig';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-    // Check localStorage for persisted user to simulate session persistence
-    const [user, setUser] = useState(() => {
-        const savedUser = localStorage.getItem('fitnessAppUser');
-        return savedUser ? JSON.parse(savedUser) : null;
-    });
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    const login = (email, password) => {
-        // Mock login logic
-        const mockUser = { id: 1, email, name: email.split('@')[0] };
-        setUser(mockUser);
-        localStorage.setItem('fitnessAppUser', JSON.stringify(mockUser));
-        return true;
+    useEffect(() => {
+        // Listen for auth state changes (handles session persistence)
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            if (firebaseUser) {
+                // User is signed in
+                setUser({
+                    id: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    name: firebaseUser.email.split('@')[0]
+                });
+            } else {
+                // User is signed out
+                setUser(null);
+            }
+            setLoading(false);
+        });
+
+        // Cleanup subscription
+        return unsubscribe;
+    }, []);
+
+    const login = async (email, password) => {
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            return true;
+        } catch (error) {
+            console.error('Login error:', error.message);
+            throw error;
+        }
     };
 
-    const register = (email, password) => {
-        // Mock register logic
-        const mockUser = { id: 1, email, name: email.split('@')[0] };
-        setUser(mockUser);
-        localStorage.setItem('fitnessAppUser', JSON.stringify(mockUser));
-        return true;
+    const register = async (email, password) => {
+        try {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            return true;
+        } catch (error) {
+            console.error('Registration error:', error.message);
+            throw error;
+        }
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('fitnessAppUser');
+    const logout = async () => {
+        try {
+            await signOut(auth);
+        } catch (error) {
+            console.error('Logout error:', error.message);
+            throw error;
+        }
     };
 
     const value = {
         user,
+        loading,
         login,
         register,
         logout
@@ -41,7 +75,8 @@ export const AuthProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={value}>
-            {children}
+            {!loading && children}
         </AuthContext.Provider>
     );
 };
+

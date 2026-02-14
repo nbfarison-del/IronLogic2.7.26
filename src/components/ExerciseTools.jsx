@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { calculateEstimated1RM, calculateWeightFrom1RM } from '../utils/calculator';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
+import * as firestoreService from '../services/firestoreService';
 
 const ExerciseTools = ({ exerciseId, exerciseName }) => {
     const { unit } = useSettings();
+    const { user } = useAuth();
     const [activeTool, setActiveTool] = useState(null); // 'calc' or 'history'
     const [history, setHistory] = useState([]);
+    const [loading, setLoading] = useState(false);
 
     // Calculator State
     const [calcWeight, setCalcWeight] = useState('');
@@ -15,17 +19,29 @@ const ExerciseTools = ({ exerciseId, exerciseName }) => {
     const [targetRpe, setTargetRpe] = useState('8');
 
     useEffect(() => {
-        if (activeTool === 'history' && exerciseId) {
-            const saved = localStorage.getItem('fitnessAppWorkouts');
-            if (saved) {
-                const allWorkouts = JSON.parse(saved);
-                const exerciseHistory = allWorkouts
-                    .filter(w => w.exerciseId === exerciseId)
-                    .sort((a, b) => new Date(b.date) - new Date(a.date));
-                setHistory(exerciseHistory);
+        const loadHistory = async () => {
+            if (activeTool === 'history' && exerciseId && user) {
+                setLoading(true);
+                try {
+                    // Optimized: Fetch only workouts containing this exercise if possible, 
+                    // or fetch all and filter (for now fetch all as per current service capability)
+                    // TODO: Add specific query in firestoreService for efficiency later
+                    const allWorkouts = await firestoreService.getWorkouts(user.id);
+
+                    const exerciseHistory = allWorkouts
+                        .filter(w => w.exerciseId === exerciseId)
+                        .sort((a, b) => new Date(b.date) - new Date(a.date));
+                    setHistory(exerciseHistory);
+                } catch (error) {
+                    console.error('Error loading history:', error);
+                } finally {
+                    setLoading(false);
+                }
             }
-        }
-    }, [activeTool, exerciseId]);
+        };
+
+        loadHistory();
+    }, [activeTool, exerciseId, user]);
 
     const e1rm = calculateEstimated1RM(calcWeight, calcReps, calcRpe);
     const projectedWeight = calculateWeightFrom1RM(e1rm, targetReps, targetRpe);

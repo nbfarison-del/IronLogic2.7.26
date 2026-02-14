@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import * as firestoreService from '../services/firestoreService';
 
 const GOGGINS_QUOTES = {
     high: [
@@ -44,9 +46,11 @@ const getRandomQuote = (score) => {
 };
 
 const RecoveryTracker = () => {
+    const { user } = useAuth();
     const [todayScore, setTodayScore] = useState(null);
     const [history, setHistory] = useState([]);
     const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(true);
 
     // Inputs (0-5 scale)
     const [metrics, setMetrics] = useState({
@@ -59,24 +63,33 @@ const RecoveryTracker = () => {
     });
 
     useEffect(() => {
-        // Load history
-        const savedHistory = localStorage.getItem('recoveryHistory');
-        let parsedHistory = savedHistory ? JSON.parse(savedHistory) : [];
+        const loadRecoveryData = async () => {
+            if (!user) return;
 
-        // Sort by date
-        parsedHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
-        setHistory(parsedHistory);
+            setLoading(true);
+            try {
+                const recoveryData = await firestoreService.getRecovery(user.id);
+                const parsedHistory = recoveryData.sort((a, b) => new Date(a.date) - new Date(b.date));
+                setHistory(parsedHistory);
 
-        // Check if we already logged today
-        const todayStr = new Date().toISOString().split('T')[0];
-        const todayEntry = parsedHistory.find(h => h.date === todayStr);
+                // Check if we already logged today
+                const todayStr = new Date().toISOString().split('T')[0];
+                const todayEntry = parsedHistory.find(h => h.date === todayStr);
 
-        if (todayEntry) {
-            setTodayScore(todayEntry.score);
-            setMessage(getRandomQuote(todayEntry.score));
-            // Optionally populate metrics from saved entry if we stored them
-        }
-    }, []);
+                if (todayEntry) {
+                    setTodayScore(todayEntry.score);
+                    setMessage(getRandomQuote(todayEntry.score));
+                }
+            } catch (error) {
+                console.error('Error loading recovery data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadRecoveryData();
+    }, [user]);
+
 
     const handleChange = (e) => {
         setMetrics({
@@ -85,7 +98,9 @@ const RecoveryTracker = () => {
         });
     };
 
-    const calculateScore = () => {
+    const calculateScore = async () => {
+        if (!user) return;
+
         // 1. RHR Normalization
         let rhrStress = 0;
         if (metrics.rhr <= 50) rhrStress = 0;
@@ -114,18 +129,33 @@ const RecoveryTracker = () => {
         setTodayScore(score);
         setMessage(getRandomQuote(score));
 
-        // Save to History
+        // Save to Firestore
         const todayStr = new Date().toISOString().split('T')[0];
         const newEntry = { date: todayStr, score: score };
 
-        // Filter out previous entry for today if exists, then add new one
-        const newHistory = history.filter(h => h.date !== todayStr);
-        newHistory.push(newEntry);
-        newHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+        try {
+            const existingEntry = history.find(h => h.date === todayStr);
 
-        setHistory(newHistory);
-        localStorage.setItem('recoveryHistory', JSON.stringify(newHistory));
+            if (existingEntry) {
+                // Update existing entry
+                await firestoreService.updateRecovery(user.id, existingEntry.id, newEntry);
+                const newHistory = history.map(h => h.date === todayStr ? { ...newEntry, id: existingEntry.id } : h);
+                setHistory(newHistory);
+            } else {
+                // Add new entry
+                const newId = await firestoreService.addRecovery(user.id, newEntry);
+                const newHistory = [...history, { ...newEntry, id: newId }].sort((a, b) => new Date(a.date) - new Date(b.date));
+                setHistory(newHistory);
+            }
+        } catch (error) {
+            console.error('Error saving recovery:', error);
+        }
     };
+
+    if (loading) {
+        return <div className="card">Loading recovery data...</div>;
+    }
+
 
     const getScoreColor = (score) => {
         if (score >= 8) return '#4caf50'; // Green

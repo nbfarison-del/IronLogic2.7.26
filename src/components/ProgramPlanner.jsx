@@ -1,22 +1,30 @@
 import { useState, useEffect } from 'react';
 import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } from '../data/exercises';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
+import * as firestoreService from '../services/firestoreService';
 import ExerciseTools from './ExerciseTools';
 
 const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
     const { unit } = useSettings();
+    const { user } = useAuth();
     const [allExercises, setAllExercises] = useState(defaultExercises);
     const [programName, setProgramName] = useState(initialData?.name || 'New Program');
     const [plannedExercises, setPlannedExercises] = useState(initialData?.exercises || []);
 
     // Load custom exercises
     useEffect(() => {
-        const savedCustom = localStorage.getItem('fitnessAppCustomExercises');
-        if (savedCustom) {
-            const parsed = JSON.parse(savedCustom);
-            setAllExercises([...defaultExercises, ...parsed]);
-        }
-    }, []);
+        const loadCustomExercises = async () => {
+            if (!user) return;
+            try {
+                const custom = await firestoreService.getCustomExercises(user.id);
+                setAllExercises([...defaultExercises, ...custom]);
+            } catch (error) {
+                console.error('Error loading custom exercises:', error);
+            }
+        };
+        loadCustomExercises();
+    }, [user]);
 
     const addExercise = () => {
         setPlannedExercises([

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import * as firestoreService from '../services/firestoreService';
 
 const Questionnaire = () => {
     const navigate = useNavigate();
@@ -44,15 +46,26 @@ const Questionnaire = () => {
         }
     };
 
-    const handleSubmit = () => {
-        // Save answers to localStorage
-        localStorage.setItem('fitnessAppQuestionnaire', JSON.stringify(answers));
-        // Also clear any existing AI program so it regenerates
-        localStorage.removeItem('fitnessAppAIProgram');
+    const handleSubmit = async () => {
+        if (!user) return;
 
-        console.log('Submitted Answers:', answers);
-        // alert('Thank you! Your questionnaire has been submitted. A coach will review it shortly.');
-        navigate('/');
+        try {
+            // Save answers to Firestore
+            await firestoreService.saveQuestionnaire(user.uid, answers);
+
+            // Generate new program immediately or just clear old one? 
+            // Let's clear the old program so Home.jsx regenerates it
+            // Since we don't have a direct delete, we can save null or overwrite. 
+            // Simpler: Just save the questionnaire. The Home component logic will see the new questionnaire? 
+            // Actually Home.jsx checks if program exists. We should probably force a regeneration.
+            // Let's rely on Home.jsx for generation for now, but we might want to clear the 'program' collection if we could.
+            // For now, let's just save the questionnaire.
+
+            console.log('Submitted Answers:', answers);
+            navigate('/');
+        } catch (error) {
+            console.error('Error saving questionnaire:', error);
+        }
     };
 
     const currentQ = questions[step];

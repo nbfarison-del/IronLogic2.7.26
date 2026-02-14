@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import * as firestoreService from '../services/firestoreService';
 import { exercises as allExercises } from '../data/exercises';
 import { calculateEstimated1RM } from '../utils/calculator';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -40,27 +41,42 @@ const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
 const Home = () => {
     const { user } = useAuth();
     const [aiProgram, setAiProgram] = useState(null);
-
-    // --- Data Loading ---
-    const workouts = JSON.parse(localStorage.getItem('fitnessAppWorkouts') || '[]');
-    const weightHistory = JSON.parse(localStorage.getItem('fitnessAppBodyWeight') || '[]');
+    const [workouts, setWorkouts] = useState([]);
+    const [weightHistory, setWeightHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check for AI Program
-        const savedProgram = localStorage.getItem('fitnessAppAIProgram');
-        if (savedProgram) {
-            setAiProgram(JSON.parse(savedProgram));
-        } else {
-            // Check if questionnaire exists to generate one
-            const questionnaire = localStorage.getItem('fitnessAppQuestionnaire');
-            if (questionnaire) {
-                const data = JSON.parse(questionnaire);
-                const newProgram = generateProgram(data);
-                setAiProgram(newProgram);
-                localStorage.setItem('fitnessAppAIProgram', JSON.stringify(newProgram));
+        const loadDashboardData = async () => {
+            if (!user) return;
+            setLoading(true);
+            try {
+                const [fetchedWorkouts, fetchedWeights, fetchedProgram, fetchedQuestionnaire] = await Promise.all([
+                    firestoreService.getWorkouts(user.id),
+                    firestoreService.getBodyWeight(user.id),
+                    firestoreService.getAIProgram(user.id),
+                    firestoreService.getQuestionnaire(user.id)
+                ]);
+
+                setWorkouts(fetchedWorkouts);
+                setWeightHistory(fetchedWeights);
+
+                if (fetchedProgram) {
+                    setAiProgram(fetchedProgram);
+                } else if (fetchedQuestionnaire) {
+                    // Generate new program if questionnaire exists but no program
+                    const newProgram = generateProgram(fetchedQuestionnaire);
+                    setAiProgram(newProgram);
+                    await firestoreService.saveAIProgram(user.id, newProgram);
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            } finally {
+                setLoading(false);
             }
-        }
-    }, []);
+        };
+
+        loadDashboardData();
+    }, [user]);
 
     // --- Recent PRs Calculation ---
     // We need to find "Personal Records" historically. 

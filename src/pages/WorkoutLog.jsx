@@ -3,10 +3,13 @@ import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } f
 import { calculateEstimated1RM } from '../utils/calculator';
 import { Link, useLocation } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
 import ExerciseTools from '../components/ExerciseTools';
+import * as firestoreService from '../services/firestoreService';
 
 const WorkoutLog = () => {
     const { unit } = useSettings();
+    const { user } = useAuth();
     const location = useLocation();
 
     // Planned Program State
@@ -23,7 +26,6 @@ const WorkoutLog = () => {
     const [workoutType, setWorkoutType] = useState('strength'); // 'strength' or 'cardio'
 
     // Multi-Set State (Strength)
-    // Structure: [{ id: 1, weight: '', reps: '', targetRpe: '', actualRpe: '' }]
     const [setRows, setSetRows] = useState([{ id: Date.now(), weight: '', reps: '', targetRpe: '', actualRpe: '' }]);
 
     // Modifiers State
@@ -49,32 +51,48 @@ const WorkoutLog = () => {
     const [distance, setDistance] = useState(''); // km/miles
     const [notes, setNotes] = useState('');
 
-    const [loggedSets, setLoggedSets] = useState(() => {
-        const saved = localStorage.getItem('fitnessAppWorkouts');
-        return saved ? JSON.parse(saved) : [];
-    });
-
+    const [loggedSets, setLoggedSets] = useState([]);
     const [maxes, setMaxes] = useState({});
+    const [loading, setLoading] = useState(true);
 
-    // Load Data
+    // Load Data from Firestore
     useEffect(() => {
-        const savedMaxes = localStorage.getItem('fitnessAppMaxes');
-        if (savedMaxes) setMaxes(JSON.parse(savedMaxes));
+        const loadData = async () => {
+            if (!user) return;
 
-        const savedCustom = localStorage.getItem('fitnessAppCustomExercises');
-        if (savedCustom) {
-            const parsed = JSON.parse(savedCustom);
-            setCustomExercises(parsed);
-            setAllExercises([...defaultExercises, ...parsed]);
-        }
-    }, []);
+            setLoading(true);
+            try {
+                // Load workouts
+                const workouts = await firestoreService.getWorkouts(user.id);
+                // Filter to today's workouts only
+                const today = new Date().toISOString().split('T')[0];
+                const todayWorkouts = workouts.filter(w => w.date.startsWith(today));
+                setLoggedSets(todayWorkouts);
+
+                // Load profile/maxes
+                const profile = await firestoreService.getUserProfile(user.id);
+                if (profile?.maxes) setMaxes(profile.maxes);
+
+                // Load custom exercises
+                const custom = await firestoreService.getCustomExercises(user.id);
+                setCustomExercises(custom);
+                setAllExercises([...defaultExercises, ...custom]);
+            } catch (error) {
+                console.error('Error loading workout data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [user]);
 
     // Load Planned Workout if coming from Calendar
     useEffect(() => {
         if (plannedProgram && plannedProgram.exercises.length > currentExIndex) {
             const ex = plannedProgram.exercises[currentExIndex];
             setSelectedExerciseId(ex.exerciseId);
-            setWorkoutType('strength'); // Planning currently only supports strength for details
+            setWorkoutType('strength');
             setSetRows(ex.sets.map(s => ({
                 id: Date.now() + Math.random(),
                 weight: s.weight,
@@ -86,24 +104,12 @@ const WorkoutLog = () => {
         }
     }, [plannedProgram, currentExIndex]);
 
-    // Save Workouts
-    useEffect(() => {
-        localStorage.setItem('fitnessAppWorkouts', JSON.stringify(loggedSets));
-    }, [loggedSets]);
-
-    // Save Custom Exercises
-    useEffect(() => {
-        if (customExercises.length > 0) {
-            localStorage.setItem('fitnessAppCustomExercises', JSON.stringify(customExercises));
-        }
-    }, [customExercises]);
-
     // --- Helpers for Set Rows ---
     const handleAddRow = () => {
         const lastRow = setRows[setRows.length - 1];
         setSetRows([...setRows, {
             id: Date.now(),
-            weight: lastRow.weight, // Clone previous for convenience
+            weight: lastRow.weight,
             reps: lastRow.reps,
             targetRpe: lastRow.targetRpe,
             actualRpe: ''
@@ -120,33 +126,39 @@ const WorkoutLog = () => {
         setSetRows(setRows.map(row => row.id === id ? { ...row, [field]: value } : row));
     };
 
-    // ----------------------------
-
-    const handleCreateExercise = (e) => {
+    const handleCreateExercise = async (e) => {
         e.preventDefault();
-        if (!newExerciseName.trim()) return;
+        if (!newExerciseName.trim() || !user) return;
 
         const newEx = {
-            id: `custom_${Date.now()}`,
             name: newExerciseName,
             category: EXERCISE_CATEGORIES.CUSTOM
         };
 
-        const updatedCustom = [...customExercises, newEx];
-        setCustomExercises(updatedCustom);
-        setAllExercises([...defaultExercises, ...updatedCustom]);
+        try {
+            await firestoreService.addCustomExercise(user.id, newEx);
 
-        // Auto-select
-        setSelectedExerciseId(newEx.id);
-        setWorkoutType('strength');
-        setNewExerciseName('');
-        setIsCreatingExercise(false);
+            // Reload custom exercises
+            const custom = await firestoreService.getCustomExercises(user.id);
+            setCustomExercises(custom);
+            setAllExercises([...defaultExercises, ...custom]);
+
+            // Auto-select the last added exercise
+            if (custom.length > 0) {
+                setSelectedExerciseId(custom[custom.length - 1].id);
+            }
+            setWorkoutType('strength');
+            setNewExerciseName('');
+            setIsCreatingExercise(false);
+        } catch (error) {
+            console.error('Error creating exercise:', error);
+        }
     };
 
-    const handleAddSet = (e) => {
+    const handleAddSet = async (e) => {
         e.preventDefault();
 
-        if (!selectedExerciseId) return;
+        if (!selectedExerciseId || !user) return;
         const exercise = allExercises.find(ex => ex.id === selectedExerciseId);
 
         let newEntries = [];
@@ -156,26 +168,24 @@ const WorkoutLog = () => {
             newEntries = setRows.map(row => {
                 let estimatedMax = calculateEstimated1RM(row.weight, row.reps, row.actualRpe || row.targetRpe);
                 return {
-                    id: row.id, // Use row ID as unique ID
                     date: new Date().toISOString(),
                     exerciseId: exercise.id,
                     exerciseName: exercise.name,
                     category: exercise.category,
                     type: workoutType,
                     weight: row.weight,
-                    sets: 1, // Each row is 1 set
+                    sets: 1,
                     reps: row.reps,
                     targetRpe: row.targetRpe,
                     actualRpe: row.actualRpe,
                     estimated1RM: estimatedMax,
                     modifiers: { ...modifiers },
-                    notes: notes // Apply common notes to all sets in this batch
+                    notes: notes
                 };
             });
         } else {
             // Cardio
             newEntries.push({
-                id: Date.now(),
                 date: new Date().toISOString(),
                 exerciseId: exercise.id,
                 exerciseName: exercise.name,
@@ -187,28 +197,38 @@ const WorkoutLog = () => {
             });
         }
 
-        setLoggedSets([...newEntries, ...loggedSets]);
-
-        // If part of a planned program, move to next exercise or finish
-        if (plannedProgram) {
-            if (currentExIndex < plannedProgram.exercises.length - 1) {
-                setCurrentExIndex(currentExIndex + 1);
-            } else {
-                setPlannedProgram(null);
-                alert('Planned workout complete!');
+        // Save to Firestore
+        try {
+            for (const entry of newEntries) {
+                await firestoreService.addWorkout(user.id, entry);
             }
-        }
 
-        // Reset fields
-        if (workoutType === 'strength') {
-            // Reset to one empty row, maybe keeping weight?
-            const lastRow = setRows[setRows.length - 1];
-            setSetRows([{ id: Date.now(), weight: lastRow.weight, reps: lastRow.reps, targetRpe: '', actualRpe: '' }]);
-            setNotes('');
-        } else {
-            setDuration('');
-            setDistance('');
-            setNotes('');
+            // Update local state
+            setLoggedSets([...newEntries, ...loggedSets]);
+
+            // If part of a planned program, move to next exercise or finish
+            if (plannedProgram) {
+                if (currentExIndex < plannedProgram.exercises.length - 1) {
+                    setCurrentExIndex(currentExIndex + 1);
+                } else {
+                    setPlannedProgram(null);
+                    alert('Planned workout complete!');
+                }
+            }
+
+            // Reset fields
+            if (workoutType === 'strength') {
+                const lastRow = setRows[setRows.length - 1];
+                setSetRows([{ id: Date.now(), weight: lastRow.weight, reps: lastRow.reps, targetRpe: '', actualRpe: '' }]);
+                setNotes('');
+            } else {
+                setDuration('');
+                setDistance('');
+                setNotes('');
+            }
+        } catch (error) {
+            console.error('Error logging workout:', error);
+            alert('Failed to log workout. Please try again.');
         }
     };
 
@@ -253,6 +273,7 @@ const WorkoutLog = () => {
     const clearHistory = () => {
         if (confirm('Are you sure you want to clear your history?')) {
             setLoggedSets([]);
+            // Note: This only clears local state. To delete from Firestore, we'd need to implement that
         }
     };
 
@@ -271,6 +292,10 @@ const WorkoutLog = () => {
     };
 
     const activeConfig = EXERCISE_CONFIG[selectedExerciseId] || {};
+
+    if (loading) {
+        return <div className="card">Loading...</div>;
+    }
 
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left' }}>
@@ -649,8 +674,7 @@ const WorkoutLog = () => {
                             </div>
                         </div>
                     );
-                })}
-            </div>
+                })}</div>
         </div >
     );
 };

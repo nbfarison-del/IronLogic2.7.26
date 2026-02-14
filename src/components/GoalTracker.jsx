@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import * as firestoreService from '../services/firestoreService';
 
 const GoalTracker = () => {
-    const [events, setEvents] = useState(() => {
-        const saved = localStorage.getItem('fitnessAppGoals');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const { user } = useAuth();
+    const [events, setEvents] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     // Form States
     const [showAddEvent, setShowAddEvent] = useState(false);
@@ -15,71 +16,113 @@ const GoalTracker = () => {
     const [goalInputs, setGoalInputs] = useState({});
 
     useEffect(() => {
-        localStorage.setItem('fitnessAppGoals', JSON.stringify(events));
-    }, [events]);
+        const loadGoals = async () => {
+            if (!user) return;
 
-    const handleAddEvent = (e) => {
+            setLoading(true);
+            try {
+                const goals = await firestoreService.getGoals(user.id);
+                setEvents(goals);
+            } catch (error) {
+                console.error('Error loading goals:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadGoals();
+    }, [user]);
+
+    const handleAddEvent = async (e) => {
         e.preventDefault();
-        if (!newEventName || !newEventDate) return;
+        if (!newEventName || !newEventDate || !user) return;
 
         const newEvent = {
-            id: Date.now(),
             name: newEventName,
             date: newEventDate,
             goals: []
         };
 
-        setEvents([...events, newEvent]);
-        setNewEventName('');
-        setNewEventDate('');
-        setShowAddEvent(false);
-    };
-
-    const handleDeleteEvent = (id) => {
-        if (confirm('Delete this event?')) {
-            setEvents(events.filter(e => e.id !== id));
+        try {
+            const newId = await firestoreService.addGoal(user.id, newEvent);
+            setEvents([...events, { ...newEvent, id: newId }]);
+            setNewEventName('');
+            setNewEventDate('');
+            setShowAddEvent(false);
+        } catch (error) {
+            console.error('Error adding event:', error);
         }
     };
 
-    const handleAddGoal = (eventId) => {
+    const handleDeleteEvent = async (id) => {
+        if (!confirm('Delete this event?') || !user) return;
+
+        try {
+            await firestoreService.deleteGoal(user.id, id);
+            setEvents(events.filter(e => e.id !== id));
+        } catch (error) {
+            console.error('Error deleting event:', error);
+        }
+    };
+
+    const handleAddGoal = async (eventId) => {
         const text = goalInputs[eventId];
-        if (!text) return;
+        if (!text || !user) return;
 
-        setEvents(events.map(ev => {
-            if (ev.id === eventId) {
-                return { ...ev, goals: [...ev.goals, { id: Date.now(), text, completed: false }] };
-            }
-            return ev;
-        }));
+        const event = events.find(ev => ev.id === eventId);
+        const updatedEvent = {
+            ...event,
+            goals: [...event.goals, { id: Date.now(), text, completed: false }]
+        };
 
-        setGoalInputs({ ...goalInputs, [eventId]: '' });
+        try {
+            await firestoreService.updateGoal(user.id, eventId, updatedEvent);
+            setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
+            setGoalInputs({ ...goalInputs, [eventId]: '' });
+        } catch (error) {
+            console.error('Error adding goal:', error);
+        }
     };
 
-    const toggleGoal = (eventId, goalId) => {
-        setEvents(events.map(ev => {
-            if (ev.id === eventId) {
-                const updatedGoals = ev.goals.map(g =>
-                    g.id === goalId ? { ...g, completed: !g.completed } : g
-                );
-                return { ...ev, goals: updatedGoals };
-            }
-            return ev;
-        }));
+    const toggleGoal = async (eventId, goalId) => {
+        if (!user) return;
+
+        const event = events.find(ev => ev.id === eventId);
+        const updatedEvent = {
+            ...event,
+            goals: event.goals.map(g =>
+                g.id === goalId ? { ...g, completed: !g.completed } : g
+            )
+        };
+
+        try {
+            await firestoreService.updateGoal(user.id, eventId, updatedEvent);
+            setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
+        } catch (error) {
+            console.error('Error toggling goal:', error);
+        }
     };
 
-    const deleteGoal = (eventId, goalId) => {
-        setEvents(events.map(ev => {
-            if (ev.id === eventId) {
-                return { ...ev, goals: ev.goals.filter(g => g.id !== goalId) };
-            }
-            return ev;
-        }));
+    const deleteGoal = async (eventId, goalId) => {
+        if (!user) return;
+
+        const event = events.find(ev => ev.id === eventId);
+        const updatedEvent = {
+            ...event,
+            goals: event.goals.filter(g => g.id !== goalId)
+        };
+
+        try {
+            await firestoreService.updateGoal(user.id, eventId, updatedEvent);
+            setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
+        } catch (error) {
+            console.error('Error deleting goal:', error);
+        }
     };
 
     const getDaysRemaining = (dateString) => {
         const eventDate = new Date(dateString);
         const today = new Date();
-        // Reset time to midnight for accurate day diff
         eventDate.setHours(0, 0, 0, 0);
         today.setHours(0, 0, 0, 0);
 
@@ -87,6 +130,10 @@ const GoalTracker = () => {
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         return diffDays;
     };
+
+    if (loading) {
+        return <div className="card">Loading goals...</div>;
+    }
 
     return (
         <div className="card" style={{ textAlign: 'left', marginBottom: '2rem' }}>
@@ -136,7 +183,7 @@ const GoalTracker = () => {
                             <div style={{ marginTop: '1rem' }}>
                                 <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#888' }}>Goals</h4>
                                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                    {ev.goals.map(g => (
+                                    {ev.goals?.map(g => (
                                         <li key={g.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', padding: '0.5rem', background: '#222', borderRadius: '4px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                 <input

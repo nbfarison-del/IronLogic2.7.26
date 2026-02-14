@@ -5,13 +5,24 @@ import { useNavigate, Link } from 'react-router-dom';
 const Register = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const { register } = useAuth();
     const navigate = useNavigate();
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        register(email, password);
-        navigate('/');
+        setError('');
+        setLoading(true);
+
+        try {
+            await register(email, password);
+            navigate('/');
+        } catch (err) {
+            setError('Failed to create account. Email may already be in use.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -36,8 +47,9 @@ const Register = () => {
                         required
                     />
                 </div>
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-                    Sign Up
+                {error && <p style={{ color: 'var(--danger)', marginTop: '0.5rem' }}>{error}</p>}
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={loading}>
+                    {loading ? 'Creating Account...' : 'Sign Up'}
                 </button>
             </form>
             <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>

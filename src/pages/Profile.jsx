@@ -1,33 +1,64 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
+import * as firestoreService from '../services/firestoreService';
 
 const Profile = () => {
-    // Initial state with some default structure
-    const [maxes, setMaxes] = useState(() => {
-        const saved = localStorage.getItem('fitnessAppMaxes');
-        return saved ? JSON.parse(saved) : {
-            squat: '',
-            bench: '',
-            deadlift: '',
-            ohp: ''
-        };
-    });
-
+    const { user } = useAuth();
     const { unit, toggleUnit } = useSettings();
 
+    const [maxes, setMaxes] = useState({
+        squat: '',
+        bench: '',
+        deadlift: '',
+        ohp: ''
+    });
+    const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState('');
+
+    useEffect(() => {
+        const loadProfile = async () => {
+            if (!user) return;
+
+            setLoading(true);
+            try {
+                const profile = await firestoreService.getUserProfile(user.id);
+                if (profile?.maxes) {
+                    setMaxes(profile.maxes);
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadProfile();
+    }, [user]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setMaxes(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        localStorage.setItem('fitnessAppMaxes', JSON.stringify(maxes));
-        setNotifications('Maxes saved successfully!');
-        setTimeout(() => setNotifications(''), 3000);
+        if (!user) return;
+
+        try {
+            await firestoreService.updateUserProfile(user.id, { maxes });
+            setNotifications('Maxes saved successfully!');
+            setTimeout(() => setNotifications(''), 3000);
+        } catch (error) {
+            console.error('Error saving profile:', error);
+            setNotifications('Failed to save. Please try again.');
+            setTimeout(() => setNotifications(''), 3000);
+        }
     };
+
+    if (loading) {
+        return <div className="card">Loading profile...</div>;
+    }
 
     return (
         <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'left' }}>

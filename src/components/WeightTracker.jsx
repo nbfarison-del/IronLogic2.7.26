@@ -1,47 +1,91 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
+import * as firestoreService from '../services/firestoreService';
 
 const WeightTracker = () => {
     const { unit } = useSettings();
+    const { user } = useAuth();
     const [todayWeight, setTodayWeight] = useState('');
     const [history, setHistory] = useState([]);
     const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Load history
-        const savedHistory = localStorage.getItem('fitnessAppBodyWeight');
-        let parsedHistory = savedHistory ? JSON.parse(savedHistory) : [];
+        const loadWeightData = async () => {
+            if (!user) return;
 
-        // Sort by date
-        parsedHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
-        setHistory(parsedHistory);
+            setLoading(true);
+            try {
+                const weightData = await firestoreService.getBodyWeight(user.id);
+                const parsedHistory = weightData.sort((a, b) => new Date(a.date) - new Date(b.date));
+                setHistory(parsedHistory);
 
-        // Check if we already logged today
-        const todayStr = new Date().toISOString().split('T')[0];
-        const todayEntry = parsedHistory.find(h => h.date === todayStr);
+                // Check if we already logged today
+                const todayStr = new Date().toISOString().split('T')[0];
+                const todayEntry = parsedHistory.find(h => h.date === todayStr);
 
-        if (todayEntry) {
-            setTodayWeight(todayEntry.weight);
-            setMessage('Weight logged for today!');
-        }
-    }, []);
+                if (todayEntry) {
+                    setTodayWeight(todayEntry.weight);
+                    setMessage('Weight logged for today!');
+                }
+            } catch (error) {
+                console.error('Error loading weight data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    const saveWeight = (e) => {
+        loadWeightData();
+    }, [user]);
+
+    const handleSave = async (e) => {
         e.preventDefault();
-        if (!todayWeight) return;
+        console.log('WeightTracker: handleSave called', { user, todayWeight, unit });
 
+        if (!user) {
+            console.error('WeightTracker: No user found!');
+            setMessage('Error: You must be logged in to save.');
+            return;
+        }
+
+        if (!todayWeight) {
+            setMessage('Please enter a weight.');
+            return;
+        }
+
+        setLoading(true);
         const todayStr = new Date().toISOString().split('T')[0];
         const newEntry = { date: todayStr, weight: parseFloat(todayWeight) };
 
-        // Filter out previous entry for today if exists, then add new one
-        const newHistory = history.filter(h => h.date !== todayStr);
-        newHistory.push(newEntry);
-        newHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+        try {
+            console.log('WeightTracker: Saving entry...', newEntry);
+            // Check for existing entry today
+            const existingEntry = history.find(h => h.date === todayStr);
 
-        setHistory(newHistory);
-        localStorage.setItem('fitnessAppBodyWeight', JSON.stringify(newHistory));
-        setMessage('Weight saved!');
+            if (existingEntry) {
+                console.log('WeightTracker: Updating existing entry', existingEntry.id);
+                await firestoreService.updateBodyWeight(user.id, existingEntry.id, newEntry);
+                setHistory(history.map(h => h.id === existingEntry.id ? { ...newEntry, id: existingEntry.id } : h));
+            } else {
+                console.log('WeightTracker: Adding new entry');
+                const newId = await firestoreService.addBodyWeight(user.id, newEntry);
+                console.log('WeightTracker: New ID received', newId);
+                setHistory([...history, { ...newEntry, id: newId }].sort((a, b) => new Date(a.date) - new Date(b.date)));
+            }
+            setMessage('Weight saved successfully!');
+            setTimeout(() => setMessage(''), 3000);
+        } catch (error) {
+            console.error('WeightTracker: Error saving weight:', error);
+            setMessage('Failed to save weight. Check console.');
+        } finally {
+            setLoading(false);
+        }
     };
+
+    if (loading) {
+        return <div className="card">Loading weight data...</div>;
+    }
 
     // Graph Rendering Helper
     const renderGraph = () => {
@@ -116,7 +160,7 @@ const WeightTracker = () => {
             {renderGraph()}
 
             <div style={{ marginTop: '2rem' }}>
-                <form onSubmit={saveWeight} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                <form onSubmit={handleSave} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
                     <div className="input-group" style={{ flex: 1 }}>
                         <label>Today's Weight ({unit})</label>
                         <input
