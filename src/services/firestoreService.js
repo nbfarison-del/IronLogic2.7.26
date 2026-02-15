@@ -70,9 +70,9 @@ export const deleteWorkout = async (userId, workoutId) => {
 };
 
 // Listen for real-time workout updates
-export const subscribeToWorkouts = (userId, callback) => {
+export const subscribeToWorkouts = (userId, callback, limitCount = 50) => {
     const workoutsRef = collection(db, 'users', userId, 'workouts');
-    const q = query(workoutsRef, orderBy('date', 'desc'));
+    const q = query(workoutsRef, orderBy('date', 'desc'), limit(limitCount));
 
     return onSnapshot(q, (snapshot) => {
         const workouts = snapshot.docs.map(doc => ({

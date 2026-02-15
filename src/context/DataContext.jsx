@@ -9,17 +9,19 @@ export const useData = () => useContext(DataContext);
 export const DataProvider = ({ children }) => {
     const { user } = useAuth();
 
-    // Core State
-    const [workouts, setWorkouts] = useState([]);
-    const [weights, setWeights] = useState([]);
-    const [recovery, setRecovery] = useState([]);
-    const [goals, setGoals] = useState([]);
-    const [profile, setProfile] = useState(null);
-    const [customExercises, setCustomExercises] = useState([]);
-    const [coaching, setCoaching] = useState({ program: null, questionnaire: null });
+    // Initialize from Cache for 0ms First Paint
+    const cachedData = useMemo(() => firestoreService.getCachedBootstrapData(), []);
 
-    // Status
-    const [isLoading, setIsLoading] = useState(true);
+    const [workouts, setWorkouts] = useState(cachedData?.workouts || []);
+    const [weights, setWeights] = useState(cachedData?.weights || []);
+    const [recovery, setRecovery] = useState(cachedData?.recovery || []);
+    const [goals, setGoals] = useState(cachedData?.goals || []);
+    const [profile, setProfile] = useState(cachedData?.profile || null);
+    const [customExercises, setCustomExercises] = useState([]); // Custom exercises don't change often, fetch OK
+    const [coaching, setCoaching] = useState(cachedData?.coaching || { program: null, questionnaire: null });
+
+    // Status - Don't show global loader if we have cached data to show
+    const [isLoading, setIsLoading] = useState(!cachedData);
     const [lastUpdated, setLastUpdated] = useState(null);
 
     useEffect(() => {
@@ -61,9 +63,11 @@ export const DataProvider = ({ children }) => {
             setCustomExercises(data);
         });
 
-        // For coaching data, we'll keep it as a fetch for now as it changes less frequently
-        // but we can subscribe later if needed.
+        // For coaching data, use cache first then update
         firestoreService.getAICoachingData(user.id).then(setCoaching);
+
+        // Update the bootstrap cache periodically with fresh data
+        firestoreService.getBootstrapData(user.id);
 
         return () => {
             unsubWorkouts();
