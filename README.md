@@ -1,3 +1,6 @@
+# IronLogic (Latest Speed Optimization Build: 2026-02-15)
+<!-- Deployment Trigger -->
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
