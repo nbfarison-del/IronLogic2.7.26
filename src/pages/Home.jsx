@@ -163,17 +163,17 @@ const Home = () => {
         return data.slice(-30);
     }, [workouts, weightHistory]);
 
-    const handleWeightUpdate = (newHistory) => {
+    const handleWeightUpdate = useCallback((newHistory) => {
         setWeightHistory(newHistory);
-    };
+    }, []);
 
-    const handleRecoveryUpdate = (newHistory) => {
+    const handleRecoveryUpdate = useCallback((newHistory) => {
         setRecoveryHistory(newHistory);
-    };
+    }, []);
 
-    const handleGoalsUpdate = (newGoals) => {
+    const handleGoalsUpdate = useCallback((newGoals) => {
         setGoals(newGoals);
-    };
+    }, []);
 
     if (loading) {
         return (

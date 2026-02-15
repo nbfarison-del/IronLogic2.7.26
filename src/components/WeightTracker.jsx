@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
@@ -14,7 +14,12 @@ const WeightTracker = ({ initialHistory, onUpdate }) => {
 
     useEffect(() => {
         if (initialHistory) {
-            setHistory(initialHistory);
+            setHistory(prev => {
+                // Only update if data actually changed to avoid re-renders
+                if (JSON.stringify(prev) === JSON.stringify(initialHistory)) return prev;
+                return initialHistory;
+            });
+
             const todayStr = new Date().toISOString().split('T')[0];
             const todayEntry = initialHistory.find(h => h.date === todayStr);
             if (todayEntry) setTodayWeight(todayEntry.weight);
@@ -189,4 +194,4 @@ const WeightTracker = ({ initialHistory, onUpdate }) => {
     );
 };
 
-export default WeightTracker;
+export default memo(WeightTracker);

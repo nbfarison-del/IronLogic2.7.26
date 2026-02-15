@@ -46,11 +46,11 @@ export const SettingsProvider = ({ children }) => {
         }
     };
 
-    const value = {
+    const value = useMemo(() => ({
         unit,
         setUnit,
         toggleUnit
-    };
+    }), [unit, user]); // Include user because toggleUnit depends on it implicitly via firestoreUpdate
 
     return (
         <SettingsContext.Provider value={value}>

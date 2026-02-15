@@ -1,5 +1,5 @@
-# IronLogic (Latest Speed Optimization Build: 2026-02-15)
-<!-- Deployment Trigger -->
+# IronLogic (Latest UI Responsiveness Build: 2026-02-15)
+<!-- Phase 4 UI Stabilization Trigger -->
 
 # React + Vite
 

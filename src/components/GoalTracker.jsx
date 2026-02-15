@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 
@@ -235,4 +235,4 @@ const GoalTracker = ({ initialGoals, onUpdate }) => {
     );
 };
 
-export default GoalTracker;
+export default memo(GoalTracker);

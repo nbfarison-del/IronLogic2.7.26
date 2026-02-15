@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 
@@ -65,7 +65,10 @@ const RecoveryTracker = ({ initialHistory, onUpdate }) => {
 
     useEffect(() => {
         if (initialHistory) {
-            setHistory(initialHistory);
+            setHistory(prev => {
+                if (JSON.stringify(prev) === JSON.stringify(initialHistory)) return prev;
+                return initialHistory;
+            });
             const todayStr = new Date().toISOString().split('T')[0];
             const todayEntry = initialHistory.find(h => h.date === todayStr);
             if (todayEntry) {
@@ -315,4 +318,4 @@ const RecoveryTracker = ({ initialHistory, onUpdate }) => {
     );
 };
 
-export default RecoveryTracker;
+export default memo(RecoveryTracker);
