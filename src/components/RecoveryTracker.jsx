@@ -278,8 +278,8 @@ const RecoveryTracker = () => {
                         </div>
                     </div>
 
-                    <button className="btn btn-primary" onClick={calculateScore} style={{ width: '100%', marginTop: '1rem' }}>
-                        Calculate Recovery
+                    <button className="btn btn-primary" onClick={calculateScore} style={{ width: '100%', marginTop: '1rem' }} disabled={loading}>
+                        {loading ? 'Calculating...' : 'Calculate Recovery'}
                     </button>
                 </div>
             ) : (

@@ -172,8 +172,8 @@ const WeightTracker = () => {
                             style={{ padding: '0.8rem', fontSize: '1.1rem' }}
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ height: '50px' }}>
-                        Log Weight
+                    <button type="submit" className="btn btn-primary" style={{ height: '50px' }} disabled={loading}>
+                        {loading ? 'Saving...' : 'Log Weight'}
                     </button>
                 </form>
             </div>

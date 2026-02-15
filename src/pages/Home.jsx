@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
@@ -78,15 +78,11 @@ const Home = () => {
         loadDashboardData();
     }, [user]);
 
-    // --- Recent PRs Calculation ---
-    // We need to find "Personal Records" historically. 
-    // A simplified approach: Sort all workouts by date. Track max 1RM seen so far. If a new one beats it, it's a PR.
-    // We want to list the *Recent* ones.
-    const getRecentPRs = () => {
+    // --- Recent PRs Calculation (Memoized) ---
+    const recentPRs = useMemo(() => {
         const prList = [];
-        const maxes = {}; // Track current max per exercise
+        const maxes = {};
 
-        // Sort workouts oldest to newest
         const sortedWorkouts = [...workouts].sort((a, b) => new Date(a.date) - new Date(b.date));
 
         sortedWorkouts.forEach(w => {
@@ -97,40 +93,29 @@ const Home = () => {
                     const increase = w.estimated1RM - currentMax;
                     maxes[exId] = w.estimated1RM;
 
-                    // Add to PR list
                     prList.push({
                         ...w,
-                        increase: increase > 0 && currentMax > 0 ? increase : 0, // 0 if first time
+                        increase: increase > 0 && currentMax > 0 ? increase : 0,
                         isFirst: currentMax === 0
                     });
                 }
             }
         });
 
-        // Return reversed (newest first), limit to 10
         return prList.reverse().slice(0, 10);
-    };
-
-    const recentPRs = getRecentPRs();
+    }, [workouts]);
 
 
-    // --- DOTS Graph Data ---
-    // We need SBD (Squat, Bench, Deadlift) totals over time.
-    // Strategy: For each weight entry, find the closest previous Squat, Bench, and Deadlift 1RM.
-    // Calculate DOTS.
-    const getDotsData = () => {
-        if (weightHistory.length === 0) return [];
+    // --- DOTS Graph Data (Memoized) ---
+    const dotsData = useMemo(() => {
+        if (weightHistory.length === 0 || workouts.length === 0) return [];
 
-        // Sort weight history
         const sortedWeights = [...weightHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
-
         const data = [];
 
         sortedWeights.forEach(bwEntry => {
             const date = new Date(bwEntry.date);
 
-            // Find best Squat/Bench/Deadlift BEFORE or ON this date
-            // Helper to get maxe1RM for exercise category before date
             const getMaxBefore = (exIds) => {
                 const relevant = workouts.filter(w =>
                     exIds.includes(w.exerciseId) &&
@@ -147,7 +132,7 @@ const Home = () => {
 
             if (squat > 0 && bench > 0 && deadlift > 0) {
                 const total = squat + bench + deadlift;
-                const dots = getDOTSScore(parseFloat(bwEntry.weight), total, true); // Assuming male for now, user profile needs gender
+                const dots = getDOTSScore(parseFloat(bwEntry.weight), total, true);
                 data.push({
                     date: bwEntry.date,
                     dots: Math.round(dots * 100) / 100,
@@ -158,9 +143,21 @@ const Home = () => {
         });
 
         return data;
-    };
+    }, [workouts, weightHistory]);
 
-    const dotsData = getDotsData();
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }}></div>
+                    <p>Loading Dashboard...</p>
+                    <style>{`
+                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                    `}</style>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -170,40 +167,42 @@ const Home = () => {
             </p>
 
             {/* AI Program Card */}
-            {aiProgram && (
-                <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                        <div>
-                            <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
-                            <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
+            {
+                aiProgram && (
+                    <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
+                                <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
+                            </div>
+                            <Link to="/questionnaire">
+                                <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
+                            </Link>
                         </div>
-                        <Link to="/questionnaire">
-                            <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
-                        </Link>
-                    </div>
 
-                    <div style={{ marginTop: '1.5rem' }}>
-                        <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
-                        <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                            {aiProgram.weeks[0]?.days.map((day, i) => (
-                                <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
-                                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
-                                    <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
-                                        {day.exercises.slice(0, 3).map((ex, j) => (
-                                            <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
-                                        ))}
-                                        {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
-                                    </ul>
-                                </div>
-                            ))}
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
+                            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                                {aiProgram.weeks[0]?.days.map((day, i) => (
+                                    <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
+                                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
+                                        <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
+                                            {day.exercises.slice(0, 3).map((ex, j) => (
+                                                <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
+                                            ))}
+                                            {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
+                                        </ul>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
 
-                    <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
-                        Load Program into Planner
-                    </button>
-                </div>
-            )}
+                        <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
+                            Load Program into Planner
+                        </button>
+                    </div>
+                )
+            }
 
             {/* DOTS Chart */}
             <div className="card" style={{ marginBottom: '2rem' }}>
@@ -283,7 +282,7 @@ const Home = () => {
                     <p style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No recent activity to show.</p>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

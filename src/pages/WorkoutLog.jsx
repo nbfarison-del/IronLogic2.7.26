@@ -198,13 +198,12 @@ const WorkoutLog = () => {
         }
 
         // Save to Firestore
+        setLoading(true);
         try {
-            for (const entry of newEntries) {
-                await firestoreService.addWorkout(user.id, entry);
-            }
+            await Promise.all(newEntries.map(entry => firestoreService.addWorkout(user.id, entry)));
 
             // Update local state
-            setLoggedSets([...newEntries, ...loggedSets]);
+            setLoggedSets(prev => [...newEntries, ...prev]);
 
             // If part of a planned program, move to next exercise or finish
             if (plannedProgram) {
@@ -600,8 +599,8 @@ const WorkoutLog = () => {
                             <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Felt heavy today..." />
                         </div>
 
-                        <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }}>
-                            {workoutType === 'strength' && setRows.length > 1 ? `Log ${setRows.length} Sets` : 'Log Workout'}
+                        <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }} disabled={loading}>
+                            {loading ? 'Logging...' : (workoutType === 'strength' && setRows.length > 1 ? `Log ${setRows.length} Sets` : 'Log Workout')}
                         </button>
                     </form>
                 )}
