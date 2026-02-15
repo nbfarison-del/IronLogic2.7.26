@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 
 const Questionnaire = () => {
+    const { user } = useAuth();
     const navigate = useNavigate();
     const [step, setStep] = useState(0);
     const [answers, setAnswers] = useState({});
@@ -51,7 +52,7 @@ const Questionnaire = () => {
 
         try {
             // Save answers to Firestore
-            await firestoreService.saveQuestionnaire(user.uid, answers);
+            await firestoreService.saveQuestionnaire(user.id, answers);
 
             // Generate new program immediately or just clear old one? 
             // Let's clear the old program so Home.jsx regenerates it

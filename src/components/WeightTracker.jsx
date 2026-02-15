@@ -1,58 +1,26 @@
-import { useState, useEffect, memo } from 'react';
-import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
 
-const WeightTracker = ({ initialHistory, onUpdate }) => {
+const WeightTracker = () => {
     const { unit } = useSettings();
     const { user } = useAuth();
+    const { weights: history, isLoading: loading } = useData();
     const [todayWeight, setTodayWeight] = useState('');
-    const [history, setHistory] = useState(initialHistory || []);
     const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(!initialHistory);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
-        if (initialHistory) {
-            setHistory(prev => {
-                // Only update if data actually changed to avoid re-renders
-                if (JSON.stringify(prev) === JSON.stringify(initialHistory)) return prev;
-                return initialHistory;
-            });
-
+        if (history.length > 0) {
             const todayStr = new Date().toISOString().split('T')[0];
-            const todayEntry = initialHistory.find(h => h.date === todayStr);
-            if (todayEntry) setTodayWeight(todayEntry.weight);
-            setLoading(false);
-            return;
-        }
-
-        const loadWeightData = async () => {
-            if (!user) return;
-
-            setLoading(true);
-            try {
-                const weightData = await firestoreService.getBodyWeight(user.id);
-                const parsedHistory = weightData.sort((a, b) => new Date(a.date) - new Date(b.date));
-                setHistory(parsedHistory);
-
-                // Check if we already logged today
-                const todayStr = new Date().toISOString().split('T')[0];
-                const todayEntry = parsedHistory.find(h => h.date === todayStr);
-
-                if (todayEntry) {
-                    setTodayWeight(todayEntry.weight);
-                    setMessage('Weight logged for today!');
-                }
-            } catch (error) {
-                console.error('Error loading weight data:', error);
-            } finally {
-                setLoading(false);
+            const todayEntry = history.find(h => h.date === todayStr);
+            if (todayEntry) {
+                setTodayWeight(todayEntry.weight);
+            } else {
+                setTodayWeight('');
             }
-        };
-
-        loadWeightData();
-    }, [user, initialHistory]);
+        }
+    }, [history]);
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -63,28 +31,14 @@ const WeightTracker = ({ initialHistory, onUpdate }) => {
         const newWeight = parseFloat(todayWeight);
         const newEntry = { date: todayStr, weight: newWeight };
 
-        // Optimistic Update
+        // Optimistic UI handled by DataContext subscription
         const existingIdx = history.findIndex(h => h.date === todayStr);
-        let updatedHistory;
-        if (existingIdx >= 0) {
-            updatedHistory = [...history];
-            updatedHistory[existingIdx] = { ...updatedHistory[existingIdx], weight: newWeight };
-        } else {
-            updatedHistory = [...history, { ...newEntry, id: 'temp-id' }].sort((a, b) => new Date(a.date) - new Date(b.date));
-        }
-
-        setHistory(updatedHistory);
-        if (onUpdate) onUpdate(updatedHistory);
 
         try {
             if (existingIdx >= 0) {
                 await firestoreService.updateBodyWeight(user.id, history[existingIdx].id, newEntry);
             } else {
-                const newId = await firestoreService.addBodyWeight(user.id, newEntry);
-                // Replace temp ID with real ID
-                const finalHistory = updatedHistory.map(h => h.id === 'temp-id' ? { ...h, id: newId } : h);
-                setHistory(finalHistory);
-                if (onUpdate) onUpdate(finalHistory);
+                await firestoreService.addBodyWeight(user.id, newEntry);
             }
             setMessage('Weight saved!');
             setTimeout(() => setMessage(''), 2000);

@@ -1,5 +1,5 @@
-import { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
 
 const GOGGINS_QUOTES = {
@@ -45,12 +45,11 @@ const getRandomQuote = (score) => {
     return quotes[Math.floor(Math.random() * quotes.length)];
 };
 
-const RecoveryTracker = ({ initialHistory, onUpdate }) => {
+const RecoveryTracker = () => {
     const { user } = useAuth();
+    const { recovery: history, isLoading: loading } = useData();
     const [todayScore, setTodayScore] = useState(null);
-    const [history, setHistory] = useState(initialHistory || []);
     const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(!initialHistory);
     const [saving, setSaving] = useState(false);
 
     // Inputs (0-5 scale)
@@ -64,47 +63,18 @@ const RecoveryTracker = ({ initialHistory, onUpdate }) => {
     });
 
     useEffect(() => {
-        if (initialHistory) {
-            setHistory(prev => {
-                if (JSON.stringify(prev) === JSON.stringify(initialHistory)) return prev;
-                return initialHistory;
-            });
+        if (history.length > 0) {
             const todayStr = new Date().toISOString().split('T')[0];
-            const todayEntry = initialHistory.find(h => h.date === todayStr);
+            const todayEntry = history.find(h => h.date === todayStr);
             if (todayEntry) {
                 setTodayScore(todayEntry.score);
                 setMessage(getRandomQuote(todayEntry.score));
+            } else {
+                setTodayScore(null);
+                setMessage('');
             }
-            setLoading(false);
-            return;
         }
-
-        const loadRecoveryData = async () => {
-            if (!user) return;
-
-            setLoading(true);
-            try {
-                const recoveryData = await firestoreService.getRecovery(user.id);
-                const parsedHistory = recoveryData.sort((a, b) => new Date(a.date) - new Date(b.date));
-                setHistory(parsedHistory);
-
-                // Check if we already logged today
-                const todayStr = new Date().toISOString().split('T')[0];
-                const todayEntry = parsedHistory.find(h => h.date === todayStr);
-
-                if (todayEntry) {
-                    setTodayScore(todayEntry.score);
-                    setMessage(getRandomQuote(todayEntry.score));
-                }
-            } catch (error) {
-                console.error('Error loading recovery data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadRecoveryData();
-    }, [user, initialHistory]);
+    }, [history]);
 
 
     const handleChange = (e) => {
@@ -144,29 +114,16 @@ const RecoveryTracker = ({ initialHistory, onUpdate }) => {
         setTodayScore(score);
         setMessage(getRandomQuote(score));
 
-        // Optimistic Update
+        // Optimistic UI handled by DataContext subscription
         const todayStr = new Date().toISOString().split('T')[0];
         const newEntry = { date: todayStr, score: score };
         const existingIdx = history.findIndex(h => h.date === todayStr);
-
-        let updatedHistory;
-        if (existingIdx >= 0) {
-            updatedHistory = history.map(h => h.date === todayStr ? { ...newEntry, id: h.id } : h);
-        } else {
-            updatedHistory = [...history, { ...newEntry, id: 'temp-id' }].sort((a, b) => new Date(a.date) - new Date(b.date));
-        }
-
-        setHistory(updatedHistory);
-        if (onUpdate) onUpdate(updatedHistory);
 
         try {
             if (existingIdx >= 0) {
                 await firestoreService.updateRecovery(user.id, history[existingIdx].id, newEntry);
             } else {
-                const newId = await firestoreService.addRecovery(user.id, newEntry);
-                const finalHistory = updatedHistory.map(h => h.id === 'temp-id' ? { ...h, id: newId } : h);
-                setHistory(finalHistory);
-                if (onUpdate) onUpdate(finalHistory);
+                await firestoreService.addRecovery(user.id, newEntry);
             }
         } catch (error) {
             console.error('Error saving recovery:', error);

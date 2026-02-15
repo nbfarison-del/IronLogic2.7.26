@@ -149,17 +149,6 @@ const Home = () => {
         return data.slice(-30);
     }, [workouts, weightHistory]);
 
-    const handleWeightUpdate = useCallback((newHistory) => {
-        // Optimistic UI handled by DataContext subscription
-    }, []);
-
-    const handleRecoveryUpdate = useCallback((newHistory) => {
-        // Optimistic UI handled by DataContext subscription
-    }, []);
-
-    const handleGoalsUpdate = useCallback((newGoals) => {
-        // Optimistic UI handled by DataContext subscription
-    }, []);
 
     if (loading) {
         return (
@@ -247,8 +236,8 @@ const Home = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
-                <RecoveryTracker initialHistory={recoveryHistory} onUpdate={handleRecoveryUpdate} />
-                <WeightTracker initialHistory={weightHistory} onUpdate={handleWeightUpdate} />
+                <RecoveryTracker />
+                <WeightTracker />
             </div>
 
             <div className="card" style={{ marginBottom: '2rem' }}>
@@ -275,7 +264,7 @@ const Home = () => {
                 )}
             </div>
 
-            <GoalTracker initialGoals={goals} onUpdate={handleGoalsUpdate} />
+            <GoalTracker />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
                 <div className="card">

@@ -1,21 +1,16 @@
-import { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
 
-const GoalTracker = ({ initialGoals, onUpdate }) => {
+const GoalTracker = () => {
     const { user } = useAuth();
-    const [events, setEvents] = useState(initialGoals || []);
-    const [loading, setLoading] = useState(false); // No longer loading initially
+    const { goals: events, isLoading: loading } = useData();
 
     // Form States
     const [showAddEvent, setShowAddEvent] = useState(false);
     const [newEventName, setNewEventName] = useState('');
     const [newEventDate, setNewEventDate] = useState('');
 
-    // Update local state if props change (though onUpdate should handle this mainly)
-    useEffect(() => {
-        if (initialGoals) setEvents(initialGoals);
-    }, [initialGoals]);
 
     // Goal Input Logic (Temp state for specific event input)
     const [goalInputs, setGoalInputs] = useState({});
@@ -33,8 +28,7 @@ const GoalTracker = ({ initialGoals, onUpdate }) => {
         };
 
         try {
-            const newId = await firestoreService.addGoal(user.id, newEvent);
-            setEvents([...events, { ...newEvent, id: newId }]);
+            await firestoreService.addGoal(user.id, newEvent);
             setNewEventName('');
             setNewEventDate('');
             setShowAddEvent(false);
@@ -48,7 +42,6 @@ const GoalTracker = ({ initialGoals, onUpdate }) => {
 
         try {
             await firestoreService.deleteGoal(user.id, id);
-            setEvents(events.filter(e => e.id !== id));
         } catch (error) {
             console.error('Error deleting event:', error);
         }
@@ -65,16 +58,13 @@ const GoalTracker = ({ initialGoals, onUpdate }) => {
             goals: [...(event.goals || []), newGoal]
         };
 
-        // Optimistic Update
-        setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
+        // Optimistic UI handled by DataContext subscription
         setGoalInputs({ ...goalInputs, [eventId]: '' });
 
         try {
             await firestoreService.updateGoal(user.id, eventId, updatedEvent);
         } catch (error) {
             console.error('Error adding goal:', error);
-            // Rollback
-            setEvents(events);
         }
     };
 
@@ -89,15 +79,11 @@ const GoalTracker = ({ initialGoals, onUpdate }) => {
             )
         };
 
-        // Optimistic Update
-        setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
-
+        // Optimistic UI handled by DataContext subscription
         try {
             await firestoreService.updateGoal(user.id, eventId, updatedEvent);
         } catch (error) {
             console.error('Error toggling goal:', error);
-            // Rollback
-            setEvents(events);
         }
     };
 
@@ -112,9 +98,6 @@ const GoalTracker = ({ initialGoals, onUpdate }) => {
 
         try {
             await firestoreService.updateGoal(user.id, eventId, updatedEvent);
-            const nextEvents = events.map(ev => ev.id === eventId ? updatedEvent : ev);
-            setEvents(nextEvents);
-            if (onUpdate) onUpdate(nextEvents);
         } catch (error) {
             console.error('Error deleting goal:', error);
         }
