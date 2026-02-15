@@ -62,10 +62,9 @@ const WorkoutLog = () => {
 
             setLoading(true);
             try {
-                // Load workouts
-                const workouts = await firestoreService.getWorkouts(user.id);
-                // Filter to today's workouts only
+                // Fetch only today's workouts instead of everything
                 const today = new Date().toISOString().split('T')[0];
+                const workouts = await firestoreService.getWorkouts(user.id, 20); // Get last 20 as fallback/recent
                 const todayWorkouts = workouts.filter(w => w.date.startsWith(today));
                 setLoggedSets(todayWorkouts);
 

@@ -10,6 +10,7 @@ import {
     query,
     where,
     orderBy,
+    limit,
     onSnapshot
 } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
@@ -31,9 +32,14 @@ export const updateUserProfile = async (userId, profileData) => {
 
 // ==================== WORKOUTS ====================
 
-export const getWorkouts = async (userId) => {
+export const getWorkouts = async (userId, limitCount = null) => {
     const workoutsRef = collection(db, 'users', userId, 'workouts');
-    const q = query(workoutsRef, orderBy('date', 'desc'));
+    let q = query(workoutsRef, orderBy('date', 'desc'));
+
+    if (limitCount) {
+        q = query(workoutsRef, orderBy('date', 'desc'), limit(limitCount));
+    }
+
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map(doc => ({
@@ -270,4 +276,29 @@ export const getSettings = async (userId) => {
 export const updateSettings = async (userId, settings) => {
     const docRef = doc(db, 'users', userId, 'profile', 'data');
     await setDoc(docRef, { settings }, { merge: true });
+};
+
+// ==================== BOOTSTRAP ====================
+
+export const getBootstrapData = async (userId) => {
+    const profileRef = doc(db, 'users', userId, 'profile', 'data');
+    const [profileSnap, workouts, weights, recovery, coaching] = await Promise.all([
+        getDoc(profileRef),
+        getWorkouts(userId, 50),
+        getBodyWeightHistory(userId),
+        getRecoveryHistory(userId),
+        getAICoachingData(userId)
+    ]);
+
+    const profileData = profileSnap.exists() ? profileSnap.data() : {};
+
+    return {
+        profile: profileData,
+        settings: profileData.settings || { unit: 'kg' },
+        maxes: profileData.maxes || {},
+        workouts,
+        weights,
+        recovery,
+        coaching
+    };
 };

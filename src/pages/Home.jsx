@@ -51,26 +51,27 @@ const Home = () => {
             if (!user) return;
             setLoading(true);
             try {
-                const [fetchedWorkouts, fetchedWeights, fetchedRecovery, coachingData] = await Promise.all([
-                    firestoreService.getWorkouts(user.id),
-                    firestoreService.getBodyWeight(user.id),
-                    firestoreService.getRecovery(user.id),
-                    firestoreService.getAICoachingData(user.id)
-                ]);
+                const data = await firestoreService.getBootstrapData(user.id);
 
-                const fetchedProgram = coachingData.program;
-                const fetchedQuestionnaire = coachingData.questionnaire;
+                setWorkouts(data.workouts);
+                setWeightHistory(data.weights);
+                setRecoveryHistory(data.recovery);
 
-                setWorkouts(fetchedWorkouts);
-                setWeightHistory(fetchedWeights);
-                setRecoveryHistory(fetchedRecovery);
+                const fetchedProgram = data.coaching.program;
+                const fetchedQuestionnaire = data.coaching.questionnaire;
 
                 if (fetchedProgram) {
                     setAiProgram(fetchedProgram);
                 } else if (fetchedQuestionnaire) {
-                    const newProgram = generateProgram(fetchedQuestionnaire);
-                    setAiProgram(newProgram);
-                    await firestoreService.saveAIProgram(user.id, newProgram);
+                    // Try/catch for dynamic import
+                    try {
+                        const { generateProgram } = await import('../utils/ProgramGenerator');
+                        const newProgram = generateProgram(fetchedQuestionnaire);
+                        setAiProgram(newProgram);
+                        await firestoreService.saveAIProgram(user.id, newProgram);
+                    } catch (err) {
+                        console.error('Error generating program:', err);
+                    }
                 }
             } catch (error) {
                 console.error('Error loading dashboard:', error);
@@ -154,7 +155,7 @@ const Home = () => {
             }
         });
 
-        return data;
+        return data.slice(-30);
     }, [workouts, weightHistory]);
 
     if (loading) {
