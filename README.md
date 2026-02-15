@@ -1,5 +1,5 @@
 # IronLogic (Latest Hybrid Experience: 2026-02-15)
-<!-- Phase 5 Hybrid Cache Trigger -->
+<!-- Phase 5 Syntax Fix Trigger -->
 
 # React + Vite
 

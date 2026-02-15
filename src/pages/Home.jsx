@@ -214,7 +214,8 @@ const Home = () => {
             </div>
         );
     }
-
+    return (
+        <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h1>Welcome back, {user?.name || 'User'}!</h1>
                 {syncStatus !== 'idle' && (
@@ -238,45 +239,45 @@ const Home = () => {
                 Train like a Champion Today!
             </p>
 
-    {/* AI Program Card */ }
-    {
-        aiProgram && (
-            <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div>
-                        <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
-                        <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
-                    </div>
-                    <Link to="/questionnaire">
-                        <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
-                    </Link>
-                </div>
-
-                <div style={{ marginTop: '1.5rem' }}>
-                    <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
-                    <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                        {aiProgram.weeks[0]?.days.map((day, i) => (
-                            <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
-                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
-                                <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
-                                    {day.exercises.slice(0, 3).map((ex, j) => (
-                                        <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
-                                    ))}
-                                    {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
-                                </ul>
+            {/* AI Program Card */}
+            {
+                aiProgram && (
+                    <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
+                                <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
                             </div>
-                        ))}
+                            <Link to="/questionnaire">
+                                <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
+                            </Link>
+                        </div>
+
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
+                            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                                {aiProgram.weeks[0]?.days.map((day, i) => (
+                                    <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
+                                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
+                                        <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
+                                            {day.exercises.slice(0, 3).map((ex, j) => (
+                                                <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
+                                            ))}
+                                            {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
+                                        </ul>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
+                            Load Program into Planner
+                        </button>
                     </div>
-                </div>
+                )
+            }
 
-                <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
-                    Load Program into Planner
-                </button>
-            </div>
-        )
-    }
-
-    {/* DOTS Chart */ }
+            {/* DOTS Chart */}
             <div className="card" style={{ marginBottom: '2rem' }}>
                 <h2>Powerlifting DOTS Progress</h2>
                 {dotsData.length > 1 ? (
