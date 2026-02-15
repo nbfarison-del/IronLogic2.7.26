@@ -286,6 +286,18 @@ export const updateSettings = async (userId, settings) => {
 
 // ==================== BOOTSTRAP ====================
 
+const BOOTSTRAP_CACHE_KEY = 'ironlogic_bootstrap_cache';
+
+export const getCachedBootstrapData = () => {
+    try {
+        const cached = localStorage.getItem(BOOTSTRAP_CACHE_KEY);
+        return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+        console.error('Error reading bootstrap cache:', e);
+        return null;
+    }
+};
+
 export const getBootstrapData = async (userId) => {
     const profileRef = doc(db, 'users', userId, 'profile', 'data');
     const [profileSnap, workouts, weights, recovery, coaching, goals] = await Promise.all([
@@ -299,7 +311,7 @@ export const getBootstrapData = async (userId) => {
 
     const profileData = profileSnap.exists() ? profileSnap.data() : {};
 
-    return {
+    const data = {
         profile: profileData,
         settings: profileData.settings || { unit: 'kg' },
         maxes: profileData.maxes || {},
@@ -309,6 +321,15 @@ export const getBootstrapData = async (userId) => {
         coaching,
         goals
     };
+
+    // Save to cache for next instant load
+    try {
+        localStorage.setItem(BOOTSTRAP_CACHE_KEY, JSON.stringify(data));
+    } catch (e) {
+        console.warn('Could not save bootstrap cache:', e);
+    }
+
+    return data;
 };
 
 export const getDataInRange = async (userId, collectionName, startDate, endDate) => {

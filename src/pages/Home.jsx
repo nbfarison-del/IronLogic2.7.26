@@ -46,11 +46,27 @@ const Home = () => {
     const [recoveryHistory, setRecoveryHistory] = useState([]);
     const [goals, setGoals] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [syncStatus, setSyncStatus] = useState('idle'); // 'idle', 'syncing', 'synced'
 
     useEffect(() => {
         const loadDashboardData = async () => {
             if (!user) return;
-            setLoading(true);
+
+            // Step 1: Check Cache for Instant Load
+            const cachedData = firestoreService.getCachedBootstrapData();
+            if (cachedData) {
+                setWorkouts(cachedData.workouts || []);
+                setWeightHistory(cachedData.weights || []);
+                setRecoveryHistory(cachedData.recovery || []);
+                setGoals(cachedData.goals || []);
+                setAiProgram(cachedData.coaching?.program || null);
+                setLoading(false); // Instant display!
+            } else {
+                setLoading(true); // Only show spinner if first time ever logging in
+            }
+
+            // Step 2: Background Fetch (Sync)
+            setSyncStatus('syncing');
             try {
                 const data = await firestoreService.getBootstrapData(user.id);
 
@@ -58,6 +74,8 @@ const Home = () => {
                 setWeightHistory(data.weights);
                 setRecoveryHistory(data.recovery);
                 setGoals(data.goals || []);
+                setSyncStatus('synced');
+                setTimeout(() => setSyncStatus('idle'), 3000);
 
                 const fetchedProgram = data.coaching.program;
                 const fetchedQuestionnaire = data.coaching.questionnaire;
@@ -65,7 +83,6 @@ const Home = () => {
                 if (fetchedProgram) {
                     setAiProgram(fetchedProgram);
                 } else if (fetchedQuestionnaire) {
-                    // Fix: Use the statically imported generateProgram
                     try {
                         const newProgram = generateProgram(fetchedQuestionnaire);
                         setAiProgram(newProgram);
@@ -163,17 +180,26 @@ const Home = () => {
         return data.slice(-30);
     }, [workouts, weightHistory]);
 
+    const updateCache = useCallback((updates) => {
+        const current = firestoreService.getCachedBootstrapData() || {};
+        const next = { ...current, ...updates };
+        localStorage.setItem('ironlogic_bootstrap_cache', JSON.stringify(next));
+    }, []);
+
     const handleWeightUpdate = useCallback((newHistory) => {
         setWeightHistory(newHistory);
-    }, []);
+        updateCache({ weights: newHistory });
+    }, [updateCache]);
 
     const handleRecoveryUpdate = useCallback((newHistory) => {
         setRecoveryHistory(newHistory);
-    }, []);
+        updateCache({ recovery: newHistory });
+    }, [updateCache]);
 
     const handleGoalsUpdate = useCallback((newGoals) => {
         setGoals(newGoals);
-    }, []);
+        updateCache({ goals: newGoals });
+    }, [updateCache]);
 
     if (loading) {
         return (
@@ -189,52 +215,68 @@ const Home = () => {
         );
     }
 
-    return (
-        <div>
-            <h1>Welcome back, {user?.name || 'User'}!</h1>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h1>Welcome back, {user?.name || 'User'}!</h1>
+                {syncStatus !== 'idle' && (
+                    <div style={{
+                        fontSize: '0.8rem',
+                        color: syncStatus === 'syncing' ? 'var(--primary)' : '#4caf50',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}>
+                        {syncStatus === 'syncing' ? (
+                            <>
+                                <div className="spinner-small" style={{ border: '2px solid #333', borderTop: '2px solid var(--primary)', borderRadius: '50%', width: '12px', height: '12px', animation: 'spin 1s linear infinite' }}></div>
+                                Syncing Cloud...
+                            </>
+                        ) : '✓ Cloud Synced'}
+                    </div>
+                )}
+            </div>
             <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginBottom: '2rem', fontStyle: 'italic' }}>
                 Train like a Champion Today!
             </p>
 
-            {/* AI Program Card */}
-            {
-                aiProgram && (
-                    <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                                <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
-                                <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
-                            </div>
-                            <Link to="/questionnaire">
-                                <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
-                            </Link>
-                        </div>
-
-                        <div style={{ marginTop: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
-                            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                                {aiProgram.weeks[0]?.days.map((day, i) => (
-                                    <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
-                                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
-                                        <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
-                                            {day.exercises.slice(0, 3).map((ex, j) => (
-                                                <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
-                                            ))}
-                                            {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
-                                        </ul>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
-                            Load Program into Planner
-                        </button>
+    {/* AI Program Card */ }
+    {
+        aiProgram && (
+            <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
+                        <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
                     </div>
-                )
-            }
+                    <Link to="/questionnaire">
+                        <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
+                    </Link>
+                </div>
 
-            {/* DOTS Chart */}
+                <div style={{ marginTop: '1.5rem' }}>
+                    <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
+                    <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                        {aiProgram.weeks[0]?.days.map((day, i) => (
+                            <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
+                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
+                                <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
+                                    {day.exercises.slice(0, 3).map((ex, j) => (
+                                        <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
+                                    ))}
+                                    {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
+                    Load Program into Planner
+                </button>
+            </div>
+        )
+    }
+
+    {/* DOTS Chart */ }
             <div className="card" style={{ marginBottom: '2rem' }}>
                 <h2>Powerlifting DOTS Progress</h2>
                 {dotsData.length > 1 ? (

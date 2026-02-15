@@ -1,5 +1,5 @@
-# IronLogic (Latest Stable Build: 2026-02-15)
-<!-- Final Import Stabilizer -->
+# IronLogic (Latest Hybrid Experience: 2026-02-15)
+<!-- Phase 5 Hybrid Cache Trigger -->
 
 # React + Vite
 
