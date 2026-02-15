@@ -158,6 +158,14 @@ const Home = () => {
         return data.slice(-30);
     }, [workouts, weightHistory]);
 
+    const handleWeightUpdate = (newHistory) => {
+        setWeightHistory(newHistory);
+    };
+
+    const handleRecoveryUpdate = (newHistory) => {
+        setRecoveryHistory(newHistory);
+    };
+
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
@@ -243,8 +251,8 @@ const Home = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
-                <RecoveryTracker initialHistory={recoveryHistory} />
-                <WeightTracker initialHistory={weightHistory} />
+                <RecoveryTracker initialHistory={recoveryHistory} onUpdate={handleRecoveryUpdate} />
+                <WeightTracker initialHistory={weightHistory} onUpdate={handleWeightUpdate} />
             </div>
 
             <div className="card" style={{ marginBottom: '2rem' }}>

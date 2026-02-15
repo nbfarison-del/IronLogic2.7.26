@@ -45,12 +45,13 @@ const getRandomQuote = (score) => {
     return quotes[Math.floor(Math.random() * quotes.length)];
 };
 
-const RecoveryTracker = ({ initialHistory }) => {
+const RecoveryTracker = ({ initialHistory, onUpdate }) => {
     const { user } = useAuth();
     const [todayScore, setTodayScore] = useState(null);
     const [history, setHistory] = useState(initialHistory || []);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(!initialHistory);
+    const [saving, setSaving] = useState(false);
 
     // Inputs (0-5 scale)
     const [metrics, setMetrics] = useState({
@@ -111,9 +112,10 @@ const RecoveryTracker = ({ initialHistory }) => {
     };
 
     const calculateScore = async () => {
-        if (!user) return;
+        if (!user || saving) return;
 
-        // 1. RHR Normalization
+        setSaving(true);
+        // ... calculation logic ...
         let rhrStress = 0;
         if (metrics.rhr <= 50) rhrStress = 0;
         else if (metrics.rhr >= 100) rhrStress = 5;
@@ -121,9 +123,7 @@ const RecoveryTracker = ({ initialHistory }) => {
             rhrStress = (metrics.rhr - 50) / 10;
         }
 
-        // 2. Sleep Inversion
         const sleepStress = 5 - metrics.sleep;
-
         const stressPoints =
             metrics.legSoreness +
             metrics.chestSoreness +
@@ -141,26 +141,35 @@ const RecoveryTracker = ({ initialHistory }) => {
         setTodayScore(score);
         setMessage(getRandomQuote(score));
 
-        // Save to Firestore
+        // Optimistic Update
         const todayStr = new Date().toISOString().split('T')[0];
         const newEntry = { date: todayStr, score: score };
+        const existingIdx = history.findIndex(h => h.date === todayStr);
+
+        let updatedHistory;
+        if (existingIdx >= 0) {
+            updatedHistory = history.map(h => h.date === todayStr ? { ...newEntry, id: h.id } : h);
+        } else {
+            updatedHistory = [...history, { ...newEntry, id: 'temp-id' }].sort((a, b) => new Date(a.date) - new Date(b.date));
+        }
+
+        setHistory(updatedHistory);
+        if (onUpdate) onUpdate(updatedHistory);
 
         try {
-            const existingEntry = history.find(h => h.date === todayStr);
-
-            if (existingEntry) {
-                // Update existing entry
-                await firestoreService.updateRecovery(user.id, existingEntry.id, newEntry);
-                const newHistory = history.map(h => h.date === todayStr ? { ...newEntry, id: existingEntry.id } : h);
-                setHistory(newHistory);
+            if (existingIdx >= 0) {
+                await firestoreService.updateRecovery(user.id, history[existingIdx].id, newEntry);
             } else {
-                // Add new entry
                 const newId = await firestoreService.addRecovery(user.id, newEntry);
-                const newHistory = [...history, { ...newEntry, id: newId }].sort((a, b) => new Date(a.date) - new Date(b.date));
-                setHistory(newHistory);
+                const finalHistory = updatedHistory.map(h => h.id === 'temp-id' ? { ...h, id: newId } : h);
+                setHistory(finalHistory);
+                if (onUpdate) onUpdate(finalHistory);
             }
         } catch (error) {
             console.error('Error saving recovery:', error);
+            setMessage('Error saving recovery data');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -290,8 +299,8 @@ const RecoveryTracker = ({ initialHistory }) => {
                         </div>
                     </div>
 
-                    <button className="btn btn-primary" onClick={calculateScore} style={{ width: '100%', marginTop: '1rem' }} disabled={loading}>
-                        {loading ? 'Calculating...' : 'Calculate Recovery'}
+                    <button className="btn btn-primary" onClick={calculateScore} style={{ width: '100%', marginTop: '1rem' }} disabled={saving}>
+                        {saving ? 'Calculating...' : 'Calculate Recovery'}
                     </button>
                 </div>
             ) : (

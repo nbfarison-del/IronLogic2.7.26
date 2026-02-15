@@ -70,17 +70,22 @@ const GoalTracker = () => {
         if (!text || !user) return;
 
         const event = events.find(ev => ev.id === eventId);
+        const newGoal = { id: Date.now(), text, completed: false };
         const updatedEvent = {
             ...event,
-            goals: [...event.goals, { id: Date.now(), text, completed: false }]
+            goals: [...(event.goals || []), newGoal]
         };
+
+        // Optimistic Update
+        setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
+        setGoalInputs({ ...goalInputs, [eventId]: '' });
 
         try {
             await firestoreService.updateGoal(user.id, eventId, updatedEvent);
-            setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
-            setGoalInputs({ ...goalInputs, [eventId]: '' });
         } catch (error) {
             console.error('Error adding goal:', error);
+            // Rollback
+            setEvents(events);
         }
     };
 
@@ -95,11 +100,15 @@ const GoalTracker = () => {
             )
         };
 
+        // Optimistic Update
+        setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
+
         try {
             await firestoreService.updateGoal(user.id, eventId, updatedEvent);
-            setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
         } catch (error) {
             console.error('Error toggling goal:', error);
+            // Rollback
+            setEvents(events);
         }
     };
 

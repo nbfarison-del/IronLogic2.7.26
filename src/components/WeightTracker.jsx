@@ -3,13 +3,14 @@ import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 
-const WeightTracker = ({ initialHistory }) => {
+const WeightTracker = ({ initialHistory, onUpdate }) => {
     const { unit } = useSettings();
     const { user } = useAuth();
     const [todayWeight, setTodayWeight] = useState('');
     const [history, setHistory] = useState(initialHistory || []);
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(!initialHistory);
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (initialHistory) {
@@ -50,45 +51,43 @@ const WeightTracker = ({ initialHistory }) => {
 
     const handleSave = async (e) => {
         e.preventDefault();
-        console.log('WeightTracker: handleSave called', { user, todayWeight, unit });
+        if (!user || !todayWeight || saving) return;
 
-        if (!user) {
-            console.error('WeightTracker: No user found!');
-            setMessage('Error: You must be logged in to save.');
-            return;
-        }
-
-        if (!todayWeight) {
-            setMessage('Please enter a weight.');
-            return;
-        }
-
-        setLoading(true);
+        setSaving(true);
         const todayStr = new Date().toISOString().split('T')[0];
-        const newEntry = { date: todayStr, weight: parseFloat(todayWeight) };
+        const newWeight = parseFloat(todayWeight);
+        const newEntry = { date: todayStr, weight: newWeight };
+
+        // Optimistic Update
+        const existingIdx = history.findIndex(h => h.date === todayStr);
+        let updatedHistory;
+        if (existingIdx >= 0) {
+            updatedHistory = [...history];
+            updatedHistory[existingIdx] = { ...updatedHistory[existingIdx], weight: newWeight };
+        } else {
+            updatedHistory = [...history, { ...newEntry, id: 'temp-id' }].sort((a, b) => new Date(a.date) - new Date(b.date));
+        }
+
+        setHistory(updatedHistory);
+        if (onUpdate) onUpdate(updatedHistory);
 
         try {
-            console.log('WeightTracker: Saving entry...', newEntry);
-            // Check for existing entry today
-            const existingEntry = history.find(h => h.date === todayStr);
-
-            if (existingEntry) {
-                console.log('WeightTracker: Updating existing entry', existingEntry.id);
-                await firestoreService.updateBodyWeight(user.id, existingEntry.id, newEntry);
-                setHistory(history.map(h => h.id === existingEntry.id ? { ...newEntry, id: existingEntry.id } : h));
+            if (existingIdx >= 0) {
+                await firestoreService.updateBodyWeight(user.id, history[existingIdx].id, newEntry);
             } else {
-                console.log('WeightTracker: Adding new entry');
                 const newId = await firestoreService.addBodyWeight(user.id, newEntry);
-                console.log('WeightTracker: New ID received', newId);
-                setHistory([...history, { ...newEntry, id: newId }].sort((a, b) => new Date(a.date) - new Date(b.date)));
+                // Replace temp ID with real ID
+                const finalHistory = updatedHistory.map(h => h.id === 'temp-id' ? { ...h, id: newId } : h);
+                setHistory(finalHistory);
+                if (onUpdate) onUpdate(finalHistory);
             }
-            setMessage('Weight saved successfully!');
-            setTimeout(() => setMessage(''), 3000);
+            setMessage('Weight saved!');
+            setTimeout(() => setMessage(''), 2000);
         } catch (error) {
-            console.error('WeightTracker: Error saving weight:', error);
-            setMessage('Failed to save weight. Check console.');
+            console.error('Error saving weight:', error);
+            setMessage('Error saving weight');
         } finally {
-            setLoading(false);
+            setSaving(false);
         }
     };
 
@@ -181,8 +180,8 @@ const WeightTracker = ({ initialHistory }) => {
                             style={{ padding: '0.8rem', fontSize: '1.1rem' }}
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary" style={{ height: '50px' }} disabled={loading}>
-                        {loading ? 'Saving...' : 'Log Weight'}
+                    <button type="submit" className="btn btn-primary" style={{ height: '50px' }} disabled={saving}>
+                        {saving ? 'Saving...' : 'Log Weight'}
                     </button>
                 </form>
             </div>

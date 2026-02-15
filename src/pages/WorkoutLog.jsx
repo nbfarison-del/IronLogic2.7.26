@@ -54,6 +54,7 @@ const WorkoutLog = () => {
     const [loggedSets, setLoggedSets] = useState([]);
     const [maxes, setMaxes] = useState({});
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
 
     // Load Data from Firestore
     useEffect(() => {
@@ -197,14 +198,26 @@ const WorkoutLog = () => {
         }
 
         // Save to Firestore
-        setLoading(true);
+        setSaving(true);
+
+        // Optimistic Update: Add to local state immediately
+        const optimisticEntries = newEntries.map(e => ({ ...e, id: 'temp-' + Math.random() }));
+        setLoggedSets(prev => [...optimisticEntries, ...prev]);
+
         try {
-            await Promise.all(newEntries.map(entry => firestoreService.addWorkout(user.id, entry)));
+            const savePromises = newEntries.map(async (entry) => {
+                return await firestoreService.addWorkout(user.id, entry);
+            });
 
-            // Update local state
-            setLoggedSets(prev => [...newEntries, ...prev]);
+            const realIds = await Promise.all(savePromises);
 
-            // If part of a planned program, move to next exercise or finish
+            // Update with real IDs
+            setLoggedSets(prev => prev.map((item, i) => {
+                const optIdx = optimisticEntries.findIndex(oe => oe.id === item.id);
+                if (optIdx >= 0) return { ...item, id: realIds[optIdx] };
+                return item;
+            }));
+
             if (plannedProgram) {
                 if (currentExIndex < plannedProgram.exercises.length - 1) {
                     setCurrentExIndex(currentExIndex + 1);
@@ -214,7 +227,6 @@ const WorkoutLog = () => {
                 }
             }
 
-            // Reset fields
             if (workoutType === 'strength') {
                 const lastRow = setRows[setRows.length - 1];
                 setSetRows([{ id: Date.now(), weight: lastRow.weight, reps: lastRow.reps, targetRpe: '', actualRpe: '' }]);
@@ -226,7 +238,10 @@ const WorkoutLog = () => {
             }
         } catch (error) {
             console.error('Error logging workout:', error);
+            setLoggedSets(prev => prev.filter(item => !item.id.toString().startsWith('temp-')));
             alert('Failed to log workout. Please try again.');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -598,8 +613,8 @@ const WorkoutLog = () => {
                             <input type="text" value={notes} onChange={e => setNotes(e.target.value)} placeholder="e.g. Felt heavy today..." />
                         </div>
 
-                        <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }} disabled={loading}>
-                            {loading ? 'Logging...' : (workoutType === 'strength' && setRows.length > 1 ? `Log ${setRows.length} Sets` : 'Log Workout')}
+                        <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }} disabled={saving}>
+                            {saving ? 'Logging...' : (workoutType === 'strength' && setRows.length > 1 ? `Log ${setRows.length} Sets` : 'Log Workout')}
                         </button>
                     </form>
                 )}
