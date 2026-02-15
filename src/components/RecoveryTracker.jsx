@@ -45,12 +45,12 @@ const getRandomQuote = (score) => {
     return quotes[Math.floor(Math.random() * quotes.length)];
 };
 
-const RecoveryTracker = () => {
+const RecoveryTracker = ({ initialHistory }) => {
     const { user } = useAuth();
     const [todayScore, setTodayScore] = useState(null);
-    const [history, setHistory] = useState([]);
+    const [history, setHistory] = useState(initialHistory || []);
     const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!initialHistory);
 
     // Inputs (0-5 scale)
     const [metrics, setMetrics] = useState({
@@ -63,6 +63,18 @@ const RecoveryTracker = () => {
     });
 
     useEffect(() => {
+        if (initialHistory) {
+            setHistory(initialHistory);
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayEntry = initialHistory.find(h => h.date === todayStr);
+            if (todayEntry) {
+                setTodayScore(todayEntry.score);
+                setMessage(getRandomQuote(todayEntry.score));
+            }
+            setLoading(false);
+            return;
+        }
+
         const loadRecoveryData = async () => {
             if (!user) return;
 
@@ -88,7 +100,7 @@ const RecoveryTracker = () => {
         };
 
         loadRecoveryData();
-    }, [user]);
+    }, [user, initialHistory]);
 
 
     const handleChange = (e) => {

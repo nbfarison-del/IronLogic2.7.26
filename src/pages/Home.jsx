@@ -43,6 +43,7 @@ const Home = () => {
     const [aiProgram, setAiProgram] = useState(null);
     const [workouts, setWorkouts] = useState([]);
     const [weightHistory, setWeightHistory] = useState([]);
+    const [recoveryHistory, setRecoveryHistory] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -50,20 +51,21 @@ const Home = () => {
             if (!user) return;
             setLoading(true);
             try {
-                const [fetchedWorkouts, fetchedWeights, fetchedProgram, fetchedQuestionnaire] = await Promise.all([
+                const [fetchedWorkouts, fetchedWeights, fetchedRecovery, fetchedProgram, fetchedQuestionnaire] = await Promise.all([
                     firestoreService.getWorkouts(user.id),
                     firestoreService.getBodyWeight(user.id),
+                    firestoreService.getRecovery(user.id),
                     firestoreService.getAIProgram(user.id),
                     firestoreService.getQuestionnaire(user.id)
                 ]);
 
                 setWorkouts(fetchedWorkouts);
                 setWeightHistory(fetchedWeights);
+                setRecoveryHistory(fetchedRecovery);
 
                 if (fetchedProgram) {
                     setAiProgram(fetchedProgram);
                 } else if (fetchedQuestionnaire) {
-                    // Generate new program if questionnaire exists but no program
                     const newProgram = generateProgram(fetchedQuestionnaire);
                     setAiProgram(newProgram);
                     await firestoreService.saveAIProgram(user.id, newProgram);
@@ -106,32 +108,40 @@ const Home = () => {
     }, [workouts]);
 
 
-    // --- DOTS Graph Data (Memoized) ---
+    // --- DOTS Graph Data (Memoized O(N+M) Optimization) ---
     const dotsData = useMemo(() => {
         if (weightHistory.length === 0 || workouts.length === 0) return [];
 
         const sortedWeights = [...weightHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const sortedWorkouts = [...workouts].sort((a, b) => new Date(a.date) - new Date(b.date));
+
         const data = [];
+        let workoutIdx = 0;
+        const currentMaxes = { squat: 0, bench: 0, deadlift: 0 };
+
+        const squatIds = ['bb_squat', 'bb_front_squat', 'ssb_squat'];
+        const benchIds = ['bb_bench'];
+        const dlIds = ['bb_deadlift', 'sumo_deadlift'];
 
         sortedWeights.forEach(bwEntry => {
-            const date = new Date(bwEntry.date);
+            const bwDate = new Date(bwEntry.date);
 
-            const getMaxBefore = (exIds) => {
-                const relevant = workouts.filter(w =>
-                    exIds.includes(w.exerciseId) &&
-                    new Date(w.date) <= date &&
-                    w.estimated1RM
-                );
-                if (relevant.length === 0) return 0;
-                return Math.max(...relevant.map(w => w.estimated1RM));
-            };
+            // Catch up workouts up to this BW entry date
+            while (workoutIdx < sortedWorkouts.length) {
+                const w = sortedWorkouts[workoutIdx];
+                const wDate = new Date(w.date);
+                if (wDate > bwDate) break;
 
-            const squat = getMaxBefore(['bb_squat', 'bb_front_squat', 'ssb_squat']);
-            const bench = getMaxBefore(['bb_bench']);
-            const deadlift = getMaxBefore(['bb_deadlift', 'sumo_deadlift']);
+                if (w.estimated1RM) {
+                    if (squatIds.includes(w.exerciseId)) currentMaxes.squat = Math.max(currentMaxes.squat, w.estimated1RM);
+                    if (benchIds.includes(w.exerciseId)) currentMaxes.bench = Math.max(currentMaxes.bench, w.estimated1RM);
+                    if (dlIds.includes(w.exerciseId)) currentMaxes.deadlift = Math.max(currentMaxes.deadlift, w.estimated1RM);
+                }
+                workoutIdx++;
+            }
 
-            if (squat > 0 && bench > 0 && deadlift > 0) {
-                const total = squat + bench + deadlift;
+            if (currentMaxes.squat > 0 && currentMaxes.bench > 0 && currentMaxes.deadlift > 0) {
+                const total = currentMaxes.squat + currentMaxes.bench + currentMaxes.deadlift;
                 const dots = getDOTSScore(parseFloat(bwEntry.weight), total, true);
                 data.push({
                     date: bwEntry.date,
@@ -230,8 +240,8 @@ const Home = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
-                <RecoveryTracker />
-                <WeightTracker />
+                <RecoveryTracker initialHistory={recoveryHistory} />
+                <WeightTracker initialHistory={weightHistory} />
             </div>
 
             <div className="card" style={{ marginBottom: '2rem' }}>

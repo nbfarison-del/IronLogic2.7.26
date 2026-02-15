@@ -3,15 +3,24 @@ import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 
-const WeightTracker = () => {
+const WeightTracker = ({ initialHistory }) => {
     const { unit } = useSettings();
     const { user } = useAuth();
     const [todayWeight, setTodayWeight] = useState('');
-    const [history, setHistory] = useState([]);
+    const [history, setHistory] = useState(initialHistory || []);
     const [message, setMessage] = useState('');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(!initialHistory);
 
     useEffect(() => {
+        if (initialHistory) {
+            setHistory(initialHistory);
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayEntry = initialHistory.find(h => h.date === todayStr);
+            if (todayEntry) setTodayWeight(todayEntry.weight);
+            setLoading(false);
+            return;
+        }
+
         const loadWeightData = async () => {
             if (!user) return;
 
@@ -37,7 +46,7 @@ const WeightTracker = () => {
         };
 
         loadWeightData();
-    }, [user]);
+    }, [user, initialHistory]);
 
     const handleSave = async (e) => {
         e.preventDefault();
