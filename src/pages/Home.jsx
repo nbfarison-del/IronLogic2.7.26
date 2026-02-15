@@ -51,13 +51,15 @@ const Home = () => {
             if (!user) return;
             setLoading(true);
             try {
-                const [fetchedWorkouts, fetchedWeights, fetchedRecovery, fetchedProgram, fetchedQuestionnaire] = await Promise.all([
+                const [fetchedWorkouts, fetchedWeights, fetchedRecovery, coachingData] = await Promise.all([
                     firestoreService.getWorkouts(user.id),
                     firestoreService.getBodyWeight(user.id),
                     firestoreService.getRecovery(user.id),
-                    firestoreService.getAIProgram(user.id),
-                    firestoreService.getQuestionnaire(user.id)
+                    firestoreService.getAICoachingData(user.id)
                 ]);
+
+                const fetchedProgram = coachingData.program;
+                const fetchedQuestionnaire = coachingData.questionnaire;
 
                 setWorkouts(fetchedWorkouts);
                 setWeightHistory(fetchedWeights);

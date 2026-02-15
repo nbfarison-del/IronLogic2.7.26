@@ -205,10 +205,20 @@ export const addCalendarNote = async (userId, noteData) => {
 
 // ==================== AI PROGRAM & QUESTIONNAIRE ====================
 
-export const getAIProgram = async (userId) => {
+export const getAICoachingData = async (userId) => {
     const docRef = doc(db, 'users', userId, 'aiProgram', 'data');
     const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? docSnap.data().program : null;
+    if (!docSnap.exists()) return { program: null, questionnaire: null };
+    const data = docSnap.data();
+    return {
+        program: data.program || null,
+        questionnaire: data.questionnaire || null
+    };
+};
+
+export const getAIProgram = async (userId) => {
+    const data = await getAICoachingData(userId);
+    return data.program;
 };
 
 export const saveAIProgram = async (userId, programData) => {
@@ -217,9 +227,8 @@ export const saveAIProgram = async (userId, programData) => {
 };
 
 export const getQuestionnaire = async (userId) => {
-    const docRef = doc(db, 'users', userId, 'aiProgram', 'data');
-    const docSnap = await getDoc(docRef);
-    return docSnap.exists() ? docSnap.data().questionnaire : null;
+    const data = await getAICoachingData(userId);
+    return data.questionnaire;
 };
 
 export const saveQuestionnaire = async (userId, questionnaireData) => {
