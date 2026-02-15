@@ -2,36 +2,25 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 
-const GoalTracker = () => {
+const GoalTracker = ({ initialGoals, onUpdate }) => {
     const { user } = useAuth();
-    const [events, setEvents] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [events, setEvents] = useState(initialGoals || []);
+    const [loading, setLoading] = useState(false); // No longer loading initially
 
     // Form States
     const [showAddEvent, setShowAddEvent] = useState(false);
     const [newEventName, setNewEventName] = useState('');
     const [newEventDate, setNewEventDate] = useState('');
 
+    // Update local state if props change (though onUpdate should handle this mainly)
+    useEffect(() => {
+        if (initialGoals) setEvents(initialGoals);
+    }, [initialGoals]);
+
     // Goal Input Logic (Temp state for specific event input)
     const [goalInputs, setGoalInputs] = useState({});
 
-    useEffect(() => {
-        const loadGoals = async () => {
-            if (!user) return;
-
-            setLoading(true);
-            try {
-                const goals = await firestoreService.getGoals(user.id);
-                setEvents(goals);
-            } catch (error) {
-                console.error('Error loading goals:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadGoals();
-    }, [user]);
+    // Fetching is now handled by the parent bootstrap
 
     const handleAddEvent = async (e) => {
         e.preventDefault();
@@ -123,7 +112,9 @@ const GoalTracker = () => {
 
         try {
             await firestoreService.updateGoal(user.id, eventId, updatedEvent);
-            setEvents(events.map(ev => ev.id === eventId ? updatedEvent : ev));
+            const nextEvents = events.map(ev => ev.id === eventId ? updatedEvent : ev);
+            setEvents(nextEvents);
+            if (onUpdate) onUpdate(nextEvents);
         } catch (error) {
             console.error('Error deleting goal:', error);
         }

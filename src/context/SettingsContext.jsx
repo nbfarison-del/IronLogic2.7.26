@@ -52,10 +52,6 @@ export const SettingsProvider = ({ children }) => {
         toggleUnit
     };
 
-    if (loading) {
-        return null; // Or a loading spinner
-    }
-
     return (
         <SettingsContext.Provider value={value}>
             {children}

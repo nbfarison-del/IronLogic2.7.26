@@ -44,6 +44,7 @@ const Home = () => {
     const [workouts, setWorkouts] = useState([]);
     const [weightHistory, setWeightHistory] = useState([]);
     const [recoveryHistory, setRecoveryHistory] = useState([]);
+    const [goals, setGoals] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -56,6 +57,7 @@ const Home = () => {
                 setWorkouts(data.workouts);
                 setWeightHistory(data.weights);
                 setRecoveryHistory(data.recovery);
+                setGoals(data.goals || []);
 
                 const fetchedProgram = data.coaching.program;
                 const fetchedQuestionnaire = data.coaching.questionnaire;
@@ -167,6 +169,10 @@ const Home = () => {
 
     const handleRecoveryUpdate = (newHistory) => {
         setRecoveryHistory(newHistory);
+    };
+
+    const handleGoalsUpdate = (newGoals) => {
+        setGoals(newGoals);
     };
 
     if (loading) {
@@ -282,7 +288,7 @@ const Home = () => {
                 )}
             </div>
 
-            <GoalTracker />
+            <GoalTracker initialGoals={goals} onUpdate={handleGoalsUpdate} />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
                 <div className="card">

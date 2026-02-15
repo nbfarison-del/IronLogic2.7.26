@@ -288,12 +288,13 @@ export const updateSettings = async (userId, settings) => {
 
 export const getBootstrapData = async (userId) => {
     const profileRef = doc(db, 'users', userId, 'profile', 'data');
-    const [profileSnap, workouts, weights, recovery, coaching] = await Promise.all([
+    const [profileSnap, workouts, weights, recovery, coaching, goals] = await Promise.all([
         getDoc(profileRef),
         getWorkouts(userId, 50),
-        getBodyWeightHistory(userId, 90), // Last 90 entries
-        getRecoveryHistory(userId, 90),   // Last 90 entries
-        getAICoachingData(userId)
+        getBodyWeightHistory(userId, 90),
+        getRecoveryHistory(userId, 90),
+        getAICoachingData(userId),
+        getGoals(userId)
     ]);
 
     const profileData = profileSnap.exists() ? profileSnap.data() : {};
@@ -305,7 +306,8 @@ export const getBootstrapData = async (userId) => {
         workouts,
         weights,
         recovery,
-        coaching
+        coaching,
+        goals
     };
 };
 
