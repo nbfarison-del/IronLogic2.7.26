@@ -63,9 +63,8 @@ const Home = () => {
                 if (fetchedProgram) {
                     setAiProgram(fetchedProgram);
                 } else if (fetchedQuestionnaire) {
-                    // Try/catch for dynamic import
+                    // Fix: Use the statically imported generateProgram
                     try {
-                        const { generateProgram } = await import('../utils/ProgramGenerator');
                         const newProgram = generateProgram(fetchedQuestionnaire);
                         setAiProgram(newProgram);
                         await firestoreService.saveAIProgram(user.id, newProgram);
@@ -84,13 +83,16 @@ const Home = () => {
     }, [user]);
 
     // --- Recent PRs Calculation (Memoized) ---
+    // Optimized: Firestore already returns workouts sorted by date desc
     const recentPRs = useMemo(() => {
         const prList = [];
         const maxes = {};
 
-        const sortedWorkouts = [...workouts].sort((a, b) => new Date(a.date) - new Date(b.date));
+        // data from bootstrap is 50 latest, sorted desc.
+        // To find PRs, we process chronologically (oldest to newest)
+        const chronological = [...workouts].reverse();
 
-        sortedWorkouts.forEach(w => {
+        chronological.forEach(w => {
             if (w.type === 'strength' && w.estimated1RM) {
                 const exId = w.exerciseId;
                 const currentMax = maxes[exId] || 0;
@@ -115,8 +117,9 @@ const Home = () => {
     const dotsData = useMemo(() => {
         if (weightHistory.length === 0 || workouts.length === 0) return [];
 
-        const sortedWeights = [...weightHistory].sort((a, b) => new Date(a.date) - new Date(b.date));
-        const sortedWorkouts = [...workouts].sort((a, b) => new Date(a.date) - new Date(b.date));
+        // firestoreService ensures weightHistory is asc and workouts is desc (we'll reverse it)
+        const sortedWeights = weightHistory;
+        const sortedWorkouts = [...workouts].reverse();
 
         const data = [];
         let workoutIdx = 0;

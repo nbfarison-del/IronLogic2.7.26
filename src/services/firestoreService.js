@@ -106,15 +106,18 @@ export const deleteGoal = async (userId, goalId) => {
 
 // ==================== BODY WEIGHT ====================
 
-export const getBodyWeightHistory = async (userId) => {
+export const getBodyWeightHistory = async (userId, limitCount = null) => {
     const weightRef = collection(db, 'users', userId, 'bodyWeight');
-    const q = query(weightRef, orderBy('date', 'asc'));
+    let q = query(weightRef, orderBy('date', 'desc'));
+    if (limitCount) {
+        q = query(weightRef, orderBy('date', 'desc'), limit(limitCount));
+    }
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-    }));
+    })).sort((a, b) => new Date(a.date) - new Date(b.date)); // Keep internal return sorted ascending for graphs
 };
 // Alias for consistency
 export const getBodyWeight = getBodyWeightHistory;
@@ -137,9 +140,12 @@ export const deleteBodyWeight = async (userId, weightId) => {
 
 // ==================== RECOVERY TRACKING ====================
 
-export const getRecoveryHistory = async (userId) => {
+export const getRecoveryHistory = async (userId, limitCount = null) => {
     const recoveryRef = collection(db, 'users', userId, 'recovery');
-    const q = query(recoveryRef, orderBy('date', 'desc'));
+    let q = query(recoveryRef, orderBy('date', 'desc'));
+    if (limitCount) {
+        q = query(recoveryRef, orderBy('date', 'desc'), limit(limitCount));
+    }
     const querySnapshot = await getDocs(q);
 
     return querySnapshot.docs.map(doc => ({
@@ -285,8 +291,8 @@ export const getBootstrapData = async (userId) => {
     const [profileSnap, workouts, weights, recovery, coaching] = await Promise.all([
         getDoc(profileRef),
         getWorkouts(userId, 50),
-        getBodyWeightHistory(userId),
-        getRecoveryHistory(userId),
+        getBodyWeightHistory(userId, 90), // Last 90 entries
+        getRecoveryHistory(userId, 90),   // Last 90 entries
         getAICoachingData(userId)
     ]);
 
@@ -301,4 +307,16 @@ export const getBootstrapData = async (userId) => {
         recovery,
         coaching
     };
+};
+
+export const getDataInRange = async (userId, collectionName, startDate, endDate) => {
+    const colRef = collection(db, 'users', userId, collectionName);
+    const q = query(
+        colRef,
+        where('date', '>=', startDate),
+        where('date', '<=', endDate),
+        orderBy('date', 'asc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };

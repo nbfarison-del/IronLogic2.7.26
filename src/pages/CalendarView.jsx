@@ -28,13 +28,24 @@ const CalendarView = () => {
     const [weightInput, setWeightInput] = useState('');
     const [noteInput, setNoteInput] = useState('');
 
-    // Load Data
+    // Load Data for current month
     useEffect(() => {
-        const loadData = async () => {
+        const loadMonthData = async () => {
             if (!user) return;
             setLoading(true);
             try {
-                // Parallel fetching for efficiency
+                // Buffer 7 days before and after the month to cover partial weeks in view
+                const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+                const startRange = new Date(firstDay);
+                startRange.setDate(startRange.getDate() - 7);
+                const endRange = new Date(lastDay);
+                endRange.setDate(endRange.getDate() + 7);
+
+                const startStr = startRange.toISOString().split('T')[0];
+                const endStr = endRange.toISOString().split('T')[0];
+
                 const [
                     fetchedWorkouts,
                     fetchedRecovery,
@@ -42,11 +53,11 @@ const CalendarView = () => {
                     fetchedPlanned,
                     fetchedNotes
                 ] = await Promise.all([
-                    firestoreService.getWorkouts(user.id),
-                    firestoreService.getRecovery(user.id),
-                    firestoreService.getBodyWeight(user.id),
-                    firestoreService.getPlannedWorkouts(user.id),
-                    firestoreService.getCalendarNotes(user.id)
+                    firestoreService.getDataInRange(user.id, 'workouts', startStr, endStr),
+                    firestoreService.getDataInRange(user.id, 'recovery', startStr, endStr),
+                    firestoreService.getDataInRange(user.id, 'bodyWeight', startStr, endStr),
+                    firestoreService.getDataInRange(user.id, 'plannedWorkouts', startStr, endStr),
+                    firestoreService.getDataInRange(user.id, 'calendarNotes', startStr, endStr)
                 ]);
 
                 setWorkouts(fetchedWorkouts);
@@ -61,8 +72,8 @@ const CalendarView = () => {
             }
         };
 
-        loadData();
-    }, [user]);
+        loadMonthData();
+    }, [user, currentDate]); // Re-fetch on month change
 
     // Sync Weight and Note Input when selected date changes
     useEffect(() => {
