@@ -38,68 +38,37 @@ const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
     return (liftWeight * 500) / denom;
 };
 
+import { useData } from '../context/DataContext';
+
 const Home = () => {
     const { user } = useAuth();
+    const {
+        workouts,
+        weights: weightHistory,
+        recovery: recoveryHistory,
+        goals,
+        coaching,
+        isLoading: loading
+    } = useData();
+
     const [aiProgram, setAiProgram] = useState(null);
-    const [workouts, setWorkouts] = useState([]);
-    const [weightHistory, setWeightHistory] = useState([]);
-    const [recoveryHistory, setRecoveryHistory] = useState([]);
-    const [goals, setGoals] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [syncStatus, setSyncStatus] = useState('idle'); // 'idle', 'syncing', 'synced'
 
     useEffect(() => {
-        const loadDashboardData = async () => {
-            if (!user) return;
-
-            // Step 1: Check Cache for Instant Load
-            const cachedData = firestoreService.getCachedBootstrapData();
-            if (cachedData) {
-                setWorkouts(cachedData.workouts || []);
-                setWeightHistory(cachedData.weights || []);
-                setRecoveryHistory(cachedData.recovery || []);
-                setGoals(cachedData.goals || []);
-                setAiProgram(cachedData.coaching?.program || null);
-                setLoading(false); // Instant display!
-            } else {
-                setLoading(true); // Only show spinner if first time ever logging in
-            }
-
-            // Step 2: Background Fetch (Sync)
-            setSyncStatus('syncing');
-            try {
-                const data = await firestoreService.getBootstrapData(user.id);
-
-                setWorkouts(data.workouts);
-                setWeightHistory(data.weights);
-                setRecoveryHistory(data.recovery);
-                setGoals(data.goals || []);
-                setSyncStatus('synced');
-                setTimeout(() => setSyncStatus('idle'), 3000);
-
-                const fetchedProgram = data.coaching.program;
-                const fetchedQuestionnaire = data.coaching.questionnaire;
-
-                if (fetchedProgram) {
-                    setAiProgram(fetchedProgram);
-                } else if (fetchedQuestionnaire) {
-                    try {
-                        const newProgram = generateProgram(fetchedQuestionnaire);
-                        setAiProgram(newProgram);
-                        await firestoreService.saveAIProgram(user.id, newProgram);
-                    } catch (err) {
-                        console.error('Error generating program:', err);
-                    }
+        if (coaching.program) {
+            setAiProgram(coaching.program);
+        } else if (coaching.questionnaire) {
+            const loadProgram = async () => {
+                try {
+                    const newProgram = generateProgram(coaching.questionnaire);
+                    setAiProgram(newProgram);
+                    await firestoreService.saveAIProgram(user.id, newProgram);
+                } catch (err) {
+                    console.error('Error generating program:', err);
                 }
-            } catch (error) {
-                console.error('Error loading dashboard:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadDashboardData();
-    }, [user]);
+            };
+            loadProgram();
+        }
+    }, [coaching, user]);
 
     // --- Recent PRs Calculation (Memoized) ---
     // Optimized: Firestore already returns workouts sorted by date desc
@@ -180,26 +149,17 @@ const Home = () => {
         return data.slice(-30);
     }, [workouts, weightHistory]);
 
-    const updateCache = useCallback((updates) => {
-        const current = firestoreService.getCachedBootstrapData() || {};
-        const next = { ...current, ...updates };
-        localStorage.setItem('ironlogic_bootstrap_cache', JSON.stringify(next));
+    const handleWeightUpdate = useCallback((newHistory) => {
+        // Optimistic UI handled by DataContext subscription
     }, []);
 
-    const handleWeightUpdate = useCallback((newHistory) => {
-        setWeightHistory(newHistory);
-        updateCache({ weights: newHistory });
-    }, [updateCache]);
-
     const handleRecoveryUpdate = useCallback((newHistory) => {
-        setRecoveryHistory(newHistory);
-        updateCache({ recovery: newHistory });
-    }, [updateCache]);
+        // Optimistic UI handled by DataContext subscription
+    }, []);
 
     const handleGoalsUpdate = useCallback((newGoals) => {
-        setGoals(newGoals);
-        updateCache({ goals: newGoals });
-    }, [updateCache]);
+        // Optimistic UI handled by DataContext subscription
+    }, []);
 
     if (loading) {
         return (
@@ -218,22 +178,6 @@ const Home = () => {
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h1>Welcome back, {user?.name || 'User'}!</h1>
-                {syncStatus !== 'idle' && (
-                    <div style={{
-                        fontSize: '0.8rem',
-                        color: syncStatus === 'syncing' ? 'var(--primary)' : '#4caf50',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                    }}>
-                        {syncStatus === 'syncing' ? (
-                            <>
-                                <div className="spinner-small" style={{ border: '2px solid #333', borderTop: '2px solid var(--primary)', borderRadius: '50%', width: '12px', height: '12px', animation: 'spin 1s linear infinite' }}></div>
-                                Syncing Cloud...
-                            </>
-                        ) : '✓ Cloud Synced'}
-                    </div>
-                )}
             </div>
             <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginBottom: '2rem', fontStyle: 'italic' }}>
                 Train like a Champion Today!

@@ -30,6 +30,13 @@ export const updateUserProfile = async (userId, profileData) => {
     await setDoc(docRef, profileData, { merge: true });
 };
 
+export const subscribeToProfile = (userId, callback) => {
+    const docRef = doc(db, 'users', userId, 'profile', 'data');
+    return onSnapshot(docRef, (docSnap) => {
+        callback(docSnap.exists() ? docSnap.data() : null);
+    });
+};
+
 // ==================== WORKOUTS ====================
 
 export const getWorkouts = async (userId, limitCount = null) => {
@@ -104,6 +111,17 @@ export const deleteGoal = async (userId, goalId) => {
     await deleteDoc(docRef);
 };
 
+export const subscribeToGoals = (userId, callback) => {
+    const goalsRef = collection(db, 'users', userId, 'goals');
+    return onSnapshot(goalsRef, (snapshot) => {
+        const goals = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        callback(goals);
+    });
+};
+
 // ==================== BODY WEIGHT ====================
 
 export const getBodyWeightHistory = async (userId, limitCount = null) => {
@@ -138,6 +156,18 @@ export const deleteBodyWeight = async (userId, weightId) => {
     await deleteDoc(docRef);
 };
 
+export const subscribeToBodyWeight = (userId, callback) => {
+    const weightRef = collection(db, 'users', userId, 'bodyWeight');
+    const q = query(weightRef, orderBy('date', 'desc'), limit(90));
+    return onSnapshot(q, (snapshot) => {
+        const weights = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        })).sort((a, b) => new Date(a.date) - new Date(b.date));
+        callback(weights);
+    });
+};
+
 // ==================== RECOVERY TRACKING ====================
 
 export const getRecoveryHistory = async (userId, limitCount = null) => {
@@ -167,6 +197,18 @@ export const addRecovery = addRecoveryEntry;
 export const updateRecovery = async (userId, recoveryId, recoveryData) => {
     const docRef = doc(db, 'users', userId, 'recovery', recoveryId);
     await updateDoc(docRef, recoveryData);
+};
+
+export const subscribeToRecovery = (userId, callback) => {
+    const recoveryRef = collection(db, 'users', userId, 'recovery');
+    const q = query(recoveryRef, orderBy('date', 'desc'), limit(90));
+    return onSnapshot(q, (snapshot) => {
+        const recovery = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        callback(recovery);
+    });
 };
 
 // ==================== PLANNED WORKOUTS ====================
@@ -263,6 +305,17 @@ export const getCustomExercises = async (userId) => {
         id: doc.id,
         ...doc.data()
     }));
+};
+
+export const subscribeToCustomExercises = (userId, callback) => {
+    const exercisesRef = collection(db, 'users', userId, 'customExercises');
+    return onSnapshot(exercisesRef, (snapshot) => {
+        const exercises = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        callback(exercises);
+    });
 };
 
 export const addCustomExercise = async (userId, exerciseData) => {

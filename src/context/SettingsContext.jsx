@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import { useAuth } from './AuthContext';
+import { useData } from './DataContext';
 import * as firestoreService from '../services/firestoreService';
 
 const SettingsContext = createContext();
@@ -8,35 +9,12 @@ export const useSettings = () => useContext(SettingsContext);
 
 export const SettingsProvider = ({ children }) => {
     const { user } = useAuth();
-    const [unit, setUnit] = useState('kg');
-    const [loading, setLoading] = useState(true);
+    const { settings } = useData();
 
-    useEffect(() => {
-        const loadSettings = async () => {
-            if (!user) {
-                setLoading(false);
-                return;
-            }
-
-            try {
-                const settings = await firestoreService.getSettings(user.id);
-                if (settings?.unit) {
-                    setUnit(settings.unit);
-                }
-            } catch (error) {
-                console.error('Error loading settings:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadSettings();
-    }, [user]);
+    const unit = settings?.unit || 'kg';
 
     const toggleUnit = async () => {
         const newUnit = unit === 'kg' ? 'lbs' : 'kg';
-        setUnit(newUnit);
-
         if (user) {
             try {
                 await firestoreService.updateSettings(user.id, { unit: newUnit });
@@ -48,9 +26,8 @@ export const SettingsProvider = ({ children }) => {
 
     const value = useMemo(() => ({
         unit,
-        setUnit,
         toggleUnit
-    }), [unit, user]); // Include user because toggleUnit depends on it implicitly via firestoreUpdate
+    }), [unit, user]);
 
     return (
         <SettingsContext.Provider value={value}>

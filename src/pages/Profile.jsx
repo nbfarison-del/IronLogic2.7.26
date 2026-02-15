@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
-import { useSettings } from '../context/SettingsContext';
-import { useAuth } from '../context/AuthContext';
-import * as firestoreService from '../services/firestoreService';
+import { useData } from '../context/DataContext';
 
 const Profile = () => {
     const { user } = useAuth();
     const { unit, toggleUnit } = useSettings();
+    const { profile, maxes: cloudMaxes } = useData();
 
     const [maxes, setMaxes] = useState({
         squat: '',
@@ -13,28 +11,13 @@ const Profile = () => {
         deadlift: '',
         ohp: ''
     });
-    const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState('');
 
     useEffect(() => {
-        const loadProfile = async () => {
-            if (!user) return;
-
-            setLoading(true);
-            try {
-                const profile = await firestoreService.getUserProfile(user.id);
-                if (profile?.maxes) {
-                    setMaxes(profile.maxes);
-                }
-            } catch (error) {
-                console.error('Error loading profile:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadProfile();
-    }, [user]);
+        if (cloudMaxes) {
+            setMaxes(cloudMaxes);
+        }
+    }, [cloudMaxes]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -56,9 +39,6 @@ const Profile = () => {
         }
     };
 
-    if (loading) {
-        return <div className="card">Loading profile...</div>;
-    }
 
     return (
         <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'left' }}>
