@@ -19,7 +19,8 @@ const Register = () => {
             await register(email, password);
             navigate('/');
         } catch (err) {
-            setError('Failed to create account. Email may already be in use.');
+            console.error(err);
+            setError(err.message || 'Failed to create account.');
         } finally {
             setLoading(false);
         }

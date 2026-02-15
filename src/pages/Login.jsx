@@ -19,7 +19,8 @@ const Login = () => {
             await login(email, password);
             navigate('/');
         } catch (err) {
-            setError('Failed to login. Check your email and password.');
+            console.error(err);
+            setError(err.message || 'Failed to login.');
         } finally {
             setLoading(false);
         }
