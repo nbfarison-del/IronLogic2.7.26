@@ -22,7 +22,6 @@ export const DataProvider = ({ children }) => {
 
     // Status - Don't show global loader if we have cached data to show
     const [isLoading, setIsLoading] = useState(!cachedData);
-    const [lastUpdated, setLastUpdated] = useState(null);
 
     useEffect(() => {
         if (!user) {
@@ -30,12 +29,14 @@ export const DataProvider = ({ children }) => {
             return;
         }
 
-        setIsLoading(true);
+        // Only show loading if we have absolutely nothing (no cache, no previous fetch)
+        if (!cachedData && workouts.length === 0) {
+            setIsLoading(true);
+        }
 
         // Start all real-time listeners in parallel
         const unsubWorkouts = firestoreService.subscribeToWorkouts(user.id, (data) => {
             setWorkouts(data);
-            setLastUpdated(new Date());
             setIsLoading(false);
         });
 
@@ -66,9 +67,6 @@ export const DataProvider = ({ children }) => {
         // For coaching data, use cache first then update
         firestoreService.getAICoachingData(user.id).then(setCoaching);
 
-        // Update the bootstrap cache periodically with fresh data
-        firestoreService.getBootstrapData(user.id);
-
         return () => {
             unsubWorkouts();
             unsubWeights();
@@ -79,6 +77,29 @@ export const DataProvider = ({ children }) => {
         };
     }, [user]);
 
+    // --- SHADOW CACHE (Debounced Persistence) ---
+    // Writes to localStorage 2 seconds after the last update to avoid blocking the UI thread during interaction.
+    useEffect(() => {
+        if (!user) return;
+
+        const dataToCache = {
+            profile,
+            settings: profile?.settings || { unit: 'kg' },
+            maxes: profile?.maxes || {},
+            workouts: workouts.slice(0, 50), // Only cache the "Head"
+            weights: weights.slice(0, 90),
+            recovery: recovery.slice(0, 90),
+            coaching,
+            goals
+        };
+
+        const timer = setTimeout(() => {
+            localStorage.setItem('ironlogic_bootstrap_cache', JSON.stringify(dataToCache));
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [user, workouts, weights, recovery, goals, profile, coaching]);
+
     const value = useMemo(() => ({
         workouts,
         weights,
@@ -88,10 +109,9 @@ export const DataProvider = ({ children }) => {
         customExercises,
         coaching,
         isLoading,
-        lastUpdated,
         settings: profile?.settings || { unit: 'kg' },
         maxes: profile?.maxes || {}
-    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, isLoading, lastUpdated]);
+    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, isLoading]);
 
     return (
         <DataContext.Provider value={value}>
