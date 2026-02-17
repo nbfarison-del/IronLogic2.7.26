@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useSettings } from '../context/SettingsContext';
-import { defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } from '../config/exerciseConfig';
+import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } from '../data/exercises';
 import ExerciseTools from '../components/ExerciseTools';
 import * as firestoreService from '../services/firestoreService';
 
