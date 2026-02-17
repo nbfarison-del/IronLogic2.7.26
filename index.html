@@ -6,35 +6,6 @@
   <link rel="icon" type="image/svg+xml" href="/vite.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IronLogic</title>
-  <script>
-    // Global Error Handler to catch "White Screen" crashes
-    window.onerror = function (message, source, lineno, colno, error) {
-      // Only show if the root is empty (meaning React didn't render)
-      if (document.getElementById('root').childNodes.length === 0) {
-        const overlay = document.createElement('div');
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100%';
-        overlay.style.height = '100%';
-        overlay.style.background = '#000';
-        overlay.style.color = 'red';
-        overlay.style.zIndex = '9999';
-        overlay.style.padding = '20px';
-        overlay.style.fontFamily = 'monospace';
-        overlay.innerHTML = '<h1>CRITICAL ERROR (White Screen Detector)</h1>' +
-          '<h3>' + message + '</h3>' +
-          '<p>' + source + ':' + lineno + '</p>' +
-          '<pre>' + (error ? error.stack : '') + '</pre>';
-        document.body.appendChild(overlay);
-      }
-    };
-
-    // Also catch unhandled promise rejections (e.g., Firebase init failures)
-    window.onunhandledrejection = function (event) {
-      window.onerror(event.reason ? event.reason.message : 'Unhandled Promise Rejection', '', '', '', event.reason);
-    };
-  </script>
 </head>
 
 <body>
