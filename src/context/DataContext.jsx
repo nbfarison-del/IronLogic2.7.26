@@ -118,13 +118,13 @@ export const DataProvider = ({ children }) => {
             profile,
             settings: profile?.settings || { unit: 'kg' },
             maxes: profile?.maxes || {},
-            workouts: workouts.slice(0, 50), // Only cache the "Head"
-            weights: weights.slice(0, 90),
-            recovery: recovery.slice(0, 90),
+            workouts: (workouts || []).slice(0, 50), // Only cache the "Head"
+            weights: (weights || []).slice(0, 90),
+            recovery: (recovery || []).slice(0, 90),
             coaching,
             goals,
-            plannedWorkouts,
-            notesHistory
+            plannedWorkouts: plannedWorkouts || [],
+            notesHistory: notesHistory || []
         };
 
         const timer = setTimeout(() => {
