@@ -130,7 +130,7 @@ const Profile = () => {
             </div>
             <div className="card" style={{ marginTop: '2rem', border: '1px solid #444', opacity: 0.8 }}>
                 <h3 style={{ fontSize: '0.9rem', color: '#888', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                    Sync Diagnostics
+                    Sync Diagnostics v1.2
                     <span style={{ color: syncStatus === 'online' ? '#4caf50' : '#f44336' }}>● {syncStatus.toUpperCase()}</span>
                 </h3>
 
