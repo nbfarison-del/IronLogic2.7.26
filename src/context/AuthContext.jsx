@@ -16,6 +16,15 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // SAFETY CHECK: If firebaseConfig failed to init, auth will be undefined.
+        if (!auth) {
+            console.error("AUTH OBJECT MISSING: Check Firebase Config / Environment Variables");
+            setLoading(false);
+            // We set loading false so the app renders (and potentially hits ErrorBoundary or just shows empty state)
+            // rather than hanging on white screen
+            return;
+        }
+
         // Listen for auth state changes (handles session persistence)
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
@@ -37,6 +46,7 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (email, password) => {
+        if (!auth) throw new Error("Firebase Auth not initialized");
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             return true;
@@ -47,6 +57,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const register = async (email, password) => {
+        if (!auth) throw new Error("Firebase Auth not initialized");
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             return true;
@@ -57,6 +68,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     const logout = async () => {
+        if (!auth) throw new Error("Firebase Auth not initialized");
         try {
             await signOut(auth);
         } catch (error) {
