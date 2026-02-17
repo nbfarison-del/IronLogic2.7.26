@@ -19,11 +19,22 @@ export const DataProvider = ({ children }) => {
     const [profile, setProfile] = useState(cachedData?.profile || null);
     const [customExercises, setCustomExercises] = useState([]); // Custom exercises don't change often, fetch OK
     const [coaching, setCoaching] = useState(cachedData?.coaching || { program: null, questionnaire: null });
+    const [plannedWorkouts, setPlannedWorkouts] = useState(cachedData?.plannedWorkouts || []);
+    const [notesHistory, setNotesHistory] = useState(cachedData?.notesHistory || []);
+
+    // Sync Status Tracking
+    const [syncStatus, setSyncStatus] = useState(navigator.onLine ? 'online' : 'offline');
 
     // Status - Don't show global loader if we have cached data to show
     const [isLoading, setIsLoading] = useState(!cachedData);
 
     useEffect(() => {
+        const handleOnline = () => setSyncStatus('online');
+        const handleOffline = () => setSyncStatus('offline');
+
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
         if (!user) {
             setIsLoading(false);
             return;
@@ -64,6 +75,9 @@ export const DataProvider = ({ children }) => {
             setCustomExercises(data);
         });
 
+        const unsubPlanned = firestoreService.subscribeToPlannedWorkouts(user.id, setPlannedWorkouts);
+        const unsubNotes = firestoreService.subscribeToCalendarNotes(user.id, setNotesHistory);
+
         // For coaching data, use cache first then update
         firestoreService.getAICoachingData(user.id).then(setCoaching);
 
@@ -74,6 +88,10 @@ export const DataProvider = ({ children }) => {
             unsubGoals();
             unsubProfile();
             unsubCustom();
+            unsubPlanned();
+            unsubNotes();
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
         };
     }, [user]);
 
@@ -90,7 +108,9 @@ export const DataProvider = ({ children }) => {
             weights: weights.slice(0, 90),
             recovery: recovery.slice(0, 90),
             coaching,
-            goals
+            goals,
+            plannedWorkouts,
+            notesHistory
         };
 
         const timer = setTimeout(() => {
@@ -108,10 +128,13 @@ export const DataProvider = ({ children }) => {
         profile,
         customExercises,
         coaching,
+        plannedWorkouts,
+        notesHistory,
         isLoading,
+        syncStatus,
         settings: profile?.settings || { unit: 'kg' },
         maxes: profile?.maxes || {}
-    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, isLoading]);
+    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, isLoading, syncStatus]);
 
     return (
         <DataContext.Provider value={value}>

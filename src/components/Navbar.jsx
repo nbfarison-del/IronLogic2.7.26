@@ -1,8 +1,10 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
+    const { syncStatus } = useData();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -15,7 +17,34 @@ const Navbar = () => {
 
     return (
         <nav>
-            <Link to="/" className="nav-brand">IronLogic</Link>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Link to="/" className="nav-brand" style={{ margin: 0 }}>IronLogic</Link>
+                {user && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: '0.65rem',
+                        color: syncStatus === 'online' ? '#4caf50' : '#f44336',
+                        background: 'rgba(0,0,0,0.3)',
+                        padding: '2px 6px',
+                        borderRadius: '10px',
+                        marginLeft: '0.5rem',
+                        textTransform: 'uppercase',
+                        fontWeight: 'bold',
+                        letterSpacing: '0.5px'
+                    }}>
+                        <div style={{
+                            width: '6px',
+                            height: '6px',
+                            borderRadius: '50%',
+                            background: syncStatus === 'online' ? '#4caf50' : '#f44336',
+                            boxShadow: syncStatus === 'online' ? '0 0 5px #4caf50' : 'none'
+                        }}></div>
+                        {syncStatus}
+                    </div>
+                )}
+            </div>
             <div className="nav-links">
                 {user ? (
                     <>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
+import { useData } from '../context/DataContext';
 import ProgramPlanner from '../components/ProgramPlanner';
 import * as firestoreService from '../services/firestoreService';
 
@@ -12,17 +13,17 @@ console.log('useSettings:', typeof useSettings);
 const CalendarView = () => {
     const { unit } = useSettings();
     const { user } = useAuth();
+    const {
+        workouts,
+        recovery: recoveryHistory,
+        weights: weightHistory,
+        plannedWorkouts,
+        notesHistory,
+        isLoading
+    } = useData();
     const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
-
-    // Data State
-    const [workouts, setWorkouts] = useState([]);
-    const [recoveryHistory, setRecoveryHistory] = useState([]);
-    const [weightHistory, setWeightHistory] = useState([]);
-    const [plannedWorkouts, setPlannedWorkouts] = useState([]);
-    const [notesHistory, setNotesHistory] = useState([]);
-    const [loading, setLoading] = useState(true);
 
     // UI State
     const [isPlanning, setIsPlanning] = useState(false);
@@ -31,42 +32,6 @@ const CalendarView = () => {
     // Input State for Weight
     const [weightInput, setWeightInput] = useState('');
     const [noteInput, setNoteInput] = useState('');
-
-    // Load Data
-    useEffect(() => {
-        const loadData = async () => {
-            if (!user) return;
-            setLoading(true);
-            try {
-                // Parallel fetching for efficiency
-                const [
-                    fetchedWorkouts,
-                    fetchedRecovery,
-                    fetchedWeights,
-                    fetchedPlanned,
-                    fetchedNotes
-                ] = await Promise.all([
-                    firestoreService.getWorkouts(user.id),
-                    firestoreService.getRecovery(user.id),
-                    firestoreService.getBodyWeight(user.id),
-                    firestoreService.getPlannedWorkouts(user.id),
-                    firestoreService.getCalendarNotes(user.id)
-                ]);
-
-                setWorkouts(fetchedWorkouts);
-                setRecoveryHistory(fetchedRecovery);
-                setWeightHistory(fetchedWeights);
-                setPlannedWorkouts(fetchedPlanned);
-                setNotesHistory(fetchedNotes);
-            } catch (error) {
-                console.error('Error loading calendar data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, [user]);
 
     // Sync Weight and Note Input when selected date changes
     useEffect(() => {
@@ -89,10 +54,8 @@ const CalendarView = () => {
             const existingEntry = weightHistory.find(w => w.date === dateStr);
             if (existingEntry) {
                 await firestoreService.updateBodyWeight(user.id, existingEntry.id, newEntry);
-                setWeightHistory(weightHistory.map(w => w.id === existingEntry.id ? { ...newEntry, id: existingEntry.id } : w));
             } else if (weightInput) {
-                const newId = await firestoreService.addBodyWeight(user.id, newEntry);
-                setWeightHistory([...weightHistory, { ...newEntry, id: newId }]);
+                await firestoreService.addBodyWeight(user.id, newEntry);
             }
         } catch (error) {
             console.error('Error saving weight:', error);
@@ -243,8 +206,8 @@ const CalendarView = () => {
     const dayPlanned = plannedWorkouts.filter(p => p.date === selectedDateStr);
     const dayRecovery = recoveryHistory.find(r => r.date === selectedDateStr);
 
-    if (loading) {
-        return <div>Loading calendar...</div>;
+    if (isLoading) {
+        return <div className="card">Syncing calendar...</div>;
     }
 
     if (isPlanning) {

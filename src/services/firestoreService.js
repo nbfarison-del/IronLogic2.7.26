@@ -239,6 +239,17 @@ export const deletePlannedWorkout = async (userId, plannedId) => {
     await deleteDoc(docRef);
 };
 
+export const subscribeToPlannedWorkouts = (userId, callback) => {
+    const plannedRef = collection(db, 'users', userId, 'plannedWorkouts');
+    return onSnapshot(plannedRef, (snapshot) => {
+        const planned = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        callback(planned);
+    });
+};
+
 // ==================== CALENDAR NOTES ====================
 
 export const getCalendarNotes = async (userId) => {
@@ -255,6 +266,17 @@ export const addCalendarNote = async (userId, noteData) => {
     const notesRef = collection(db, 'users', userId, 'calendarNotes');
     const docRef = await addDoc(notesRef, noteData);
     return docRef.id;
+};
+
+export const subscribeToCalendarNotes = (userId, callback) => {
+    const notesRef = collection(db, 'users', userId, 'calendarNotes');
+    return onSnapshot(notesRef, (snapshot) => {
+        const notes = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        callback(notes);
+    });
 };
 
 // ==================== AI PROGRAM & QUESTIONNAIRE ====================
