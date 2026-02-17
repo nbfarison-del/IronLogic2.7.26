@@ -1,15 +1,17 @@
-import { useData } from '../context/DataContext';
+import { useState, useEffect } from 'react';
+import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } from '../data/exercises';
+import { calculateEstimated1RM } from '../utils/calculator';
+import { Link, useLocation } from 'react-router-dom';
+import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
+import ExerciseTools from '../components/ExerciseTools';
+import * as firestoreService from '../services/firestoreService';
+
+console.log('--- WorkoutLog Module Initialized ---');
 
 const WorkoutLog = () => {
     const { unit } = useSettings();
     const { user } = useAuth();
-    const {
-        workouts,
-        maxes,
-        customExercises: cloudCustom,
-        isLoading: contextLoading
-    } = useData();
-
     const location = useLocation();
 
     // Planned Program State
@@ -52,21 +54,40 @@ const WorkoutLog = () => {
     const [notes, setNotes] = useState('');
 
     const [loggedSets, setLoggedSets] = useState([]);
+    const [maxes, setMaxes] = useState({});
+    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
-    // Sync from context
+    // Load Data from Firestore
     useEffect(() => {
-        if (cloudCustom) {
-            setCustomExercises(cloudCustom);
-            setAllExercises([...defaultExercises, ...cloudCustom]);
-        }
-    }, [cloudCustom]);
+        const loadData = async () => {
+            if (!user) return;
 
-    useEffect(() => {
-        const today = new Date().toISOString().split('T')[0];
-        const todayWorkouts = workouts.filter(w => w.date.startsWith(today));
-        setLoggedSets(todayWorkouts);
-    }, [workouts]);
+            setLoading(true);
+            try {
+                // Fetch only today's workouts instead of everything
+                const today = new Date().toISOString().split('T')[0];
+                const workouts = await firestoreService.getWorkouts(user.id, 20); // Get last 20 as fallback/recent
+                const todayWorkouts = workouts.filter(w => w.date.startsWith(today));
+                setLoggedSets(todayWorkouts);
+
+                // Load profile/maxes
+                const profile = await firestoreService.getUserProfile(user.id);
+                if (profile?.maxes) setMaxes(profile.maxes);
+
+                // Load custom exercises
+                const custom = await firestoreService.getCustomExercises(user.id);
+                setCustomExercises(custom);
+                setAllExercises([...defaultExercises, ...custom]);
+            } catch (error) {
+                console.error('Error loading workout data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [user]);
 
     // Load Planned Workout if coming from Calendar
     useEffect(() => {
@@ -287,8 +308,8 @@ const WorkoutLog = () => {
 
     const activeConfig = EXERCISE_CONFIG[selectedExerciseId] || {};
 
-    if (contextLoading && workouts.length === 0) {
-        return <div className="card">Initializing...</div>;
+    if (loading) {
+        return <div className="card">Loading...</div>;
     }
 
     return (

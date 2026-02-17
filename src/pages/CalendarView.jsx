@@ -1,23 +1,28 @@
-import { useData } from '../context/DataContext';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSettings } from '../context/SettingsContext';
+import { useAuth } from '../context/AuthContext';
+import ProgramPlanner from '../components/ProgramPlanner';
+import * as firestoreService from '../services/firestoreService';
+
+console.log('--- CalendarView Module Initialized ---');
+console.log('useAuth:', typeof useAuth);
+console.log('useSettings:', typeof useSettings);
 
 const CalendarView = () => {
     const { unit } = useSettings();
     const { user } = useAuth();
-    const {
-        workouts,
-        weights: weightHistory,
-        recovery: recoveryHistory,
-        goals,
-        isLoading: loading
-    } = useData();
-
     const navigate = useNavigate();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
 
-    // Local state for non-streamed items (planned, notes)
+    // Data State
+    const [workouts, setWorkouts] = useState([]);
+    const [recoveryHistory, setRecoveryHistory] = useState([]);
+    const [weightHistory, setWeightHistory] = useState([]);
     const [plannedWorkouts, setPlannedWorkouts] = useState([]);
     const [notesHistory, setNotesHistory] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     // UI State
     const [isPlanning, setIsPlanning] = useState(false);
@@ -27,36 +32,41 @@ const CalendarView = () => {
     const [weightInput, setWeightInput] = useState('');
     const [noteInput, setNoteInput] = useState('');
 
-    // Load Data for non-streamed items when month changes
+    // Load Data
     useEffect(() => {
-        const loadMonthData = async () => {
+        const loadData = async () => {
             if (!user) return;
+            setLoading(true);
             try {
-                const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-                const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-
-                const startRange = new Date(firstDay);
-                startRange.setDate(startRange.getDate() - 7);
-                const endRange = new Date(lastDay);
-                endRange.setDate(endRange.getDate() + 7);
-
-                const startStr = startRange.toISOString().split('T')[0];
-                const endStr = endRange.toISOString().split('T')[0];
-
-                const [fetchedPlanned, fetchedNotes] = await Promise.all([
-                    firestoreService.getPlannedWorkouts(user.id), // Planned workouts are usually few, can fetch all
+                // Parallel fetching for efficiency
+                const [
+                    fetchedWorkouts,
+                    fetchedRecovery,
+                    fetchedWeights,
+                    fetchedPlanned,
+                    fetchedNotes
+                ] = await Promise.all([
+                    firestoreService.getWorkouts(user.id),
+                    firestoreService.getRecovery(user.id),
+                    firestoreService.getBodyWeight(user.id),
+                    firestoreService.getPlannedWorkouts(user.id),
                     firestoreService.getCalendarNotes(user.id)
                 ]);
 
+                setWorkouts(fetchedWorkouts);
+                setRecoveryHistory(fetchedRecovery);
+                setWeightHistory(fetchedWeights);
                 setPlannedWorkouts(fetchedPlanned);
                 setNotesHistory(fetchedNotes);
             } catch (error) {
-                console.error('Error loading calendar extra data:', error);
+                console.error('Error loading calendar data:', error);
+            } finally {
+                setLoading(false);
             }
         };
 
-        loadMonthData();
-    }, [user, currentDate]);
+        loadData();
+    }, [user]);
 
     // Sync Weight and Note Input when selected date changes
     useEffect(() => {
