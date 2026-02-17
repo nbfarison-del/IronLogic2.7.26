@@ -72,16 +72,13 @@ const CalendarView = () => {
             if (existingEntry) {
                 if (noteInput.trim()) {
                     await firestoreService.updateCalendarNote(user.id, existingEntry.id, { text: noteInput });
-                    setNotesHistory(notesHistory.map(n => n.id === existingEntry.id ? { ...n, text: noteInput } : n));
                 } else {
                     // Delete if empty
                     await firestoreService.deleteCalendarNote(user.id, existingEntry.id);
-                    setNotesHistory(notesHistory.filter(n => n.id !== existingEntry.id));
                 }
             } else if (noteInput.trim()) {
                 const newNote = { date: dateStr, text: noteInput };
-                const newId = await firestoreService.addCalendarNote(user.id, newNote);
-                setNotesHistory([...notesHistory, { ...newNote, id: newId }]);
+                await firestoreService.addCalendarNote(user.id, newNote);
             }
         } catch (error) {
             console.error('Error saving note:', error);
@@ -93,10 +90,8 @@ const CalendarView = () => {
         try {
             if (editingProgram) {
                 await firestoreService.updatePlannedWorkout(user.id, program.id, program);
-                setPlannedWorkouts(plannedWorkouts.map(p => p.id === program.id ? program : p));
             } else {
-                const newId = await firestoreService.addPlannedWorkout(user.id, program);
-                setPlannedWorkouts([...plannedWorkouts, { ...program, id: newId }]);
+                await firestoreService.addPlannedWorkout(user.id, program);
             }
             setIsPlanning(false);
             setEditingProgram(null);
@@ -109,7 +104,6 @@ const CalendarView = () => {
         if (!user || !confirm('Are you sure you want to delete this planned workout?')) return;
         try {
             await firestoreService.deletePlannedWorkout(user.id, id);
-            setPlannedWorkouts(plannedWorkouts.filter(p => p.id !== id));
         } catch (error) {
             console.error('Error deleting planned workout:', error);
         }

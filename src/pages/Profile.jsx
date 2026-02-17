@@ -21,6 +21,13 @@ const Profile = () => {
     });
     const [notifications, setNotifications] = useState('');
 
+    // Sync local state when global stream updates (Live Sync)
+    useEffect(() => {
+        if (syncedMaxes) {
+            setMaxes(syncedMaxes);
+        }
+    }, [syncedMaxes]);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setMaxes(prev => ({ ...prev, [name]: value }));
