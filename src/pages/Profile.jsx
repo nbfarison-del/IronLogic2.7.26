@@ -137,7 +137,7 @@ const Profile = () => {
                 <div style={{ fontSize: '0.75rem', color: '#aaa', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '4px' }}>
                         <span>User ID:</span>
-                        <span style={{ fontFamily: 'monospace' }}>{user.uid.slice(0, 15)}...</span>
+                        <span style={{ fontFamily: 'monospace' }}>{user?.uid ? `${user.uid.slice(0, 15)}...` : 'N/A'}</span>
                     </div>
 
                     {Object.entries(syncTimestamps).map(([key, time]) => (
