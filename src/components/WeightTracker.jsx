@@ -1,6 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useSettings } from '../context/SettingsContext';
 import * as firestoreService from '../services/firestoreService';
 
 const WeightTracker = () => {
