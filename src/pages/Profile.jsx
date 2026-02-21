@@ -4,14 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
 
-console.log('--- Profile Module Initialized ---');
-console.log('useAuth:', typeof useAuth);
-console.log('useSettings:', typeof useSettings);
-
 const Profile = () => {
     const { user } = useAuth();
     const { unit, toggleUnit } = useSettings();
-    const { maxes: syncedMaxes, isLoading, syncStatus, syncTimestamps } = useData();
+    const { maxes: syncedMaxes, isLoading } = useData();
 
     const [maxes, setMaxes] = useState(syncedMaxes || {
         squat: '',
@@ -127,41 +123,6 @@ const Profile = () => {
                         Save Profile
                     </button>
                 </form>
-            </div>
-            <div className="card" style={{ marginTop: '2rem', border: '1px solid #444', opacity: 0.8 }}>
-                <h3 style={{ fontSize: '0.9rem', color: '#888', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
-                    Sync Diagnostics v1.2
-                    <span style={{ color: syncStatus === 'online' ? '#4caf50' : '#f44336' }}>● {syncStatus.toUpperCase()}</span>
-                </h3>
-
-                <div style={{ fontSize: '0.75rem', color: '#aaa', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '4px' }}>
-                        <span>User ID:</span>
-                        <span style={{ fontFamily: 'monospace' }}>
-                            {user?.id ? `${String(user.id).slice(0, 15)}...` : 'N/A'}
-                        </span>
-                    </div>
-
-                    {Object.entries(syncTimestamps).map(([key, time]) => (
-                        <div key={key} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Last {key}:</span>
-                            <span style={{ color: 'var(--primary)' }}>{time}</span>
-                        </div>
-                    ))}
-
-                    <button
-                        className="btn"
-                        style={{ fontSize: '0.7rem', marginTop: '1rem', padding: '4px 8px', background: 'transparent', border: '1px solid #666' }}
-                        onClick={() => {
-                            if (confirm('Clear local cache and refresh?')) {
-                                localStorage.removeItem('ironlogic_bootstrap_cache');
-                                window.location.reload();
-                            }
-                        }}
-                    >
-                        Force Cache Refresh
-                    </button>
-                </div>
             </div>
         </div>
     );
