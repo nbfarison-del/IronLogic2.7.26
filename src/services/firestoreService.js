@@ -70,7 +70,7 @@ export const deleteWorkout = async (userId, workoutId) => {
 };
 
 // Listen for real-time workout updates
-export const subscribeToWorkouts = (userId, callback, limitCount = 50) => {
+export const subscribeToWorkouts = (userId, callback, errorCallback, limitCount = 50) => {
     const workoutsRef = collection(db, 'users', userId, 'workouts');
     const q = query(workoutsRef, orderBy('date', 'desc'), limit(limitCount));
 
@@ -80,7 +80,7 @@ export const subscribeToWorkouts = (userId, callback, limitCount = 50) => {
             ...doc.data()
         }));
         callback(workouts);
-    });
+    }, errorCallback);
 };
 
 // ==================== GOALS ====================
@@ -111,7 +111,7 @@ export const deleteGoal = async (userId, goalId) => {
     await deleteDoc(docRef);
 };
 
-export const subscribeToGoals = (userId, callback) => {
+export const subscribeToGoals = (userId, callback, errorCallback) => {
     const goalsRef = collection(db, 'users', userId, 'goals');
     return onSnapshot(goalsRef, (snapshot) => {
         const goals = snapshot.docs.map(doc => ({
@@ -119,7 +119,7 @@ export const subscribeToGoals = (userId, callback) => {
             ...doc.data()
         }));
         callback(goals);
-    });
+    }, errorCallback);
 };
 
 // ==================== BODY WEIGHT ====================
@@ -156,7 +156,7 @@ export const deleteBodyWeight = async (userId, weightId) => {
     await deleteDoc(docRef);
 };
 
-export const subscribeToBodyWeight = (userId, callback) => {
+export const subscribeToBodyWeight = (userId, callback, errorCallback) => {
     const weightRef = collection(db, 'users', userId, 'bodyWeight');
     const q = query(weightRef, orderBy('date', 'desc'), limit(90));
     return onSnapshot(q, (snapshot) => {
@@ -165,7 +165,7 @@ export const subscribeToBodyWeight = (userId, callback) => {
             ...doc.data()
         })).sort((a, b) => new Date(a.date) - new Date(b.date));
         callback(weights);
-    });
+    }, errorCallback);
 };
 
 // ==================== RECOVERY TRACKING ====================
@@ -199,7 +199,7 @@ export const updateRecovery = async (userId, recoveryId, recoveryData) => {
     await updateDoc(docRef, recoveryData);
 };
 
-export const subscribeToRecovery = (userId, callback) => {
+export const subscribeToRecovery = (userId, callback, errorCallback) => {
     const recoveryRef = collection(db, 'users', userId, 'recovery');
     const q = query(recoveryRef, orderBy('date', 'desc'), limit(90));
     return onSnapshot(q, (snapshot) => {
@@ -208,7 +208,7 @@ export const subscribeToRecovery = (userId, callback) => {
             ...doc.data()
         }));
         callback(recovery);
-    });
+    }, errorCallback);
 };
 
 // ==================== PLANNED WORKOUTS ====================
@@ -239,7 +239,7 @@ export const deletePlannedWorkout = async (userId, plannedId) => {
     await deleteDoc(docRef);
 };
 
-export const subscribeToPlannedWorkouts = (userId, callback) => {
+export const subscribeToPlannedWorkouts = (userId, callback, errorCallback) => {
     const plannedRef = collection(db, 'users', userId, 'plannedWorkouts');
     return onSnapshot(plannedRef, (snapshot) => {
         const planned = snapshot.docs.map(doc => ({
@@ -247,7 +247,7 @@ export const subscribeToPlannedWorkouts = (userId, callback) => {
             ...doc.data()
         }));
         callback(planned);
-    });
+    }, errorCallback);
 };
 
 // ==================== CALENDAR NOTES ====================
@@ -268,7 +268,7 @@ export const addCalendarNote = async (userId, noteData) => {
     return docRef.id;
 };
 
-export const subscribeToCalendarNotes = (userId, callback) => {
+export const subscribeToCalendarNotes = (userId, callback, errorCallback) => {
     const notesRef = collection(db, 'users', userId, 'calendarNotes');
     return onSnapshot(notesRef, (snapshot) => {
         const notes = snapshot.docs.map(doc => ({
@@ -276,7 +276,7 @@ export const subscribeToCalendarNotes = (userId, callback) => {
             ...doc.data()
         }));
         callback(notes);
-    });
+    }, errorCallback);
 };
 
 // ==================== AI PROGRAM & QUESTIONNAIRE ====================
@@ -329,7 +329,7 @@ export const getCustomExercises = async (userId) => {
     }));
 };
 
-export const subscribeToCustomExercises = (userId, callback) => {
+export const subscribeToCustomExercises = (userId, callback, errorCallback) => {
     const exercisesRef = collection(db, 'users', userId, 'customExercises');
     return onSnapshot(exercisesRef, (snapshot) => {
         const exercises = snapshot.docs.map(doc => ({
@@ -337,7 +337,7 @@ export const subscribeToCustomExercises = (userId, callback) => {
             ...doc.data()
         }));
         callback(exercises);
-    });
+    }, errorCallback);
 };
 
 export const addCustomExercise = async (userId, exerciseData) => {

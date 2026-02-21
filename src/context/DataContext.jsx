@@ -25,6 +25,7 @@ export const DataProvider = ({ children }) => {
     // Sync Status Tracking
     const [syncStatus, setSyncStatus] = useState(navigator.onLine ? 'online' : 'offline');
     const [syncTimestamps, setSyncTimestamps] = useState({});
+    const [syncError, setSyncError] = useState(null);
 
     // Status - Don't show global loader if we have cached data to show
     const [isLoading, setIsLoading] = useState(!cachedData);
@@ -32,6 +33,11 @@ export const DataProvider = ({ children }) => {
     useEffect(() => {
         const handleOnline = () => setSyncStatus('online');
         const handleOffline = () => setSyncStatus('offline');
+
+        const handleError = (source) => (err) => {
+            console.error(`${source} Sync Error:`, err);
+            setSyncError(`${source}: ${err.message || 'Unknown error'}`);
+        };
 
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
@@ -51,49 +57,49 @@ export const DataProvider = ({ children }) => {
             setWorkouts(data);
             setSyncTimestamps(prev => ({ ...prev, workouts: new Date().toLocaleTimeString() }));
             setIsLoading(false);
-        });
+        }, handleError('Workouts'));
 
         const unsubWeights = firestoreService.subscribeToBodyWeight(user.id, (data) => {
             setWeights(data);
             setSyncTimestamps(prev => ({ ...prev, weights: new Date().toLocaleTimeString() }));
             setIsLoading(false);
-        });
+        }, handleError('Weights'));
 
         const unsubRecovery = firestoreService.subscribeToRecovery(user.id, (data) => {
             setRecovery(data);
             setSyncTimestamps(prev => ({ ...prev, recovery: new Date().toLocaleTimeString() }));
             setIsLoading(false);
-        });
+        }, handleError('Recovery'));
 
         const unsubGoals = firestoreService.subscribeToGoals(user.id, (data) => {
             setGoals(data);
             setSyncTimestamps(prev => ({ ...prev, goals: new Date().toLocaleTimeString() }));
             setIsLoading(false);
-        });
+        }, handleError('Goals'));
 
         const unsubProfile = firestoreService.subscribeToProfile(user.id, (data) => {
             setProfile(data);
             setSyncTimestamps(prev => ({ ...prev, profile: new Date().toLocaleTimeString() }));
             setIsLoading(false);
-        });
+        }, handleError('Profile'));
 
         const unsubCustom = firestoreService.subscribeToCustomExercises(user.id, (data) => {
             setCustomExercises(data);
             setSyncTimestamps(prev => ({ ...prev, customExercises: new Date().toLocaleTimeString() }));
-        });
+        }, handleError('CustomExercises'));
 
         const unsubPlanned = firestoreService.subscribeToPlannedWorkouts(user.id, (data) => {
             setPlannedWorkouts(data);
             setSyncTimestamps(prev => ({ ...prev, plannedWorkouts: new Date().toLocaleTimeString() }));
-        });
+        }, handleError('PlannedWorkouts'));
 
         const unsubNotes = firestoreService.subscribeToCalendarNotes(user.id, (data) => {
             setNotesHistory(data);
             setSyncTimestamps(prev => ({ ...prev, calendarNotes: new Date().toLocaleTimeString() }));
-        });
+        }, handleError('CalendarNotes'));
 
         // For coaching data, use cache first then update
-        firestoreService.getAICoachingData(user.id).then(setCoaching);
+        firestoreService.getAICoachingData(user.id).then(setCoaching).catch(handleError('Coaching'));
 
         return () => {
             unsubWorkouts();
@@ -147,9 +153,10 @@ export const DataProvider = ({ children }) => {
         isLoading,
         syncStatus,
         syncTimestamps,
+        syncError,
         settings: profile?.settings || { unit: 'kg' },
         maxes: profile?.maxes || {}
-    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, isLoading, syncStatus, syncTimestamps]);
+    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, isLoading, syncStatus, syncTimestamps, syncError]);
 
     return (
         <DataContext.Provider value={value}>
