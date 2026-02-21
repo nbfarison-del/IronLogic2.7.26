@@ -8,12 +8,27 @@ const Profile = () => {
     const { user } = useAuth();
     const { unit, toggleUnit } = useSettings();
     const {
+        workouts,
+        weights,
+        recovery,
+        goals,
+        plannedWorkouts,
+        notesHistory,
         maxes: syncedMaxes,
         isLoading,
         syncStatus,
         syncTimestamps,
         syncError
     } = useData();
+
+    const counts = {
+        workouts: workouts?.length || 0,
+        weights: weights?.length || 0,
+        recovery: recovery?.length || 0,
+        goals: goals?.length || 0,
+        planned: plannedWorkouts?.length || 0,
+        notes: notesHistory?.length || 0
+    };
 
     const [maxes, setMaxes] = useState({
         squat: '',
@@ -170,7 +185,7 @@ const Profile = () => {
                         ) : (
                             Object.entries(syncTimestamps).map(([key, time]) => (
                                 <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
-                                    <span style={{ textTransform: 'capitalize' }}>{key}:</span>
+                                    <span style={{ textTransform: 'capitalize' }}>{key} ({counts[key] || 0}):</span>
                                     <span style={{ color: '#aaa' }}>{time}</span>
                                 </div>
                             ))

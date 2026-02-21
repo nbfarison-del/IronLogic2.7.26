@@ -43,8 +43,11 @@ const WorkoutLog = () => {
     // Filter today's sets from the global syncedWorkouts stream
     const loggedSets = useMemo(() => {
         if (!syncedWorkouts) return [];
-        const today = new Date().toISOString().split('T')[0];
-        return syncedWorkouts.filter(w => w.date.startsWith(today));
+        const today = new Date().toLocaleDateString('en-CA'); // Gets YYYY-MM-DD in local time
+        return syncedWorkouts.filter(w => {
+            const workoutDate = new Date(w.date).toLocaleDateString('en-CA');
+            return workoutDate === today;
+        });
     }, [syncedWorkouts]);
 
     const calculateEstimated1RM = (weight, reps, rpe) => {
