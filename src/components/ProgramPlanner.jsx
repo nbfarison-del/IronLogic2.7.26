@@ -118,9 +118,11 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
         const filteredExercises = plannedExercises.filter(ex => ex.exerciseId);
         if (filteredExercises.length === 0) return alert('Please select an exercise');
 
+        const getDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const todayStr = getDateStr(date);
         onSave({
             id: initialData?.id || Date.now().toString(),
-            date: date.toISOString().split('T')[0],
+            date: todayStr,
             name: programName,
             exercises: filteredExercises
         });

@@ -287,7 +287,20 @@ const Home = () => {
 
                 <div className="card">
                     <h2>Recent Activity</h2>
-                    <p style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No recent activity to show.</p>
+                    {workouts.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                            {workouts.slice(0, 5).map((w, i) => (
+                                <div key={i} style={{ fontSize: '0.9rem', padding: '0.5rem', background: '#222', borderRadius: '4px', borderLeft: '3px solid #666' }}>
+                                    <div style={{ fontWeight: 'bold' }}>{w.exerciseName}</div>
+                                    <div style={{ color: '#aaa', fontSize: '0.8rem' }}>
+                                        {w.date.includes('T') ? w.date.split('T')[0] : w.date} • {w.weight ? `${w.weight}${unit} x ` : ''}{w.reps ? `${w.reps} reps` : (w.duration ? `${w.duration}m` : '')}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No recent activity to show.</p>
+                    )}
                 </div>
             </div>
         </div >

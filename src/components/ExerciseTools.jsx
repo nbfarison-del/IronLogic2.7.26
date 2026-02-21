@@ -130,7 +130,9 @@ const ExerciseTools = ({ exerciseId, exerciseName }) => {
                             {history.map((entry, idx) => (
                                 <div key={entry.id || idx} style={{ background: '#222', padding: '0.6rem', borderRadius: '4px', fontSize: '0.85rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#888', marginBottom: '2px' }}>
-                                        <span>{new Date(entry.date).toLocaleDateString()}</span>
+                                        <div style={{ fontSize: '0.8rem', color: '#aaa' }}>
+                                            {entry.date.includes('T') ? entry.date.split('T')[0] : entry.date}
+                                        </div>
                                         {entry.estimated1RM && <span style={{ color: 'gold' }}>e1RM: {entry.estimated1RM}</span>}
                                     </div>
                                     <div style={{ fontWeight: 'bold' }}>

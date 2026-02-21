@@ -43,7 +43,8 @@ const WorkoutLog = () => {
     // Filter today's sets from the global syncedWorkouts stream
     const loggedSets = useMemo(() => {
         if (!syncedWorkouts) return [];
-        const today = new Date().toLocaleDateString('en-CA'); // Gets YYYY-MM-DD in local time
+        const todayObj = new Date();
+        const today = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
         return syncedWorkouts.filter(w => {
             // w.date is either 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm:ss...'
             const workoutDate = w.date.includes('T') ? w.date.split('T')[0] : w.date;
@@ -107,10 +108,12 @@ const WorkoutLog = () => {
         const exercise = allExercises.find(ex => ex.id === selectedExerciseId);
 
         setSaving(true);
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         try {
             const newEntries = workoutType === 'strength'
                 ? setRows.map(row => ({
-                    date: new Date().toISOString(),
+                    date: todayStr,
                     exerciseId: exercise.id,
                     exerciseName: exercise.name,
                     category: exercise.category,
@@ -125,7 +128,7 @@ const WorkoutLog = () => {
                     notes: notes
                 }))
                 : [{
-                    date: new Date().toISOString(),
+                    date: todayStr,
                     exerciseId: exercise.id,
                     exerciseName: exercise.name,
                     category: exercise.category,

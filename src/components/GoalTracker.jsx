@@ -22,6 +22,8 @@ const GoalTracker = () => {
         e.preventDefault();
         if (!newEventName || !newEventDate || !user) return;
 
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const newEvent = {
             name: newEventName,
             date: newEventDate,
@@ -53,6 +55,8 @@ const GoalTracker = () => {
         if (!text || !user) return;
 
         const event = events.find(ev => ev.id === eventId);
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const newGoal = { id: Date.now(), text, completed: false };
         const updatedEvent = {
             ...event,
@@ -155,7 +159,7 @@ const GoalTracker = () => {
                                 <div>
                                     <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>{ev.name}</h3>
                                     <div style={{ fontSize: '0.9rem', color: '#aaa' }}>
-                                        {new Date(ev.date).toLocaleDateString()}
+                                        {ev.date.includes('T') ? ev.date.split('T')[0] : ev.date}
                                     </div>
                                 </div>
                                 <div style={{ textAlign: 'center', background: '#333', padding: '0.5rem', borderRadius: '6px', minWidth: '80px' }}>

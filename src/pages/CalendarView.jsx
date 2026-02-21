@@ -29,9 +29,14 @@ const CalendarView = () => {
     const [weightInput, setWeightInput] = useState('');
     const [noteInput, setNoteInput] = useState('');
 
+    // Browser-robust YYYY-MM-DD helper
+    const getDateStr = (date) => {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+
     // Sync Weight and Note Input when selected date changes
     useEffect(() => {
-        const dateStr = selectedDate.toLocaleDateString('en-CA');
+        const dateStr = getDateStr(selectedDate);
 
         const weightEntry = weightHistory.find(w => w.date === dateStr);
         setWeightInput(weightEntry ? weightEntry.weight : '');
@@ -43,7 +48,7 @@ const CalendarView = () => {
     const saveWeight = async (e) => {
         e.preventDefault();
         if (!user) return;
-        const dateStr = selectedDate.toLocaleDateString('en-CA');
+        const dateStr = getDateStr(selectedDate);
         const newEntry = { date: dateStr, weight: parseFloat(weightInput) };
 
         try {
@@ -61,7 +66,7 @@ const CalendarView = () => {
     const saveNote = async (e) => {
         e.preventDefault();
         if (!user) return;
-        const dateStr = selectedDate.toLocaleDateString('en-CA');
+        const dateStr = getDateStr(selectedDate);
 
         try {
             const existingEntry = notesHistory.find(n => n.date === dateStr);
@@ -69,7 +74,6 @@ const CalendarView = () => {
                 if (noteInput.trim()) {
                     await firestoreService.updateCalendarNote(user.id, existingEntry.id, { text: noteInput });
                 } else {
-                    // Delete if empty
                     await firestoreService.deleteCalendarNote(user.id, existingEntry.id);
                 }
             } else if (noteInput.trim()) {
@@ -137,17 +141,14 @@ const CalendarView = () => {
         const startDay = getFirstDayOfMonth(currentDate);
         const days = [];
 
-        // Empty cells for offset
         for (let i = 0; i < startDay; i++) {
             days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
         }
 
-        // Days
         for (let d = 1; d <= totalDays; d++) {
             const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
-            const dateStr = date.toLocaleDateString('en-CA');
+            const dateStr = getDateStr(date);
 
-            // Indicators
             const hasWorkout = workouts.some(w => w.date.startsWith(dateStr));
             const hasPlanned = plannedWorkouts.some(p => p.date.startsWith(dateStr));
             const recoveryEntry = recoveryHistory.find(r => r.date.startsWith(dateStr));
@@ -190,12 +191,6 @@ const CalendarView = () => {
         return days;
     };
 
-    // Get Data for Selected Day
-    const selectedDateStr = selectedDate.toLocaleDateString('en-CA');
-    const dayWorkouts = workouts.filter(w => w.date.startsWith(selectedDateStr));
-    const dayPlanned = plannedWorkouts.filter(p => p.date === selectedDateStr);
-    const dayRecovery = recoveryHistory.find(r => r.date === selectedDateStr);
-
     if (isLoading) {
         return <div className="card">Syncing calendar...</div>;
     }
@@ -213,6 +208,11 @@ const CalendarView = () => {
         );
     }
 
+    const selectedDateStr = getDateStr(selectedDate);
+    const dayWorkouts = workouts.filter(w => w.date.startsWith(selectedDateStr));
+    const dayPlanned = plannedWorkouts.filter(p => p.date === selectedDateStr);
+    const dayRecovery = recoveryHistory.find(r => r.date === selectedDateStr);
+
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -224,163 +224,97 @@ const CalendarView = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '2rem' }}>
-
-                {/* Calendar Section */}
-                <div className="card">
+                <div className="card calendar-container">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <button className="btn" onClick={() => changeMonth(-1)}>&lt; Prev</button>
-                        <h2 style={{ margin: 0 }}>
-                            {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                        </h2>
-                        <button className="btn" onClick={() => changeMonth(1)}>Next &gt;</button>
+                        <button className="btn" onClick={() => changeMonth(-1)}>&lt;</button>
+                        <h2>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
+                        <button className="btn" onClick={() => changeMonth(1)}>&gt;</button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', textAlign: 'center' }}>
+                    <div className="calendar-grid" style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(7, 1fr)',
+                        gap: '1px',
+                        background: '#333',
+                        border: '1px solid #333'
+                    }}>
                         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                            <div key={day} style={{ fontWeight: 'bold', color: '#888' }}>{day}</div>
+                            <div key={day} style={{ padding: '0.5rem', textAlign: 'center', background: '#222', fontWeight: 'bold' }}>{day}</div>
                         ))}
                         {renderCalendarDays()}
                     </div>
-
-                    <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem', fontSize: '0.8rem', color: '#aaa', flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)' }}></div> Logged
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2196f3' }}></div> Planned
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#4caf50' }}></div> Recovery
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#9c27b0' }}></div> Body Weight
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ffeb3b' }}></div> Note
-                        </div>
-                    </div>
                 </div>
 
-                {/* Selected Day Detail Section */}
                 <div className="card">
-                    <div style={{ borderBottom: '1px solid #444', paddingBottom: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                        <h2 style={{ margin: 0 }}>
-                            {selectedDate.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                        </h2>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button className="btn btn-primary" onClick={() => navigate('/log')} style={{ fontSize: '0.8rem' }}>Log Workout Here</button>
-                            <button className="btn" onClick={() => setIsPlanning(true)} style={{ fontSize: '0.8rem' }}>Plan Workout Here</button>
-                        </div>
-                    </div>
+                    <h2>Details for {selectedDate.toLocaleDateString()}</h2>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
-
-                        {/* 1. Planned Programs */}
-                        <div style={{ gridColumn: '1 / -1' }}>
-                            <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>📅 Planned Program</h3>
-                            {dayPlanned.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                    {dayPlanned.map(p => (
-                                        <div key={p.id} style={{ padding: '1rem', background: '#222', borderRadius: '8px', borderLeft: '4px solid #2196f3' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                                                <div>
-                                                    <h4 style={{ margin: 0, color: '#2196f3' }}>{p.name}</h4>
-                                                    <div style={{ fontSize: '0.85rem', color: '#aaa', marginTop: '0.2rem' }}>
-                                                        {p.exercises.length} Exercises scheduled
-                                                    </div>
-                                                </div>
-                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                    <button className="btn" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }} onClick={() => startWorkout(p)}>Start Now</button>
-                                                    <button className="btn" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }} onClick={() => { setEditingProgram(p); setIsPlanning(true); }}>Edit</button>
-                                                    <button className="btn" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', color: '#f44336' }} onClick={() => deletePlannedWorkout(p.id)}>Delete</button>
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem', marginTop: '1rem' }}>
-                                                {p.exercises.map((ex, i) => (
-                                                    <div key={i} style={{ fontSize: '0.9rem', color: '#ccc', background: '#1a1a1a', padding: '0.5rem', borderRadius: '4px' }}>
-                                                        <strong>{ex.exerciseName}</strong>: {ex.sets.length} sets
-                                                        {ex.notes && <div style={{ fontSize: '0.75rem', fontStyle: 'italic', color: '#888' }}>{ex.notes}</div>}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p style={{ color: '#666', fontStyle: 'italic' }}>No programs planned for this day.</p>
-                            )}
-                        </div>
-
-                        {/* 2. Workouts Done */}
-                        <div style={{ gridColumn: '1 / -1' }}>
-                            <h3>🏋️ Logged Workouts</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
+                        <div>
+                            <h3>Workouts</h3>
                             {dayWorkouts.length > 0 ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {dayWorkouts.map(w => (
-                                        <div key={w.id} style={{ padding: '0.8rem', background: '#222', borderRadius: '6px', borderLeft: '4px solid var(--primary)' }}>
-                                            <strong>{w.exerciseName}</strong>
-                                            <span style={{ color: '#ccc', marginLeft: '0.5rem' }}>
-                                                {w.type === 'strength'
-                                                    ? `${w.weight} ${unit} x ${w.sets} x ${w.reps}`
-                                                    : `${w.duration} mins`}
-                                            </span>
-                                            {w.estimated1RM && <span style={{ marginLeft: '1rem', fontSize: '0.8rem', color: 'gold', border: '1px solid #444', padding: '2px 4px' }}>e1RM: {w.estimated1RM}</span>}
-                                            {w.notes && <div style={{ fontSize: '0.85rem', color: '#aaa', fontStyle: 'italic', marginTop: '0.2rem' }}>{w.notes}</div>}
+                                    {dayWorkouts.map((w, i) => (
+                                        <div key={i} style={{ padding: '0.5rem', background: '#222', borderRadius: '4px' }}>
+                                            {w.exerciseName}: {w.weight}{unit} x {w.reps}
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <p style={{ color: '#666', fontStyle: 'italic' }}>No workouts logged for this day.</p>
+                                <p style={{ color: '#666', fontStyle: 'italic' }}>No workouts logged.</p>
                             )}
-                        </div>
 
-                        {/* 3. Body Weight Entry */}
-                        <div>
-                            <h3>⚖️ Body Weight</h3>
-                            <form onSubmit={saveWeight} style={{ display: 'flex', gap: '0.5rem' }}>
-                                <input
-                                    type="number"
-                                    step="0.1"
-                                    placeholder={`Weight in ${unit}`}
-                                    value={weightInput}
-                                    onChange={(e) => setWeightInput(e.target.value)}
-                                    style={{ flex: 1 }}
-                                />
-                                <button type="submit" className="btn btn-primary">Save</button>
-                            </form>
-                        </div>
-
-                        {/* 4. Daily Notes */}
-                        <div>
-                            <h3>📝 Daily Notes</h3>
-                            <form onSubmit={saveNote} style={{ display: 'flex', gap: '0.5rem' }}>
-                                <input
-                                    type="text"
-                                    placeholder="Add a note for this day..."
-                                    value={noteInput}
-                                    onChange={(e) => setNoteInput(e.target.value)}
-                                    style={{ flex: 1 }}
-                                />
-                                <button type="submit" className="btn">Save</button>
-                            </form>
-                        </div>
-
-                        {/* 5. Recovery Score */}
-                        <div>
-                            <h3>🔋 Recovery</h3>
-                            {dayRecovery ? (
-                                <div style={{
-                                    fontSize: '1.5rem',
-                                    fontWeight: 'bold',
-                                    color: dayRecovery.score >= 8 ? '#4caf50' : dayRecovery.score >= 5 ? '#ff9800' : '#f44336'
-                                }}>
-                                    {dayRecovery.score}/10
+                            <h3 style={{ marginTop: '1.5rem' }}>Planned Sessions</h3>
+                            {dayPlanned.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {dayPlanned.map((p, i) => (
+                                        <div key={i} style={{ padding: '0.5rem', background: '#222', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span>{p.planName}</span>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => startWorkout(p)}>Start</button>
+                                                <button className="btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => { setEditingProgram(p); setIsPlanning(true); }}>Edit</button>
+                                                <button className="btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', background: '#f44336' }} onClick={() => deletePlannedWorkout(p.id)}>Delete</button>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
                             ) : (
-                                <p style={{ color: '#666', fontStyle: 'italic' }}>No recovery score logged.</p>
+                                <p style={{ color: '#666', fontStyle: 'italic' }}>No programs planned.</p>
                             )}
                         </div>
 
+                        <div style={{ borderLeft: '1px solid #333', paddingLeft: '2rem' }}>
+                            <h3>Body Metrics</h3>
+                            <form onSubmit={saveWeight} style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ fontSize: '0.8rem' }}>Body Weight ({unit})</label>
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
+                                    <input
+                                        type="number"
+                                        step="0.1"
+                                        value={weightInput}
+                                        onChange={(e) => setWeightInput(e.target.value)}
+                                        style={{ flex: 1, padding: '0.5rem' }}
+                                    />
+                                    <button type="submit" className="btn btn-primary">Save</button>
+                                </div>
+                            </form>
+
+                            {dayRecovery && (
+                                <div style={{ padding: '1rem', background: '#222', borderRadius: '8px', borderLeft: `4px solid ${dayRecovery.score >= 8 ? '#4caf50' : dayRecovery.score >= 5 ? '#ff9800' : '#f44336'}` }}>
+                                    <div style={{ fontWeight: 'bold' }}>Recovery Score: {dayRecovery.score}/10</div>
+                                </div>
+                            )}
+
+                            <h3 style={{ marginTop: '1.5rem' }}>Notes</h3>
+                            <form onSubmit={saveNote}>
+                                <textarea
+                                    value={noteInput}
+                                    onChange={(e) => setNoteInput(e.target.value)}
+                                    placeholder="Add notes for this day..."
+                                    style={{ width: '100%', height: '80px', padding: '0.5rem', background: '#222', color: 'white', border: '1px solid #444', borderRadius: '4px' }}
+                                />
+                                <button type="submit" className="btn" style={{ marginTop: '0.5rem', width: '100%' }}>Save Note</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>

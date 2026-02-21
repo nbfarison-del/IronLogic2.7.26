@@ -3,6 +3,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
+import { getFirestore, clearIndexedDbPersistence } from 'firebase/firestore';
 
 const Profile = () => {
     const { user } = useAuth();
@@ -44,10 +45,24 @@ const Profile = () => {
         }
     }, [syncedMaxes]);
 
-    const handleForceRefresh = () => {
-        if (window.confirm('This will clear the local cache and force a fresh sync from the server. Continue?')) {
-            localStorage.clear();
-            window.location.reload();
+    // Browser-robust YYYY-MM-DD
+    const getTodayStr = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const handleForceRefresh = async () => {
+        if (window.confirm('This will wipe all local caches (including Firebase persistence) and force a full reload. Continue?')) {
+            try {
+                localStorage.clear();
+                const db = getFirestore();
+                await clearIndexedDbPersistence(db);
+                // Redirect to root to avoid 404 on re-load
+                window.location.href = '/';
+            } catch (err) {
+                console.error('Refresh error:', err);
+                window.location.reload();
+            }
         }
     };
 

@@ -65,7 +65,8 @@ const RecoveryTracker = () => {
 
     useEffect(() => {
         if (history.length > 0) {
-            const todayStr = new Date().toLocaleDateString('en-CA');
+            const d = new Date();
+            const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             const todayEntry = history.find(h => h.date.startsWith(todayStr));
             if (todayEntry) {
                 setTodayScore(todayEntry.score);
@@ -76,7 +77,6 @@ const RecoveryTracker = () => {
             }
         }
     }, [history]);
-
 
     const handleChange = (e) => {
         setMetrics({
@@ -89,7 +89,7 @@ const RecoveryTracker = () => {
         if (!user || saving) return;
 
         setSaving(true);
-        // ... calculation logic ...
+        // ... (existing calculation logic)
         let rhrStress = 0;
         if (metrics.rhr <= 50) rhrStress = 0;
         else if (metrics.rhr >= 100) rhrStress = 5;
@@ -116,7 +116,8 @@ const RecoveryTracker = () => {
         setMessage(getRandomQuote(score));
 
         // Optimistic UI handled by DataContext subscription
-        const todayStr = new Date().toLocaleDateString('en-CA');
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const newEntry = { date: todayStr, score: score };
         const existingIdx = history.findIndex(h => h.date.startsWith(todayStr));
 

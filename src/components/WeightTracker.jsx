@@ -14,7 +14,8 @@ const WeightTracker = () => {
 
     useEffect(() => {
         if (history.length > 0) {
-            const todayStr = new Date().toLocaleDateString('en-CA');
+            const d = new Date();
+            const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             const todayEntry = history.find(h => h.date.startsWith(todayStr));
             if (todayEntry) {
                 setTodayWeight(todayEntry.weight);
@@ -29,7 +30,8 @@ const WeightTracker = () => {
         if (!user || !todayWeight || saving) return;
 
         setSaving(true);
-        const todayStr = new Date().toLocaleDateString('en-CA');
+        const d = new Date();
+        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const newWeight = parseFloat(todayWeight);
         const newEntry = { date: todayStr, weight: newWeight };
 
