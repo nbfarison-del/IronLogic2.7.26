@@ -225,7 +225,7 @@ const WorkoutLog = () => {
                                     {setRows.map((row, idx) => (
                                         <div key={row.id} style={{ display: 'grid', gridTemplateColumns: '1fr 0.5fr 0.5fr 0.5fr 30px', gap: '0.5rem', marginBottom: '0.5rem' }}>
                                             <input type="number" value={row.weight} onChange={e => handleRowChange(row.id, 'weight', e.target.value)} placeholder={`Weight (${unit})`} required />
-                                            <input type="number" value={row.reps} onChange={handleRowChange.bind(null, row.id, 'reps')} placeholder="Reps" required />
+                                            <input type="number" value={row.reps} onChange={e => handleRowChange(row.id, 'reps', e.target.value)} placeholder="Reps" required />
                                             <input type="number" step="0.5" value={row.targetRpe} onChange={e => handleRowChange(row.id, 'targetRpe', e.target.value)} placeholder="T-RPE" />
                                             <input type="number" step="0.5" value={row.actualRpe} onChange={e => handleRowChange(row.id, 'actualRpe', e.target.value)} placeholder="A-RPE" required />
                                             {idx > 0 && <button type="button" onClick={() => handleRemoveRow(row.id)} style={{ color: 'red' }}>&times;</button>}
