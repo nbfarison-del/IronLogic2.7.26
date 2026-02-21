@@ -21,6 +21,7 @@ const Profile = () => {
         deadlift: '',
         ohp: ''
     });
+    const [notifications, setNotifications] = useState('');
 
     useEffect(() => {
         if (syncedMaxes) {
