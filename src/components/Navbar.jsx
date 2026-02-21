@@ -44,6 +44,19 @@ const Navbar = () => {
                         {syncStatus}
                     </div>
                 )}
+                {user && (
+                    <div style={{
+                        fontSize: '0.6rem',
+                        color: '#888',
+                        marginLeft: '0.25rem',
+                        maxWidth: '120px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                    }} title={user.email}>
+                        {user.email}
+                    </div>
+                )}
             </div>
             <div className="nav-links">
                 {user ? (
