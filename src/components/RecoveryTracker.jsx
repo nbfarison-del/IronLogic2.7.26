@@ -65,7 +65,7 @@ const RecoveryTracker = () => {
 
     useEffect(() => {
         if (history.length > 0) {
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = new Date().toLocaleDateString('en-CA');
             const todayEntry = history.find(h => h.date === todayStr);
             if (todayEntry) {
                 setTodayScore(todayEntry.score);
@@ -116,7 +116,7 @@ const RecoveryTracker = () => {
         setMessage(getRandomQuote(score));
 
         // Optimistic UI handled by DataContext subscription
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toLocaleDateString('en-CA');
         const newEntry = { date: todayStr, score: score };
         const existingIdx = history.findIndex(h => h.date === todayStr);
 

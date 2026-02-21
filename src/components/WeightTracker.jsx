@@ -14,7 +14,7 @@ const WeightTracker = () => {
 
     useEffect(() => {
         if (history.length > 0) {
-            const todayStr = new Date().toISOString().split('T')[0];
+            const todayStr = new Date().toLocaleDateString('en-CA');
             const todayEntry = history.find(h => h.date === todayStr);
             if (todayEntry) {
                 setTodayWeight(todayEntry.weight);
@@ -29,7 +29,7 @@ const WeightTracker = () => {
         if (!user || !todayWeight || saving) return;
 
         setSaving(true);
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayStr = new Date().toLocaleDateString('en-CA');
         const newWeight = parseFloat(todayWeight);
         const newEntry = { date: todayStr, weight: newWeight };
 

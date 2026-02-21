@@ -98,8 +98,10 @@ export const DataProvider = ({ children }) => {
             setSyncTimestamps(prev => ({ ...prev, calendarNotes: new Date().toLocaleTimeString() }));
         }, handleError('CalendarNotes'));
 
-        // For coaching data, use cache first then update
-        firestoreService.getAICoachingData(user.id).then(setCoaching).catch(handleError('Coaching'));
+        const unsubCoaching = firestoreService.subscribeToAICoachingData(user.id, (data) => {
+            setCoaching(data);
+            setSyncTimestamps(prev => ({ ...prev, coaching: new Date().toLocaleTimeString() }));
+        }, handleError('Coaching'));
 
         return () => {
             unsubWorkouts();
@@ -110,6 +112,7 @@ export const DataProvider = ({ children }) => {
             unsubCustom();
             unsubPlanned();
             unsubNotes();
+            unsubCoaching();
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };

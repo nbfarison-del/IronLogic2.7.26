@@ -292,6 +292,21 @@ export const getAICoachingData = async (userId) => {
     };
 };
 
+export const subscribeToAICoachingData = (userId, callback, errorCallback) => {
+    const docRef = doc(db, 'users', userId, 'aiProgram', 'data');
+    return onSnapshot(docRef, (docSnap) => {
+        if (!docSnap.exists()) {
+            callback({ program: null, questionnaire: null });
+        } else {
+            const data = docSnap.data();
+            callback({
+                program: data.program || null,
+                questionnaire: data.questionnaire || null
+            });
+        }
+    }, errorCallback);
+};
+
 export const getAIProgram = async (userId) => {
     const data = await getAICoachingData(userId);
     return data.program;

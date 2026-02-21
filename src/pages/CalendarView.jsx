@@ -6,10 +6,6 @@ import { useData } from '../context/DataContext';
 import ProgramPlanner from '../components/ProgramPlanner';
 import * as firestoreService from '../services/firestoreService';
 
-console.log('--- CalendarView Module Initialized ---');
-console.log('useAuth:', typeof useAuth);
-console.log('useSettings:', typeof useSettings);
-
 const CalendarView = () => {
     const { unit } = useSettings();
     const { user } = useAuth();
@@ -35,7 +31,7 @@ const CalendarView = () => {
 
     // Sync Weight and Note Input when selected date changes
     useEffect(() => {
-        const dateStr = selectedDate.toISOString().split('T')[0];
+        const dateStr = selectedDate.toLocaleDateString('en-CA');
 
         const weightEntry = weightHistory.find(w => w.date === dateStr);
         setWeightInput(weightEntry ? weightEntry.weight : '');
@@ -47,7 +43,7 @@ const CalendarView = () => {
     const saveWeight = async (e) => {
         e.preventDefault();
         if (!user) return;
-        const dateStr = selectedDate.toISOString().split('T')[0];
+        const dateStr = selectedDate.toLocaleDateString('en-CA');
         const newEntry = { date: dateStr, weight: parseFloat(weightInput) };
 
         try {
@@ -65,7 +61,7 @@ const CalendarView = () => {
     const saveNote = async (e) => {
         e.preventDefault();
         if (!user) return;
-        const dateStr = selectedDate.toISOString().split('T')[0];
+        const dateStr = selectedDate.toLocaleDateString('en-CA');
 
         try {
             const existingEntry = notesHistory.find(n => n.date === dateStr);
@@ -149,7 +145,7 @@ const CalendarView = () => {
         // Days
         for (let d = 1; d <= totalDays; d++) {
             const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = date.toLocaleDateString('en-CA');
 
             // Indicators
             const hasWorkout = workouts.some(w => w.date.startsWith(dateStr));
@@ -195,7 +191,7 @@ const CalendarView = () => {
     };
 
     // Get Data for Selected Day
-    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+    const selectedDateStr = selectedDate.toLocaleDateString('en-CA');
     const dayWorkouts = workouts.filter(w => w.date.startsWith(selectedDateStr));
     const dayPlanned = plannedWorkouts.filter(p => p.date === selectedDateStr);
     const dayRecovery = recoveryHistory.find(r => r.date === selectedDateStr);
