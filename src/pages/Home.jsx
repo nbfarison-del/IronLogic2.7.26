@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import * as firestoreService from '../services/firestoreService';
 import { exercises as allExercises } from '../data/exercises';
 import { calculateEstimated1RM } from '../utils/calculator';
@@ -42,6 +43,7 @@ import { useData } from '../context/DataContext';
 
 const Home = () => {
     const { user } = useAuth();
+    const { unit } = useSettings();
     const {
         workouts,
         weights: weightHistory,
