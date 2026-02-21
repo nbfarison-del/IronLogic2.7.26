@@ -149,10 +149,10 @@ const CalendarView = () => {
 
             // Indicators
             const hasWorkout = workouts.some(w => w.date.startsWith(dateStr));
-            const hasPlanned = plannedWorkouts.some(p => p.date === dateStr);
-            const recoveryEntry = recoveryHistory.find(r => r.date === dateStr);
-            const hasWeight = weightHistory.some(w => w.date === dateStr);
-            const hasNote = notesHistory.some(n => n.date === dateStr);
+            const hasPlanned = plannedWorkouts.some(p => p.date.startsWith(dateStr));
+            const recoveryEntry = recoveryHistory.find(r => r.date.startsWith(dateStr));
+            const hasWeight = weightHistory.some(w => w.date.startsWith(dateStr));
+            const hasNote = notesHistory.some(n => n.date.startsWith(dateStr));
 
             const isSelected = isSameDay(date, selectedDate);
             const isToday = isSameDay(date, new Date());

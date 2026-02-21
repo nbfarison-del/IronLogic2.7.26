@@ -15,7 +15,7 @@ const WeightTracker = () => {
     useEffect(() => {
         if (history.length > 0) {
             const todayStr = new Date().toLocaleDateString('en-CA');
-            const todayEntry = history.find(h => h.date === todayStr);
+            const todayEntry = history.find(h => h.date.startsWith(todayStr));
             if (todayEntry) {
                 setTodayWeight(todayEntry.weight);
             } else {
@@ -34,7 +34,7 @@ const WeightTracker = () => {
         const newEntry = { date: todayStr, weight: newWeight };
 
         // Optimistic UI handled by DataContext subscription
-        const existingIdx = history.findIndex(h => h.date === todayStr);
+        const existingIdx = history.findIndex(h => h.date.startsWith(todayStr));
 
         try {
             if (existingIdx >= 0) {

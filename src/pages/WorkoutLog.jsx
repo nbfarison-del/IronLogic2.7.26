@@ -45,7 +45,8 @@ const WorkoutLog = () => {
         if (!syncedWorkouts) return [];
         const today = new Date().toLocaleDateString('en-CA'); // Gets YYYY-MM-DD in local time
         return syncedWorkouts.filter(w => {
-            const workoutDate = new Date(w.date).toLocaleDateString('en-CA');
+            // w.date is either 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm:ss...'
+            const workoutDate = w.date.includes('T') ? w.date.split('T')[0] : w.date;
             return workoutDate === today;
         });
     }, [syncedWorkouts]);
