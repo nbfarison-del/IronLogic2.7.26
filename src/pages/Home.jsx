@@ -248,7 +248,9 @@ const Home = () => {
                             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem', background: '#222', borderRadius: '6px', borderLeft: '4px solid gold' }}>
                                 <div>
                                     <div style={{ fontWeight: 'bold' }}>{pr.exerciseName}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#aaa' }}>{new Date(pr.date).toLocaleDateString()}</div>
+                                    <div style={{ fontSize: '0.8rem', color: '#aaa' }}>
+                                        {pr.date.includes('T') ? pr.date.split('T')[0] : pr.date}
+                                    </div>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'gold' }}>{pr.estimated1RM} <span style={{ fontSize: '0.8rem' }}>e1RM</span></div>
