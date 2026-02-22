@@ -178,7 +178,11 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>User ID:</span>
-                        <span style={{ color: '#888', fontSize: '0.7rem' }}>{user?.id ? `${user.id.substring(0, 8)}...` : 'N/A'}</span>
+                        <span style={{ color: '#888', fontSize: '0.65rem', wordBreak: 'break-all', marginLeft: '1rem' }}>{user?.id || 'N/A'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>App Version:</span>
+                        <span style={{ color: '#888' }}>v1.2.5 (Sync Unlocked)</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Firestore Status:</span>
