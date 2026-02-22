@@ -427,11 +427,19 @@ export const forceSyncNetwork = async () => {
 export const testFirestoreConnection = async (userId) => {
     const testRef = doc(db, 'users', userId, 'profile', 'connectionTest');
     try {
-        await setDoc(testRef, { lastTest: new Date().toISOString(), status: 'ok' }, { merge: true });
+        // Wrap setDoc in a timeout promise
+        const timeout = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('TIMEOUT: Server did not respond in 10s')), 10000)
+        );
+
+        await Promise.race([
+            setDoc(testRef, { lastTest: new Date().toISOString(), status: 'ok' }, { merge: true }),
+            timeout
+        ]);
         return { success: true };
     } catch (error) {
         console.error('Connection test failed:', error);
-        return { success: false, code: error.code, message: error.message };
+        return { success: false, code: error.code || 'timeout', message: error.message };
     }
 };
 

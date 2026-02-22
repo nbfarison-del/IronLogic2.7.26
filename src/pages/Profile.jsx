@@ -39,6 +39,8 @@ const Profile = () => {
     });
     const [notifications, setNotifications] = useState('');
 
+    const [isTesting, setIsTesting] = useState(false);
+
     useEffect(() => {
         if (syncedMaxes) {
             setMaxes(syncedMaxes);
@@ -238,6 +240,7 @@ const Profile = () => {
                         </button>
                         <button
                             onClick={async () => {
+                                setIsTesting(true);
                                 try {
                                     const result = await firestoreService.testFirestoreConnection(user.id);
                                     if (result.success) {
@@ -247,16 +250,21 @@ const Profile = () => {
                                     }
                                 } catch (err) {
                                     alert('Failed to run test. Check your internet connection.');
+                                } finally {
+                                    setIsTesting(false);
                                 }
                             }}
                             className="btn btn-primary"
+                            disabled={isTesting}
                             style={{
                                 flex: 3,
                                 fontSize: '0.8rem',
-                                padding: '0.5rem'
+                                padding: '0.5rem',
+                                opacity: isTesting ? 0.7 : 1,
+                                cursor: isTesting ? 'not-allowed' : 'pointer'
                             }}
                         >
-                            Test Cloud Connection
+                            {isTesting ? 'Testing...' : 'Test Cloud Connection'}
                         </button>
                     </div>
                     <div style={{ marginTop: '0.5rem' }}>
