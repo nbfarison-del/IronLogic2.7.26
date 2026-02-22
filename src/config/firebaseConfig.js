@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { initializeFirestore, getFirestore } from 'firebase/firestore';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -26,7 +26,12 @@ try {
 
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
-    db = getFirestore(app);
+
+    // Force Long-Polling to bypass firewall/WebSocket blocks
+    db = initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        useFetchStreams: false // More compatible with old proxies
+    });
 
     // Enable Multi-Tab Persistence
     import('firebase/firestore').then(({ enableMultiTabIndexedDbPersistence }) => {

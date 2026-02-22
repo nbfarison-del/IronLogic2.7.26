@@ -184,7 +184,7 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: 'var(--primary)' }}>v1.3.0 (Mega Debug Lock)</span>
+                        <span style={{ color: 'var(--primary)' }}>v1.3.1 (Firewall Bypass)</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Firestore Status:</span>
