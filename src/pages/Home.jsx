@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
 import { exercises as allExercises } from '../data/exercises';
 import { calculateEstimated1RM } from '../utils/calculator';
@@ -9,41 +10,22 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import RecoveryTracker from '../components/RecoveryTracker';
 import WeightTracker from '../components/WeightTracker';
 import GoalTracker from '../components/GoalTracker';
-
 import { generateProgram } from '../services/ProgramGenerator';
 
 // DOTS Utilities
 const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
-    // DOTS Coefficients (Male)
     const mCoeffs = [-0.000001093, 0.0007391293, -0.191875104, 24.0900756, -307.75076];
-    // DOTS Coefficients (Female)
     const fCoeffs = [-0.0000010706, 0.0005158568, -0.1126655495, 13.6175032, -57.96288];
-
     const c = isMale ? mCoeffs : fCoeffs;
-    const w = bodyWeight * 2.20462; // Convert kg to lbs for DOTS formula usually? Wait, DOTS is usually KG.
-    // Standard DOTS uses KG.
-    // Formula: Score = WeightLifted * 500 / (c1*bw^4 + c2*bw^3 + c3*bw^2 + c4*bw + c5)
-    // Actually standard DOTS coefficients are for KG.
-    // Male:
-    // A = -0.0000010930
-    // B = 0.0007391293
-    // C = -0.1918751040
-    // D = 24.0900756000
-    // E = -307.7507600000
-
-    // Denominator = A*bw^4 + B*bw^3 + C*bw^2 + D*bw + E
     const bw = bodyWeight;
     const denom = c[0] * Math.pow(bw, 4) + c[1] * Math.pow(bw, 3) + c[2] * Math.pow(bw, 2) + c[3] * bw + c[4];
-
     if (denom === 0) return 0;
     return (liftWeight * 500) / denom;
 };
 
-import { useData } from '../context/DataContext';
-
 const Home = () => {
     const { user } = useAuth();
-    const { unit } = useSettings();
+    const { unit: appUnit } = useSettings();
     const {
         workouts,
         weights: weightHistory,
@@ -72,16 +54,10 @@ const Home = () => {
         }
     }, [coaching, user]);
 
-    // --- Recent PRs Calculation (Memoized) ---
-    // Optimized: Firestore already returns workouts sorted by date desc
     const recentPRs = useMemo(() => {
         const prList = [];
         const maxes = {};
-
-        // data from bootstrap is 50 latest, sorted desc.
-        // To find PRs, we process chronologically (oldest to newest)
         const chronological = [...workouts].reverse();
-
         chronological.forEach(w => {
             if (w.type === 'strength' && w.estimated1RM) {
                 const exId = w.exerciseId;
@@ -89,7 +65,6 @@ const Home = () => {
                 if (w.estimated1RM > currentMax) {
                     const increase = w.estimated1RM - currentMax;
                     maxes[exId] = w.estimated1RM;
-
                     prList.push({
                         ...w,
                         increase: increase > 0 && currentMax > 0 ? increase : 0,
@@ -98,36 +73,26 @@ const Home = () => {
                 }
             }
         });
-
         return prList.reverse().slice(0, 10);
     }, [workouts]);
 
-
-    // --- DOTS Graph Data (Memoized O(N+M) Optimization) ---
     const dotsData = useMemo(() => {
         if (weightHistory.length === 0 || workouts.length === 0) return [];
-
-        // firestoreService ensures weightHistory is asc and workouts is desc (we'll reverse it)
         const sortedWeights = weightHistory;
         const sortedWorkouts = [...workouts].reverse();
-
         const data = [];
         let workoutIdx = 0;
         const currentMaxes = { squat: 0, bench: 0, deadlift: 0 };
-
         const squatIds = ['bb_squat', 'bb_front_squat', 'ssb_squat'];
         const benchIds = ['bb_bench'];
         const dlIds = ['bb_deadlift', 'sumo_deadlift'];
 
         sortedWeights.forEach(bwEntry => {
             const bwDate = new Date(bwEntry.date);
-
-            // Catch up workouts up to this BW entry date
             while (workoutIdx < sortedWorkouts.length) {
                 const w = sortedWorkouts[workoutIdx];
                 const wDate = new Date(w.date);
                 if (wDate > bwDate) break;
-
                 if (w.estimated1RM) {
                     if (squatIds.includes(w.exerciseId)) currentMaxes.squat = Math.max(currentMaxes.squat, w.estimated1RM);
                     if (benchIds.includes(w.exerciseId)) currentMaxes.bench = Math.max(currentMaxes.bench, w.estimated1RM);
@@ -135,7 +100,6 @@ const Home = () => {
                 }
                 workoutIdx++;
             }
-
             if (currentMaxes.squat > 0 && currentMaxes.bench > 0 && currentMaxes.deadlift > 0) {
                 const total = currentMaxes.squat + currentMaxes.bench + currentMaxes.deadlift;
                 const dots = getDOTSScore(parseFloat(bwEntry.weight), total, true);
@@ -147,24 +111,21 @@ const Home = () => {
                 });
             }
         });
-
         return data.slice(-30);
     }, [workouts, weightHistory]);
-
 
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
                 <div style={{ textAlign: 'center' }}>
-                    <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '40px', height: '40px', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }}></div>
+                    <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }}></div>
                     <p>Loading Dashboard...</p>
-                    <style>{`
-                        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                    `}</style>
+                    <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
                 </div>
             </div>
         );
     }
+
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -174,45 +135,39 @@ const Home = () => {
                 Train like a Champion Today!
             </p>
 
-            {/* AI Program Card */}
-            {
-                aiProgram && (
-                    <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                                <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
-                                <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
-                            </div>
-                            <Link to="/questionnaire">
-                                <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
-                            </Link>
+            {aiProgram && (
+                <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
+                            <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
                         </div>
-
-                        <div style={{ marginTop: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
-                            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                                {aiProgram.weeks[0]?.days.map((day, i) => (
-                                    <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
-                                        <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
-                                        <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
-                                            {day.exercises.slice(0, 3).map((ex, j) => (
-                                                <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
-                                            ))}
-                                            {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
-                                        </ul>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
-                            Load Program into Planner
-                        </button>
+                        <Link to="/questionnaire">
+                            <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
+                        </Link>
                     </div>
-                )
-            }
+                    <div style={{ marginTop: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
+                        <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                            {aiProgram.weeks[0]?.days.map((day, i) => (
+                                <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
+                                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
+                                    <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
+                                        {day.exercises.slice(0, 3).map((ex, j) => (
+                                            <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
+                                        ))}
+                                        {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
+                                    </ul>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
+                        Load Program into Planner
+                    </button>
+                </div>
+            )}
 
-            {/* DOTS Chart */}
             <div className="card" style={{ marginBottom: '2rem' }}>
                 <h2>Powerlifting DOTS Progress</h2>
                 {dotsData.length > 1 ? (
@@ -278,7 +233,6 @@ const Home = () => {
                         <button className="btn btn-primary" style={{ marginTop: '1rem' }}>Log Now</button>
                     </Link>
                 </div>
-
                 <div className="card">
                     <h2>View Progress</h2>
                     <p>See your stats and improvements over time.</p>
@@ -286,7 +240,6 @@ const Home = () => {
                         <button className="btn" style={{ marginTop: '1rem' }}>View Dashboard</button>
                     </Link>
                 </div>
-
                 <div className="card">
                     <h2>Recent Activity</h2>
                     {workouts.length > 0 ? (
@@ -295,7 +248,7 @@ const Home = () => {
                                 <div key={i} style={{ fontSize: '0.9rem', padding: '0.5rem', background: '#222', borderRadius: '4px', borderLeft: '3px solid #666' }}>
                                     <div style={{ fontWeight: 'bold' }}>{w.exerciseName}</div>
                                     <div style={{ color: '#aaa', fontSize: '0.8rem' }}>
-                                        {w.date.includes('T') ? w.date.split('T')[0] : w.date} • {w.weight ? `${w.weight}${unit} x ` : ''}{w.reps ? `${w.reps} reps` : (w.duration ? `${w.duration}m` : '')}
+                                        {w.date.includes('T') ? w.date.split('T')[0] : w.date} • {w.weight ? `${w.weight}${appUnit} x ` : ''}{w.reps ? `${w.reps} reps` : (w.duration ? `${w.duration}m` : '')}
                                     </div>
                                 </div>
                             ))}
@@ -305,7 +258,7 @@ const Home = () => {
                     )}
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 
