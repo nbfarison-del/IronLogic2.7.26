@@ -184,7 +184,7 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>v1.4.0 (Sync Recovery Pro)</span>
+                        <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>v1.4.1 (Sync Stabilization)</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>System Time:</span>

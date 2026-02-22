@@ -28,11 +28,17 @@ try {
     auth = getAuth(app);
 
     // Force Hard Long-Polling to bypass firewall/WebSocket blocks
-    db = initializeFirestore(app, {
-        experimentalForceLongPolling: true, // Force HTTPS instead of WebSockets
-        experimentalAutoDetectLongPolling: true,
-        useFetchStreams: false
-    });
+    try {
+        db = initializeFirestore(app, {
+            experimentalForceLongPolling: true, // Force HTTPS instead of WebSockets
+            experimentalAutoDetectLongPolling: true,
+            useFetchStreams: false
+        });
+        console.log("Firestore initialized with Long Polling.");
+    } catch (e) {
+        console.warn("initializeFirestore failed, falling back to getFirestore:", e);
+        db = getFirestore(app);
+    }
 
     // Enable Multi-Tab Persistence
     import('firebase/firestore').then(({ enableMultiTabIndexedDbPersistence }) => {
