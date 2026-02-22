@@ -53,54 +53,54 @@ export const DataProvider = ({ children }) => {
         }
 
         // Start all real-time listeners in parallel
-        const unsubWorkouts = firestoreService.subscribeToWorkouts(user.id, (data) => {
+        const unsubWorkouts = firestoreService.subscribeToWorkouts(user.id, (data, meta) => {
             setWorkouts(data);
-            setSyncTimestamps(prev => ({ ...prev, workouts: new Date().toLocaleTimeString() }));
+            setSyncTimestamps(prev => ({ ...prev, workouts: { ...meta, time: new Date().toLocaleTimeString() } }));
             setIsLoading(false);
         }, handleError('Workouts'));
 
-        const unsubWeights = firestoreService.subscribeToBodyWeight(user.id, (data) => {
+        const unsubWeights = firestoreService.subscribeToBodyWeight(user.id, (data, meta) => {
             setWeights(data);
-            setSyncTimestamps(prev => ({ ...prev, weights: new Date().toLocaleTimeString() }));
+            setSyncTimestamps(prev => ({ ...prev, weights: { ...meta, time: new Date().toLocaleTimeString() } }));
             setIsLoading(false);
         }, handleError('Weights'));
 
-        const unsubRecovery = firestoreService.subscribeToRecovery(user.id, (data) => {
+        const unsubRecovery = firestoreService.subscribeToRecovery(user.id, (data, meta) => {
             setRecovery(data);
-            setSyncTimestamps(prev => ({ ...prev, recovery: new Date().toLocaleTimeString() }));
+            setSyncTimestamps(prev => ({ ...prev, recovery: { ...meta, time: new Date().toLocaleTimeString() } }));
             setIsLoading(false);
         }, handleError('Recovery'));
 
-        const unsubGoals = firestoreService.subscribeToGoals(user.id, (data) => {
+        const unsubGoals = firestoreService.subscribeToGoals(user.id, (data, meta) => {
             setGoals(data);
-            setSyncTimestamps(prev => ({ ...prev, goals: new Date().toLocaleTimeString() }));
+            setSyncTimestamps(prev => ({ ...prev, goals: { ...meta, time: new Date().toLocaleTimeString() } }));
             setIsLoading(false);
         }, handleError('Goals'));
 
-        const unsubProfile = firestoreService.subscribeToProfile(user.id, (data) => {
+        const unsubProfile = firestoreService.subscribeToProfile(user.id, (data, meta) => {
             setProfile(data);
-            setSyncTimestamps(prev => ({ ...prev, profile: new Date().toLocaleTimeString() }));
+            setSyncTimestamps(prev => ({ ...prev, profile: { ...meta, time: new Date().toLocaleTimeString() } }));
             setIsLoading(false);
         }, handleError('Profile'));
 
-        const unsubCustom = firestoreService.subscribeToCustomExercises(user.id, (data) => {
+        const unsubCustom = firestoreService.subscribeToCustomExercises(user.id, (data, meta) => {
             setCustomExercises(data);
-            setSyncTimestamps(prev => ({ ...prev, customExercises: new Date().toLocaleTimeString() }));
+            setSyncTimestamps(prev => ({ ...prev, customExercises: { ...meta, time: new Date().toLocaleTimeString() } }));
         }, handleError('CustomExercises'));
 
-        const unsubPlanned = firestoreService.subscribeToPlannedWorkouts(user.id, (data) => {
+        const unsubPlanned = firestoreService.subscribeToPlannedWorkouts(user.id, (data, meta) => {
             setPlannedWorkouts(data);
-            setSyncTimestamps(prev => ({ ...prev, plannedWorkouts: new Date().toLocaleTimeString() }));
+            setSyncTimestamps(prev => ({ ...prev, plannedWorkouts: { ...meta, time: new Date().toLocaleTimeString() } }));
         }, handleError('PlannedWorkouts'));
 
-        const unsubNotes = firestoreService.subscribeToCalendarNotes(user.id, (data) => {
+        const unsubNotes = firestoreService.subscribeToCalendarNotes(user.id, (data, meta) => {
             setNotesHistory(data);
-            setSyncTimestamps(prev => ({ ...prev, calendarNotes: new Date().toLocaleTimeString() }));
+            setSyncTimestamps(prev => ({ ...prev, calendarNotes: { ...meta, time: new Date().toLocaleTimeString() } }));
         }, handleError('CalendarNotes'));
 
-        const unsubCoaching = firestoreService.subscribeToAICoachingData(user.id, (data) => {
+        const unsubCoaching = firestoreService.subscribeToAICoachingData(user.id, (data, meta) => {
             setCoaching(data);
-            setSyncTimestamps(prev => ({ ...prev, coaching: new Date().toLocaleTimeString() }));
+            setSyncTimestamps(prev => ({ ...prev, coaching: { ...meta, time: new Date().toLocaleTimeString() } }));
         }, handleError('Coaching'));
 
         return () => {

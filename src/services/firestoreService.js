@@ -30,11 +30,14 @@ export const updateUserProfile = async (userId, profileData) => {
     await setDoc(docRef, profileData, { merge: true });
 };
 
-export const subscribeToProfile = (userId, callback) => {
+export const subscribeToProfile = (userId, callback, errorCallback) => {
     const docRef = doc(db, 'users', userId, 'profile', 'data');
     return onSnapshot(docRef, (docSnap) => {
-        callback(docSnap.exists() ? docSnap.data() : null);
-    });
+        callback(docSnap.exists() ? docSnap.data() : null, {
+            fromCache: docSnap.metadata.fromCache,
+            hasPendingWrites: docSnap.metadata.hasPendingWrites
+        });
+    }, errorCallback);
 };
 
 // ==================== WORKOUTS ====================
@@ -79,7 +82,11 @@ export const subscribeToWorkouts = (userId, callback, errorCallback, limitCount 
             id: doc.id,
             ...doc.data()
         }));
-        callback(workouts);
+        callback(workouts, {
+            fromCache: snapshot.metadata.fromCache,
+            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+            count: snapshot.size
+        });
     }, errorCallback);
 };
 
@@ -118,7 +125,11 @@ export const subscribeToGoals = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(goals);
+        callback(goals, {
+            fromCache: snapshot.metadata.fromCache,
+            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+            count: snapshot.size
+        });
     }, errorCallback);
 };
 
@@ -164,7 +175,11 @@ export const subscribeToBodyWeight = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         })).sort((a, b) => new Date(a.date) - new Date(b.date));
-        callback(weights);
+        callback(weights, {
+            fromCache: snapshot.metadata.fromCache,
+            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+            count: snapshot.size
+        });
     }, errorCallback);
 };
 
@@ -207,7 +222,11 @@ export const subscribeToRecovery = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(recovery);
+        callback(recovery, {
+            fromCache: snapshot.metadata.fromCache,
+            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+            count: snapshot.size
+        });
     }, errorCallback);
 };
 
@@ -246,7 +265,11 @@ export const subscribeToPlannedWorkouts = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(planned);
+        callback(planned, {
+            fromCache: snapshot.metadata.fromCache,
+            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+            count: snapshot.size
+        });
     }, errorCallback);
 };
 
@@ -275,7 +298,11 @@ export const subscribeToCalendarNotes = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(notes);
+        callback(notes, {
+            fromCache: snapshot.metadata.fromCache,
+            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+            count: snapshot.size
+        });
     }, errorCallback);
 };
 
@@ -296,12 +323,18 @@ export const subscribeToAICoachingData = (userId, callback, errorCallback) => {
     const docRef = doc(db, 'users', userId, 'aiProgram', 'data');
     return onSnapshot(docRef, (docSnap) => {
         if (!docSnap.exists()) {
-            callback({ program: null, questionnaire: null });
+            callback({ program: null, questionnaire: null }, {
+                fromCache: docSnap.metadata.fromCache,
+                hasPendingWrites: docSnap.metadata.hasPendingWrites
+            });
         } else {
             const data = docSnap.data();
             callback({
                 program: data.program || null,
                 questionnaire: data.questionnaire || null
+            }, {
+                fromCache: docSnap.metadata.fromCache,
+                hasPendingWrites: docSnap.metadata.hasPendingWrites
             });
         }
     }, errorCallback);
@@ -351,7 +384,11 @@ export const subscribeToCustomExercises = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(exercises);
+        callback(exercises, {
+            fromCache: snapshot.metadata.fromCache,
+            hasPendingWrites: snapshot.metadata.hasPendingWrites,
+            count: snapshot.size
+        });
     }, errorCallback);
 };
 

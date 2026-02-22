@@ -202,10 +202,22 @@ const Profile = () => {
                         {Object.entries(syncTimestamps || {}).length === 0 ? (
                             <div style={{ color: '#666' }}>No live updates received yet.</div>
                         ) : (
-                            Object.entries(syncTimestamps).map(([key, time]) => (
-                                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
-                                    <span style={{ textTransform: 'capitalize' }}>{key} ({counts[key] || 0}):</span>
-                                    <span style={{ color: '#aaa' }}>{time}</span>
+                            Object.entries(syncTimestamps).map(([key, meta]) => (
+                                <div key={key} style={{ padding: '5px 0', borderBottom: '1px solid #222' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span style={{ textTransform: 'capitalize', fontWeight: 'bold' }}>{key} ({counts[key] || 0}):</span>
+                                        <span style={{ color: '#aaa', fontSize: '0.75rem' }}>{meta.time}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '2px', fontSize: '0.7rem' }}>
+                                        <span style={{ color: meta.fromCache ? '#ffa726' : '#4caf50' }}>
+                                            {meta.fromCache ? '● Local Cache' : '● Cloud Verified'}
+                                        </span>
+                                        {meta.hasPendingWrites && (
+                                            <span style={{ color: '#f44336', fontWeight: 'bold' }}>
+                                                ⚠️ {meta.pendingCount || 'Pending'} Upload
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             ))
                         )}
