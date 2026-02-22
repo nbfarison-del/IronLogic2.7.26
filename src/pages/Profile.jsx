@@ -223,21 +223,40 @@ const Profile = () => {
                         )}
                     </div>
 
-                    <button
-                        onClick={handleForceRefresh}
-                        className="btn"
-                        style={{
-                            marginTop: '1.5rem',
-                            width: '100%',
-                            background: '#333',
-                            fontSize: '0.8rem',
-                            padding: '0.5rem'
-                        }}
-                    >
-                        Hard Refresh Sync
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
+                        <button
+                            onClick={handleForceRefresh}
+                            className="btn"
+                            style={{
+                                flex: 2,
+                                background: '#333',
+                                fontSize: '0.8rem',
+                                padding: '0.5rem'
+                            }}
+                        >
+                            Hard Refresh Sync
+                        </button>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await firestoreService.forceSyncNetwork();
+                                    alert('Network sync resumed! Checking for uploads...');
+                                } catch (err) {
+                                    alert('Failed to resume network. Check your internet connection.');
+                                }
+                            }}
+                            className="btn btn-primary"
+                            style={{
+                                flex: 3,
+                                fontSize: '0.8rem',
+                                padding: '0.5rem'
+                            }}
+                        >
+                            Resume Network Sync
+                        </button>
+                    </div>
                     <p style={{ fontSize: '0.7rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
-                        Clears local cache and reloads from server
+                        Hard Refresh clears cache; Resume Network kicks the connection.
                     </p>
                 </div>
             </div>

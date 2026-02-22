@@ -11,7 +11,9 @@ import {
     where,
     orderBy,
     limit,
-    onSnapshot
+    onSnapshot,
+    disableNetwork,
+    enableNetwork
 } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
 
@@ -409,6 +411,17 @@ export const getSettings = async (userId) => {
 export const updateSettings = async (userId, settings) => {
     const docRef = doc(db, 'users', userId, 'profile', 'data');
     await setDoc(docRef, { settings }, { merge: true });
+};
+
+export const forceSyncNetwork = async () => {
+    try {
+        await disableNetwork(db);
+        await enableNetwork(db);
+        return true;
+    } catch (error) {
+        console.error('Force sync failed:', error);
+        throw error;
+    }
 };
 
 // ==================== BOOTSTRAP ====================
