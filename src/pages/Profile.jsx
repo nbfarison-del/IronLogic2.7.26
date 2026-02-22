@@ -184,7 +184,7 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#888' }}>v1.2.5 (Sync Unlocked)</span>
+                        <span style={{ color: 'var(--primary)' }}>v1.3.0 (Mega Debug Lock)</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Firestore Status:</span>
@@ -240,18 +240,31 @@ const Profile = () => {
                         </button>
                         <button
                             onClick={async () => {
+                                console.log('--- DIAGNOSTIC: Test Cloud Connection Clicked ---');
+                                if (!user || !user.id) {
+                                    alert('❌ ERROR: User session invalid. Please log out and log back in.');
+                                    return;
+                                }
+
+                                alert('TEST STARTING: Watch if the button changes to "Testing...". If it does not change, the app is frozen.');
+
                                 setIsTesting(true);
                                 try {
+                                    console.log('DIAGNOSTIC: Calling service for UID:', user.id);
                                     const result = await firestoreService.testFirestoreConnection(user.id);
+                                    console.log('DIAGNOSTIC: Result received:', result);
+
                                     if (result.success) {
-                                        alert('✅ CONNECTION SUCCESS! Your PC can talk to the cloud. If you still see "Pending Uploads", Firestore is likely still draining its local queue. Wait 30 seconds.');
+                                        alert('✅ CONNECTION SUCCESS!\n\nYour browser CAN write to the Cloud. If data is missing on the phone, look at the "Pending Upload" count below. It may take 30-60s to flush the queue.');
                                     } else {
                                         alert(`❌ CONNECTION FAILED!\n\nCode: ${result.code}\nMessage: ${result.message}\n\nThis confirms the server is rejecting your data.`);
                                     }
                                 } catch (err) {
-                                    alert('Failed to run test. Check your internet connection.');
+                                    console.error('DIAGNOSTIC: Catch block hit:', err);
+                                    alert(`🚨 CRITICAL ERROR: ${err.message}`);
                                 } finally {
                                     setIsTesting(false);
+                                    console.log('--- DIAGNOSTIC: Test Completed ---');
                                 }
                             }}
                             className="btn btn-primary"
