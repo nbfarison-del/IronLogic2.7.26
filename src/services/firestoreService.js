@@ -424,6 +424,17 @@ export const forceSyncNetwork = async () => {
     }
 };
 
+export const testFirestoreConnection = async (userId) => {
+    const testRef = doc(db, 'users', userId, 'profile', 'connectionTest');
+    try {
+        await setDoc(testRef, { lastTest: new Date().toISOString(), status: 'ok' }, { merge: true });
+        return { success: true };
+    } catch (error) {
+        console.error('Connection test failed:', error);
+        return { success: false, code: error.code, message: error.message };
+    }
+};
+
 // ==================== BOOTSTRAP ====================
 
 const BOOTSTRAP_CACHE_KEY = 'ironlogic_bootstrap_cache';

@@ -239,10 +239,14 @@ const Profile = () => {
                         <button
                             onClick={async () => {
                                 try {
-                                    await firestoreService.forceSyncNetwork();
-                                    alert('Network sync resumed! Checking for uploads...');
+                                    const result = await firestoreService.testFirestoreConnection(user.id);
+                                    if (result.success) {
+                                        alert('✅ CONNECTION SUCCESS! Your PC can talk to the cloud. If you still see "Pending Uploads", Firestore is likely still draining its local queue. Wait 30 seconds.');
+                                    } else {
+                                        alert(`❌ CONNECTION FAILED!\n\nCode: ${result.code}\nMessage: ${result.message}\n\nThis confirms the server is rejecting your data.`);
+                                    }
                                 } catch (err) {
-                                    alert('Failed to resume network. Check your internet connection.');
+                                    alert('Failed to run test. Check your internet connection.');
                                 }
                             }}
                             className="btn btn-primary"
@@ -252,11 +256,33 @@ const Profile = () => {
                                 padding: '0.5rem'
                             }}
                         >
+                            Test Cloud Connection
+                        </button>
+                    </div>
+                    <div style={{ marginTop: '0.5rem' }}>
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await firestoreService.forceSyncNetwork();
+                                    alert('Network sync resumed! Checking for uploads...');
+                                } catch (err) {
+                                    alert('Failed to resume network.');
+                                }
+                            }}
+                            className="btn"
+                            style={{
+                                width: '100%',
+                                fontSize: '0.8rem',
+                                padding: '0.5rem',
+                                background: '#222',
+                                border: '1px solid #444'
+                            }}
+                        >
                             Resume Network Sync
                         </button>
                     </div>
                     <p style={{ fontSize: '0.7rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
-                        Hard Refresh clears cache; Resume Network kicks the connection.
+                        Test Connection reveals the EXACT error code blocking your sync.
                     </p>
                 </div>
             </div>
