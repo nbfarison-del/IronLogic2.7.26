@@ -184,7 +184,11 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: 'var(--primary)' }}>v1.3.1 (Firewall Bypass)</span>
+                        <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>v1.4.0 (Sync Recovery Pro)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>System Time:</span>
+                        <span style={{ color: '#888' }}>{new Date().toLocaleTimeString()}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Firestore Status:</span>
@@ -280,7 +284,7 @@ const Profile = () => {
                             {isTesting ? 'Testing...' : 'Test Cloud Connection'}
                         </button>
                     </div>
-                    <div style={{ marginTop: '0.5rem' }}>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
                         <button
                             onClick={async () => {
                                 try {
@@ -292,14 +296,41 @@ const Profile = () => {
                             }}
                             className="btn"
                             style={{
-                                width: '100%',
+                                flex: 1,
                                 fontSize: '0.8rem',
                                 padding: '0.5rem',
                                 background: '#222',
                                 border: '1px solid #444'
                             }}
                         >
-                            Resume Network Sync
+                            Resume Network
+                        </button>
+                        <button
+                            onClick={async () => {
+                                if (window.confirm('NUCLEAR OPTION: This will forcefully terminate all Firestore tasks and wipe ONLY the local database cache. Your workout data in the cloud is safe. Use this if your sync is permanently stuck. Continue?')) {
+                                    try {
+                                        const { terminate, clearIndexedDbPersistence } = await import('firebase/firestore');
+                                        const dbInstance = (await import('../config/firebaseConfig')).db;
+                                        await terminate(dbInstance);
+                                        await clearIndexedDbPersistence(dbInstance);
+                                        alert('Cache Nuked! Redirecting to refresh...');
+                                        window.location.href = '/profile';
+                                    } catch (err) {
+                                        alert('Nuclear reset failed. Hard Refresh instead.');
+                                        window.location.reload();
+                                    }
+                                }
+                            }}
+                            className="btn"
+                            style={{
+                                flex: 2,
+                                fontSize: '0.8rem',
+                                padding: '0.5rem',
+                                background: '#b71c1c',
+                                border: '1px solid #ff5252'
+                            }}
+                        >
+                            Nuclear Reset
                         </button>
                     </div>
                     <p style={{ fontSize: '0.7rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>

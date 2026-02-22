@@ -27,10 +27,11 @@ try {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
 
-    // Force Long-Polling to bypass firewall/WebSocket blocks
+    // Force Hard Long-Polling to bypass firewall/WebSocket blocks
     db = initializeFirestore(app, {
+        experimentalForceLongPolling: true, // Force HTTPS instead of WebSockets
         experimentalAutoDetectLongPolling: true,
-        useFetchStreams: false // More compatible with old proxies
+        useFetchStreams: false
     });
 
     // Enable Multi-Tab Persistence
