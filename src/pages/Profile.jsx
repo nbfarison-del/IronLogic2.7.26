@@ -40,6 +40,8 @@ const Profile = () => {
     const [notifications, setNotifications] = useState('');
 
     const [isTesting, setIsTesting] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState('Idle');
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         if (syncedMaxes) {
@@ -51,6 +53,33 @@ const Profile = () => {
     const getTodayStr = () => {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const handleTestConnection = async () => {
+        if (!user || !user.id) {
+            setError('User session invalid');
+            return;
+        }
+
+        setIsTesting(true);
+        setConnectionStatus('Testing...');
+        setError(null);
+
+        try {
+            const result = await firestoreService.testFirestoreConnection(user.id);
+            if (result.success) {
+                setConnectionStatus('Online');
+                setError(null);
+            } else {
+                setConnectionStatus('Failed');
+                setError(`${result.code}: ${result.message}`);
+            }
+        } catch (err) {
+            setConnectionStatus('Error');
+            setError(err.message);
+        } finally {
+            setIsTesting(false);
+        }
     };
 
     const handleForceRefresh = async () => {
@@ -184,7 +213,22 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.9.0 (Extreme Audit)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v2.0.0 (Super Trace)</span>
+                    </div>
+
+                    {/* Tier 1: Connection Trace (The Truth) */}
+                    <div style={{ margin: '8px 0', padding: '8px', background: '#212121', borderRadius: '4px', border: '1px solid #ff5252' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#ff5252' }}>⚠️ FIREBASE AUTH TRACE</span>
+                        </div>
+                        <div style={{ fontSize: '0.65rem' }}>
+                            Status: <span style={{ color: connectionStatus === 'Online' ? '#00e676' : '#ff5252' }}>{connectionStatus || 'Idle'}</span>
+                        </div>
+                        {error && (
+                            <div style={{ marginTop: '4px', padding: '4px', background: '#000', color: '#ff5252', fontSize: '0.6rem', fontFamily: 'monospace', overflow: 'auto' }}>
+                                ERROR: {error}
+                            </div>
+                        )}
                     </div>
 
                     {/* Tier 1: Environment Audit */}
@@ -301,113 +345,110 @@ const Profile = () => {
                             Hard Refresh Sync
                         </button>
                         <button
-                            onClick={async () => {
-                                console.log('--- DIAGNOSTIC: Test Cloud Connection Clicked ---');
-                                if (!user || !user.id) {
-                                    alert('❌ ERROR: User session invalid. Please log out and log back in.');
-                                    return;
-                                }
-
-                                alert('TEST STARTING: Watch if the button changes to "Testing...". If it does not change, the app is frozen.');
-
-                                setIsTesting(true);
-                                try {
-                                    console.log('DIAGNOSTIC: Calling service for UID:', user.id);
-                                    const result = await firestoreService.testFirestoreConnection(user.id);
-                                    console.log('DIAGNOSTIC: Result received:', result);
-
-                                    if (result.success) {
-                                        alert('✅ CONNECTION SUCCESS!\n\nYour browser CAN write to the Cloud. If data is missing on the phone, look at the "Pending Upload" count below. It may take 30-60s to flush the queue.');
-                                    } else {
-                                        alert(`❌ CONNECTION FAILED!\n\nCode: ${result.code}\nMessage: ${result.message}\n\nThis confirms the server is rejecting your data.`);
-                                    }
-                                } catch (err) {
-                                    console.error('DIAGNOSTIC: Catch block hit:', err);
-                                    alert(`🚨 CRITICAL ERROR: ${err.message}`);
-                                } finally {
-                                    setIsTesting(false);
-                                    console.log('--- DIAGNOSTIC: Test Completed ---');
-                                }
-                            }}
-                            className="btn btn-primary"
+                            onClick={handleTestConnection}
                             disabled={isTesting}
+                            className="btn btn-primary"
                             style={{
                                 flex: 3,
+                                background: connectionStatus === 'Online' ? '#00e676' : '#1e3a8a',
                                 fontSize: '0.8rem',
                                 padding: '0.5rem',
-                                opacity: isTesting ? 0.7 : 1,
+                                color: 'white',
                                 cursor: isTesting ? 'not-allowed' : 'pointer'
                             }}
                         >
                             {isTesting ? 'Testing...' : 'Test Cloud Connection'}
                         </button>
                     </div>
-                    <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
-                        <button
-                            onClick={async () => {
-                                try {
-                                    await firestoreService.forceSyncNetwork();
-                                    alert('Network sync resumed! Checking for uploads...');
-                                } catch (err) {
-                                    alert('Failed to resume network.');
-                                }
-                            }}
-                            className="btn"
-                            style={{
-                                flex: 1,
-                                fontSize: '0.8rem',
-                                padding: '0.5rem',
-                                background: '#222',
-                                border: '1px solid #444'
-                            }}
-                        >
-                            Resume Network
-                        </button>
-                        <button
-                            onClick={async () => {
-                                if (window.confirm('PURGE EVERYTHING: This will unregister all Service Workers and wipe LocalStorage. Use this if the site feels "stale" or old versions keep coming back. Continue?')) {
-                                    try {
-                                        // 1. Unregister Service Workers
-                                        if ('serviceWorker' in navigator) {
-                                            const registrations = await navigator.serviceWorker.getRegistrations();
-                                            for (let registration of registrations) {
-                                                await registration.unregister();
-                                            }
-                                        }
-                                        // 2. Clear Local Storage
-                                        localStorage.clear();
-                                        // 3. Firestore reset (if possible)
-                                        const { terminate, clearIndexedDbPersistence } = await import('firebase/firestore');
-                                        const dbInstance = (await import('../config/firebaseConfig')).db;
-                                        await terminate(dbInstance);
-                                        await clearIndexedDbPersistence(dbInstance);
 
-                                        alert('System Purged! Refreshing...');
-                                        window.location.href = '/profile';
-                                    } catch (err) {
-                                        alert('Purge had issues. Hard Refreshing instead.');
-                                        window.location.reload();
-                                    }
-                                }
-                            }}
-                            className="btn"
-                            style={{
-                                flex: 2,
-                                fontSize: '0.8rem',
-                                padding: '0.5rem',
-                                background: '#311b92',
-                                border: '1px solid #7e57c2'
-                            }}
-                        >
-                            Purge Cache & Workers
-                        </button>
-                    </div>
-                    <p style={{ fontSize: '0.7rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
-                        Test Connection reveals the EXACT error code blocking your sync.
-                    </p>
+                    {error && (
+                        <div style={{ marginTop: '0.5rem' }}>
+                            <button
+                                onClick={() => {
+                                    const diag = `v2.0.0 | ${window.location.hostname} | ${error}`;
+                                    navigator.clipboard.writeText(diag);
+                                    alert('Diagnostic Report copied!');
+                                }}
+                                style={{
+                                    width: '100%',
+                                    fontSize: '0.65rem',
+                                    background: '#111',
+                                    padding: '4px',
+                                    border: '1px solid #ff5252',
+                                    color: '#ff5252'
+                                }}
+                            >
+                                Copy Trace Report 📋
+                            </button>
+                        </div>
+                    )}
                 </div>
+                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                    <button
+                        onClick={async () => {
+                            try {
+                                await firestoreService.forceSyncNetwork();
+                                alert('Network sync resumed! Checking for uploads...');
+                            } catch (err) {
+                                alert('Failed to resume network.');
+                            }
+                        }}
+                        className="btn"
+                        style={{
+                            flex: 1,
+                            fontSize: '0.8rem',
+                            padding: '0.5rem',
+                            background: '#222',
+                            border: '1px solid #444'
+                        }}
+                    >
+                        Resume Network
+                    </button>
+                    <button
+                        onClick={async () => {
+                            if (window.confirm('PURGE EVERYTHING: This will unregister all Service Workers and wipe LocalStorage. Use this if the site feels "stale" or old versions keep coming back. Continue?')) {
+                                try {
+                                    // 1. Unregister Service Workers
+                                    if ('serviceWorker' in navigator) {
+                                        const registrations = await navigator.serviceWorker.getRegistrations();
+                                        for (let registration of registrations) {
+                                            await registration.unregister();
+                                        }
+                                    }
+                                    // 2. Clear Local Storage
+                                    localStorage.clear();
+                                    // 3. Firestore reset (if possible)
+                                    const { terminate, clearIndexedDbPersistence } = await import('firebase/firestore');
+                                    const dbInstance = (await import('../config/firebaseConfig')).db;
+                                    await terminate(dbInstance);
+                                    await clearIndexedDbPersistence(dbInstance);
+
+                                    alert('System Purged! Refreshing...');
+                                    window.location.href = '/profile';
+                                } catch (err) {
+                                    alert('Purge had issues. Hard Refreshing instead.');
+                                    window.location.reload();
+                                }
+                            }
+                        }}
+                        className="btn"
+                        style={{
+                            flex: 2,
+                            fontSize: '0.8rem',
+                            padding: '0.5rem',
+                            background: '#311b92',
+                            border: '1px solid #7e57c2'
+                        }}
+                    >
+                        Purge Cache & Workers
+                    </button>
+                </div>
+                <p style={{ fontSize: '0.7rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
+                    Test Connection reveals the EXACT error code blocking your sync.
+                </p>
             </div>
         </div>
+        </div >
     );
 };
 
