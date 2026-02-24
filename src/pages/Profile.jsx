@@ -213,7 +213,7 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v2.0.0 (Super Trace)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v2.0.2 (Super Trace)</span>
                     </div>
 
                     {/* Tier 1: Connection Trace (The Truth) */}
@@ -231,56 +231,9 @@ const Profile = () => {
                         )}
                     </div>
 
-                    {/* Tier 1: Environment Audit */}
-                    <div style={{ margin: '8px 0', padding: '8px', background: '#111', borderRadius: '4px', border: '1px solid #333' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #222', paddingBottom: '4px', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#aaa' }}>1. Environment (Vercel)</span>
-                            <span style={{ color: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID ? '#00e676' : '#ffea00', fontSize: '0.7rem' }}>
-                                {import.meta.env.VITE_FIREBASE_MEASUREMENT_ID ? '7/7' : '6/7'}
-                            </span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
-                            <span>MEASUREMENT_ID:</span>
-                            <span style={{ color: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID ? '#00e676' : '#ff5252' }}>
-                                {import.meta.env.VITE_FIREBASE_MEASUREMENT_ID ? 'DETECTED ✅' : 'MISSING ❌'}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Tier 2: SDK Execution Logic */}
-                    <div style={{ margin: '8px 0', padding: '8px', background: '#111', borderRadius: '4px', border: '1px solid #333' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #222', paddingBottom: '4px', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#aaa' }}>2. Active Configuration</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
-                            <span>SDK State:</span>
-                            <span style={{ color: '#00e676' }}>LOCKED & ARMED 🦾</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginTop: '4px' }}>
-                            <span>Fallback (MEASURE):</span>
-                            <span style={{ color: '#00e676' }}>ACTIVE ✅ (G-28...)</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginTop: '4px' }}>
-                            <span>Protocol:</span>
-                            <span style={{ color: '#00e676' }}>HTTPS (Long Polling)</span>
-                        </div>
-                    </div>
-
-                    {/* Tier 3: Domain Authorization */}
-                    <div style={{ margin: '8px 0', padding: '8px', background: '#111', borderRadius: '4px', border: '1px solid #333' }}>
-                        <div style={{ display: 'flex', borderBottom: '1px solid #222', paddingBottom: '4px', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#aaa' }}>3. Domain Security</span>
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: '#888' }}>
-                            Host: <span style={{ color: '#00e676' }}>{window.location.hostname}</span>
-                        </div>
-                        <div style={{ fontSize: '0.65rem', color: '#666', marginTop: '2px' }}>
-                            {window.location.hostname.startsWith('www.') ? 'WWW Cluster Detected' : 'Root Domain Only'}
-                        </div>
-                    </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Hostname:</span>
-                        <span style={{ color: '#888' }}>{window.location.hostname}</span>
+                        <span style={{ color: '#888', fontSize: '0.65rem' }}>{window.location.hostname}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Env Config:</span>
