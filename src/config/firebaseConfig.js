@@ -2,7 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 
-console.log('--- IRONLOGIC HEARTBEAT: v1.7.0 (Feb 24, 09:23) ---');
+console.log('--- IRONLOGIC HEARTBEAT: v1.8.0 (Feb 24, 12:45) ---');
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -11,8 +11,11 @@ const firebaseConfig = {
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-28F6H5KY12" // Emergency Hard-Fallback
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-28F6H5KY12"
 };
+
+// Export for diagnostic visibility
+export const resolvedConfig = { ...firebaseConfig };
 
 // Initialize App (Safe Singleton)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -20,7 +23,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 // Initialize Auth
 const auth = getAuth(app);
 
-// Initialize Firestore (v1.6.0 Protocol Lock: NO WebSockets)
+// Initialize Firestore (v1.8.0 Protocol Lock: NO WebSockets)
 let db;
 try {
     if (!firebaseConfig.apiKey) {
@@ -29,15 +32,14 @@ try {
 
     db = initializeFirestore(app, {
         experimentalForceLongPolling: true,
-        experimentalAutoDetectLongPolling: false, // LOCK: Never try to "Upgrade" to WebSockets
+        experimentalAutoDetectLongPolling: false,
         useFetchStreams: false,
-        ignoreUndefinedProperties: true // Stability 🦾
+        ignoreUndefinedProperties: true
     });
-    console.log("Firestore: Protocol Lock Active (HTTPS Only)");
+    console.log("Firestore: Protocol Lock v1.8.0 (Forced HTTPS)");
 } catch (e) {
-    // Fallback
     db = getFirestore(app);
-    console.warn("Firestore: Fallback instance active", e.message);
+    console.warn("Firestore: Default instance activated", e.message);
 }
 
 // Final safety check
