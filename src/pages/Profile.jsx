@@ -184,7 +184,13 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.5.1 (Deployment Heartbeat)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.5.2 (Env Audit)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Env Config:</span>
+                        <span style={{ color: import.meta.env.VITE_FIREBASE_API_KEY ? '#00e676' : '#ff5252', fontWeight: 'bold' }}>
+                            {import.meta.env.VITE_FIREBASE_API_KEY ? 'DETECTED ✅' : 'MISSING ❌'}
+                        </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>System Time:</span>
