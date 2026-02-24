@@ -2,6 +2,8 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 
+console.log('--- IRONLOGIC HEARTBEAT: v1.5.1 (Feb 24, 08:11) ---');
+
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
