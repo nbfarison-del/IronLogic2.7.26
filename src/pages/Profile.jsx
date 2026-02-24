@@ -184,7 +184,7 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.4.3 (Emergency Polling Fix)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.5.0 (Sync Rescue Final)</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>System Time:</span>
