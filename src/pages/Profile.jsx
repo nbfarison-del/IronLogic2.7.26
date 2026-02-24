@@ -184,7 +184,36 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.6.0 (Protocol Lock)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.6.1 (Deep Audit)</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Env Keys (7):</span>
+                        <span style={{
+                            color: [
+                                import.meta.env.VITE_FIREBASE_API_KEY,
+                                import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+                                import.meta.env.VITE_FIREBASE_PROJECT_ID,
+                                import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+                                import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+                                import.meta.env.VITE_FIREBASE_APP_ID,
+                                import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+                            ].filter(Boolean).length === 7 ? '#00e676' : '#ff5252',
+                            fontWeight: 'bold'
+                        }}>
+                            {[
+                                import.meta.env.VITE_FIREBASE_API_KEY,
+                                import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+                                import.meta.env.VITE_FIREBASE_PROJECT_ID,
+                                import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+                                import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+                                import.meta.env.VITE_FIREBASE_APP_ID,
+                                import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+                            ].filter(Boolean).length}/7
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Hostname:</span>
+                        <span style={{ color: '#888' }}>{window.location.hostname}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Env Config:</span>
@@ -313,16 +342,27 @@ const Profile = () => {
                         </button>
                         <button
                             onClick={async () => {
-                                if (window.confirm('NUCLEAR OPTION: This will forcefully terminate all Firestore tasks and wipe ONLY the local database cache. Your workout data in the cloud is safe. Use this if your sync is permanently stuck. Continue?')) {
+                                if (window.confirm('PURGE EVERYTHING: This will unregister all Service Workers and wipe LocalStorage. Use this if the site feels "stale" or old versions keep coming back. Continue?')) {
                                     try {
+                                        // 1. Unregister Service Workers
+                                        if ('serviceWorker' in navigator) {
+                                            const registrations = await navigator.serviceWorker.getRegistrations();
+                                            for (let registration of registrations) {
+                                                await registration.unregister();
+                                            }
+                                        }
+                                        // 2. Clear Local Storage
+                                        localStorage.clear();
+                                        // 3. Firestore reset (if possible)
                                         const { terminate, clearIndexedDbPersistence } = await import('firebase/firestore');
                                         const dbInstance = (await import('../config/firebaseConfig')).db;
                                         await terminate(dbInstance);
                                         await clearIndexedDbPersistence(dbInstance);
-                                        alert('Cache Nuked! Redirecting to refresh...');
+
+                                        alert('System Purged! Refreshing...');
                                         window.location.href = '/profile';
                                     } catch (err) {
-                                        alert('Nuclear reset failed. Hard Refresh instead.');
+                                        alert('Purge had issues. Hard Refreshing instead.');
                                         window.location.reload();
                                     }
                                 }
@@ -332,11 +372,11 @@ const Profile = () => {
                                 flex: 2,
                                 fontSize: '0.8rem',
                                 padding: '0.5rem',
-                                background: '#b71c1c',
-                                border: '1px solid #ff5252'
+                                background: '#311b92',
+                                border: '1px solid #7e57c2'
                             }}
                         >
-                            Nuclear Reset
+                            Purge Cache & Workers
                         </button>
                     </div>
                     <p style={{ fontSize: '0.7rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
