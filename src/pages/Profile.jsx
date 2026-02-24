@@ -184,7 +184,7 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.5.2 (Env Audit)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.6.0 (Protocol Lock)</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Env Config:</span>

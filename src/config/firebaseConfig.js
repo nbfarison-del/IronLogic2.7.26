@@ -2,7 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 
-console.log('--- IRONLOGIC HEARTBEAT: v1.5.2 (Feb 24, 08:52) ---');
+console.log('--- IRONLOGIC HEARTBEAT: v1.6.0 (Feb 24, 08:58) ---');
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,7 +20,7 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 // Initialize Auth
 const auth = getAuth(app);
 
-// Initialize Firestore (Aggressive Long-Polling + Fallback)
+// Initialize Firestore (v1.6.0 Protocol Lock: NO WebSockets)
 let db;
 try {
     if (!firebaseConfig.apiKey) {
@@ -29,13 +29,15 @@ try {
 
     db = initializeFirestore(app, {
         experimentalForceLongPolling: true,
-        useFetchStreams: false
+        experimentalAutoDetectLongPolling: false, // LOCK: Never try to "Upgrade" to WebSockets
+        useFetchStreams: false,
+        ignoreUndefinedProperties: true // Stability 🦾
     });
-    console.log("Firestore: Forced Long-Polling Active");
+    console.log("Firestore: Protocol Lock Active (HTTPS Only)");
 } catch (e) {
-    // If initializeFirestore fails (e.g. already initialized), get existing instance
+    // Fallback
     db = getFirestore(app);
-    console.warn("Firestore: Falling back to default instance", e.message);
+    console.warn("Firestore: Fallback instance active", e.message);
 }
 
 // Final safety check
