@@ -184,32 +184,47 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.6.1 (Deep Audit)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.6.2 (Key Hunter)</span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Env Keys (7):</span>
-                        <span style={{
-                            color: [
-                                import.meta.env.VITE_FIREBASE_API_KEY,
-                                import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-                                import.meta.env.VITE_FIREBASE_PROJECT_ID,
-                                import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-                                import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-                                import.meta.env.VITE_FIREBASE_APP_ID,
-                                import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-                            ].filter(Boolean).length === 7 ? '#00e676' : '#ff5252',
-                            fontWeight: 'bold'
-                        }}>
-                            {[
-                                import.meta.env.VITE_FIREBASE_API_KEY,
-                                import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-                                import.meta.env.VITE_FIREBASE_PROJECT_ID,
-                                import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-                                import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-                                import.meta.env.VITE_FIREBASE_APP_ID,
-                                import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-                            ].filter(Boolean).length}/7
-                        </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '8px 0', padding: '8px', background: '#111', borderRadius: '4px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Env Keys:</span>
+                            <span style={{
+                                color: [
+                                    import.meta.env.VITE_FIREBASE_API_KEY,
+                                    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+                                    import.meta.env.VITE_FIREBASE_PROJECT_ID,
+                                    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+                                    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+                                    import.meta.env.VITE_FIREBASE_APP_ID,
+                                    import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+                                ].filter(Boolean).length === 7 ? '#00e676' : '#ff5252',
+                                fontWeight: 'bold'
+                            }}>
+                                {[
+                                    import.meta.env.VITE_FIREBASE_API_KEY,
+                                    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+                                    import.meta.env.VITE_FIREBASE_PROJECT_ID,
+                                    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+                                    import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+                                    import.meta.env.VITE_FIREBASE_APP_ID,
+                                    import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+                                ].filter(Boolean).length}/7
+                            </span>
+                        </div>
+                        {([
+                            ['API_KEY', import.meta.env.VITE_FIREBASE_API_KEY],
+                            ['AUTH_DOMAIN', import.meta.env.VITE_FIREBASE_AUTH_DOMAIN],
+                            ['PROJECT_ID', import.meta.env.VITE_FIREBASE_PROJECT_ID],
+                            ['STORAGE_BUCKET', import.meta.env.VITE_FIREBASE_STORAGE_BUCKET],
+                            ['SENDER_ID', import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID],
+                            ['APP_ID', import.meta.env.VITE_FIREBASE_APP_ID],
+                            ['MEASUREMENT_ID', import.meta.env.VITE_FIREBASE_MEASUREMENT_ID]
+                        ].filter(item => !item[1]).map(item => (
+                            <div key={item[0]} style={{ color: '#ff5252', fontSize: '0.7rem' }}>
+                                ⚠️ MISSING: VITE_FIREBASE_{item[0]}
+                            </div>
+                        )))}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Hostname:</span>
