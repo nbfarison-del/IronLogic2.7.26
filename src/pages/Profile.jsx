@@ -184,11 +184,11 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.6.2 (Key Hunter)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v1.7.0 (Hardcore Recovery)</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '8px 0', padding: '8px', background: '#111', borderRadius: '4px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Env Keys:</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '4px' }}>
+                            <span>Env Sync Audit:</span>
                             <span style={{
                                 color: [
                                     import.meta.env.VITE_FIREBASE_API_KEY,
@@ -198,7 +198,7 @@ const Profile = () => {
                                     import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
                                     import.meta.env.VITE_FIREBASE_APP_ID,
                                     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-                                ].filter(Boolean).length === 7 ? '#00e676' : '#ff5252',
+                                ].filter(Boolean).length === 7 ? '#00e676' : '#ffea00',
                                 fontWeight: 'bold'
                             }}>
                                 {[
@@ -209,22 +209,25 @@ const Profile = () => {
                                     import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
                                     import.meta.env.VITE_FIREBASE_APP_ID,
                                     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-                                ].filter(Boolean).length}/7
+                                ].filter(Boolean).length}/7 Detect
                             </span>
                         </div>
-                        {([
+                        {[
                             ['API_KEY', import.meta.env.VITE_FIREBASE_API_KEY],
-                            ['AUTH_DOMAIN', import.meta.env.VITE_FIREBASE_AUTH_DOMAIN],
-                            ['PROJECT_ID', import.meta.env.VITE_FIREBASE_PROJECT_ID],
-                            ['STORAGE_BUCKET', import.meta.env.VITE_FIREBASE_STORAGE_BUCKET],
-                            ['SENDER_ID', import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID],
-                            ['APP_ID', import.meta.env.VITE_FIREBASE_APP_ID],
-                            ['MEASUREMENT_ID', import.meta.env.VITE_FIREBASE_MEASUREMENT_ID]
-                        ].filter(item => !item[1]).map(item => (
-                            <div key={item[0]} style={{ color: '#ff5252', fontSize: '0.7rem' }}>
-                                ⚠️ MISSING: VITE_FIREBASE_{item[0]}
+                            ['AUTH', import.meta.env.VITE_FIREBASE_AUTH_DOMAIN],
+                            ['ID', import.meta.env.VITE_FIREBASE_PROJECT_ID],
+                            ['BUCKET', import.meta.env.VITE_FIREBASE_STORAGE_BUCKET],
+                            ['SENDER', import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID],
+                            ['APP', import.meta.env.VITE_FIREBASE_APP_ID],
+                            ['MEASURE', import.meta.env.VITE_FIREBASE_MEASUREMENT_ID]
+                        ].map(item => (
+                            <div key={item[0]} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                                <span style={{ color: '#aaa' }}>{item[0]}:</span>
+                                <span style={{ color: item[1] ? '#00e676' : '#ff5252', fontFamily: 'monospace' }}>
+                                    {item[1] ? `${item[1].substring(0, 3)}...` : 'MISSING'}
+                                </span>
                             </div>
-                        )))}
+                        ))}
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>Hostname:</span>
