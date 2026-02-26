@@ -42,11 +42,16 @@ const Profile = () => {
     const [isTesting, setIsTesting] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState('Idle');
     const [error, setError] = useState(null);
+    const [diagData, setDiagData] = useState({ xray: { projectId: '...', apiKey: '...' } });
 
     useEffect(() => {
         if (syncedMaxes) {
             setMaxes(syncedMaxes);
         }
+        // Load diagnostics once
+        import('../config/firebaseConfig').then(mod => {
+            setDiagData(mod.SDK_AUTO_DIAGNOSTIC);
+        });
     }, [syncedMaxes]);
 
     // Browser-robust YYYY-MM-DD
@@ -213,7 +218,7 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v2.1.0 (Breakthrough)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v2.2.0 (Deep X-Ray)</span>
                     </div>
 
                     {/* Tier 1: Connection Trace (The Truth) */}
@@ -229,6 +234,33 @@ const Profile = () => {
                                 ERROR: {error}
                             </div>
                         )}
+                        {error && error.includes('TIMEOUT') && (
+                            <button
+                                onClick={async () => {
+                                    const { initFirestoreWithProtocol } = await import('../config/firebaseConfig');
+                                    initFirestoreWithProtocol(true);
+                                    alert('Protocol Switched: WEBSOCKETS. Try Testing again!');
+                                }}
+                                style={{ marginTop: '8px', width: '100%', fontSize: '0.65rem', padding: '4px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '2px', cursor: 'pointer' }}
+                            >
+                                EMERGENCY: Switch to WebSockets 🔌
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Tier 2: Key X-Ray (Integrity Check) */}
+                    <div style={{ margin: '8px 0', padding: '8px', background: '#1a1a1a', borderRadius: '4px', border: '1px solid #444' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#aaa' }}>2. Key X-Ray Audit</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
+                            <span>Project ID:</span>
+                            <span style={{ color: '#00e676', fontFamily: 'monospace' }}>{diagData.xray.projectId}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginTop: '2px' }}>
+                            <span>API Key:</span>
+                            <span style={{ color: '#00e676', fontFamily: 'monospace' }}>{diagData.xray.apiKey}</span>
+                        </div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
