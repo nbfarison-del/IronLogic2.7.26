@@ -213,7 +213,7 @@ const Profile = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v2.0.2 (Super Trace)</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v2.1.0 (Breakthrough)</span>
                     </div>
 
                     {/* Tier 1: Connection Trace (The Truth) */}
