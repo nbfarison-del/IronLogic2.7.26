@@ -2,7 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 
-console.log('--- IRONLOGIC HEARTBEAT: v2.2.0 (Feb 26, 04:40) ---');
+console.log('--- IRONLOGIC HEARTBEAT: v2.3.0 (Feb 26, 04:50) ---');
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,11 +18,11 @@ const firebaseConfig = {
 export const SDK_AUTO_DIAGNOSTIC = {
     env_keys: Object.keys(import.meta.env).filter(k => k.startsWith('VITE_FIREBASE_')).length,
     fallback_active: !import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-    protocol: 'DYNAMIC_SWITCHER_V2.2',
-    // Key X-Ray: Show first 4 chars to confirm they aren't blank or mangled
+    protocol: 'HARD_RESET_V2.3',
+    // Key X-Ray: Show start and end to catch (copy) or spaces
     xray: {
-        apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 4)}...` : 'MISSING',
-        projectId: firebaseConfig.projectId ? `${firebaseConfig.projectId.substring(0, 4)}...` : 'MISSING'
+        apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 5)}...${firebaseConfig.apiKey.slice(-3)}` : 'MISSING',
+        projectId: firebaseConfig.projectId ? `${firebaseConfig.projectId.substring(0, 5)}...${firebaseConfig.projectId.slice(-3)}` : 'MISSING'
     }
 };
 
