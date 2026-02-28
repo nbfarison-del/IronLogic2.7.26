@@ -15,6 +15,7 @@ const CalendarView = () => {
         weights: weightHistory,
         plannedWorkouts,
         notesHistory,
+        mobilityLogs,
         isLoading
     } = useData();
     const navigate = useNavigate();
@@ -154,6 +155,7 @@ const CalendarView = () => {
             const recoveryEntry = recoveryHistory.find(r => r.date.startsWith(dateStr));
             const hasWeight = weightHistory.some(w => w.date.startsWith(dateStr));
             const hasNote = notesHistory.some(n => n.date.startsWith(dateStr));
+            const hasMobility = mobilityLogs.some(m => m.date.startsWith(dateStr));
 
             const isSelected = isSameDay(date, selectedDate);
             const isToday = isSameDay(date, new Date());
@@ -184,6 +186,7 @@ const CalendarView = () => {
                         )}
                         {hasWeight && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#9c27b0' }} title="Weight Logged"></div>}
                         {hasNote && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffeb3b' }} title="Note Added"></div>}
+                        {hasMobility && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#9c27b0', border: '1px solid white' }} title="Mobility Logged"></div>}
                     </div>
                 </div>
             );
@@ -212,6 +215,7 @@ const CalendarView = () => {
     const dayWorkouts = workouts.filter(w => w.date.startsWith(selectedDateStr));
     const dayPlanned = plannedWorkouts.filter(p => p.date === selectedDateStr);
     const dayRecovery = recoveryHistory.find(r => r.date === selectedDateStr);
+    const dayMobility = mobilityLogs.filter(m => m.date === selectedDateStr);
 
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'left' }}>

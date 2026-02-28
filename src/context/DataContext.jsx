@@ -21,6 +21,7 @@ export const DataProvider = ({ children }) => {
     const [coaching, setCoaching] = useState(cachedData?.coaching || { program: null, questionnaire: null });
     const [plannedWorkouts, setPlannedWorkouts] = useState(cachedData?.plannedWorkouts || []);
     const [notesHistory, setNotesHistory] = useState(cachedData?.notesHistory || []);
+    const [mobilityLogs, setMobilityLogs] = useState(cachedData?.mobilityLogs || []);
 
     // Sync Status Tracking
     const [syncStatus, setSyncStatus] = useState(navigator.onLine ? 'online' : 'offline');
@@ -53,55 +54,60 @@ export const DataProvider = ({ children }) => {
         }
 
         // Start all real-time listeners in parallel
-        const unsubWorkouts = firestoreService.subscribeToWorkouts(user.id, (data, meta) => {
+        const unsubWorkouts = firestoreService.subscribeToWorkouts(user.id, (data) => {
             setWorkouts(data);
-            setSyncTimestamps(prev => ({ ...prev, workouts: { ...meta, time: new Date().toLocaleTimeString() } }));
+            setSyncTimestamps(prev => ({ ...prev, workouts: new Date().toLocaleTimeString() }));
             setIsLoading(false);
         }, handleError('Workouts'));
 
-        const unsubWeights = firestoreService.subscribeToBodyWeight(user.id, (data, meta) => {
+        const unsubWeights = firestoreService.subscribeToBodyWeight(user.id, (data) => {
             setWeights(data);
-            setSyncTimestamps(prev => ({ ...prev, weights: { ...meta, time: new Date().toLocaleTimeString() } }));
+            setSyncTimestamps(prev => ({ ...prev, weights: new Date().toLocaleTimeString() }));
             setIsLoading(false);
         }, handleError('Weights'));
 
-        const unsubRecovery = firestoreService.subscribeToRecovery(user.id, (data, meta) => {
+        const unsubRecovery = firestoreService.subscribeToRecovery(user.id, (data) => {
             setRecovery(data);
-            setSyncTimestamps(prev => ({ ...prev, recovery: { ...meta, time: new Date().toLocaleTimeString() } }));
+            setSyncTimestamps(prev => ({ ...prev, recovery: new Date().toLocaleTimeString() }));
             setIsLoading(false);
         }, handleError('Recovery'));
 
-        const unsubGoals = firestoreService.subscribeToGoals(user.id, (data, meta) => {
+        const unsubGoals = firestoreService.subscribeToGoals(user.id, (data) => {
             setGoals(data);
-            setSyncTimestamps(prev => ({ ...prev, goals: { ...meta, time: new Date().toLocaleTimeString() } }));
+            setSyncTimestamps(prev => ({ ...prev, goals: new Date().toLocaleTimeString() }));
             setIsLoading(false);
         }, handleError('Goals'));
 
-        const unsubProfile = firestoreService.subscribeToProfile(user.id, (data, meta) => {
+        const unsubProfile = firestoreService.subscribeToProfile(user.id, (data) => {
             setProfile(data);
-            setSyncTimestamps(prev => ({ ...prev, profile: { ...meta, time: new Date().toLocaleTimeString() } }));
+            setSyncTimestamps(prev => ({ ...prev, profile: new Date().toLocaleTimeString() }));
             setIsLoading(false);
         }, handleError('Profile'));
 
-        const unsubCustom = firestoreService.subscribeToCustomExercises(user.id, (data, meta) => {
+        const unsubCustom = firestoreService.subscribeToCustomExercises(user.id, (data) => {
             setCustomExercises(data);
-            setSyncTimestamps(prev => ({ ...prev, customExercises: { ...meta, time: new Date().toLocaleTimeString() } }));
+            setSyncTimestamps(prev => ({ ...prev, customExercises: new Date().toLocaleTimeString() }));
         }, handleError('CustomExercises'));
 
-        const unsubPlanned = firestoreService.subscribeToPlannedWorkouts(user.id, (data, meta) => {
+        const unsubPlanned = firestoreService.subscribeToPlannedWorkouts(user.id, (data) => {
             setPlannedWorkouts(data);
-            setSyncTimestamps(prev => ({ ...prev, plannedWorkouts: { ...meta, time: new Date().toLocaleTimeString() } }));
+            setSyncTimestamps(prev => ({ ...prev, plannedWorkouts: new Date().toLocaleTimeString() }));
         }, handleError('PlannedWorkouts'));
 
-        const unsubNotes = firestoreService.subscribeToCalendarNotes(user.id, (data, meta) => {
+        const unsubNotes = firestoreService.subscribeToCalendarNotes(user.id, (data) => {
             setNotesHistory(data);
-            setSyncTimestamps(prev => ({ ...prev, calendarNotes: { ...meta, time: new Date().toLocaleTimeString() } }));
+            setSyncTimestamps(prev => ({ ...prev, calendarNotes: new Date().toLocaleTimeString() }));
         }, handleError('CalendarNotes'));
 
-        const unsubCoaching = firestoreService.subscribeToAICoachingData(user.id, (data, meta) => {
+        const unsubCoaching = firestoreService.subscribeToAICoachingData(user.id, (data) => {
             setCoaching(data);
-            setSyncTimestamps(prev => ({ ...prev, coaching: { ...meta, time: new Date().toLocaleTimeString() } }));
+            setSyncTimestamps(prev => ({ ...prev, coaching: new Date().toLocaleTimeString() }));
         }, handleError('Coaching'));
+
+        const unsubMobility = firestoreService.subscribeToMobilityLogs(user.id, (data) => {
+            setMobilityLogs(data);
+            setSyncTimestamps(prev => ({ ...prev, mobilityLogs: new Date().toLocaleTimeString() }));
+        }, handleError('Mobility'));
 
         return () => {
             unsubWorkouts();
@@ -113,6 +119,7 @@ export const DataProvider = ({ children }) => {
             unsubPlanned();
             unsubNotes();
             unsubCoaching();
+            unsubMobility();
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
@@ -133,7 +140,8 @@ export const DataProvider = ({ children }) => {
             coaching,
             goals,
             plannedWorkouts: plannedWorkouts || [],
-            notesHistory: notesHistory || []
+            notesHistory: notesHistory || [],
+            mobilityLogs: mobilityLogs || []
         };
 
         const timer = setTimeout(() => {
@@ -141,7 +149,7 @@ export const DataProvider = ({ children }) => {
         }, 2000);
 
         return () => clearTimeout(timer);
-    }, [user, workouts, weights, recovery, goals, profile, coaching]);
+    }, [user, workouts, weights, recovery, goals, profile, coaching, mobilityLogs]);
 
     const value = useMemo(() => ({
         workouts,
@@ -153,13 +161,14 @@ export const DataProvider = ({ children }) => {
         coaching,
         plannedWorkouts,
         notesHistory,
+        mobilityLogs,
         isLoading,
         syncStatus,
         syncTimestamps,
         syncError,
         settings: profile?.settings || { unit: 'kg' },
         maxes: profile?.maxes || {}
-    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, isLoading, syncStatus, syncTimestamps, syncError]);
+    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, mobilityLogs, isLoading, syncStatus, syncTimestamps, syncError]);
 
     return (
         <DataContext.Provider value={value}>

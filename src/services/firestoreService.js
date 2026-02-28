@@ -11,9 +11,7 @@ import {
     where,
     orderBy,
     limit,
-    onSnapshot,
-    disableNetwork,
-    enableNetwork
+    onSnapshot
 } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
 
@@ -32,14 +30,11 @@ export const updateUserProfile = async (userId, profileData) => {
     await setDoc(docRef, profileData, { merge: true });
 };
 
-export const subscribeToProfile = (userId, callback, errorCallback) => {
+export const subscribeToProfile = (userId, callback) => {
     const docRef = doc(db, 'users', userId, 'profile', 'data');
     return onSnapshot(docRef, (docSnap) => {
-        callback(docSnap.exists() ? docSnap.data() : null, {
-            fromCache: docSnap.metadata.fromCache,
-            hasPendingWrites: docSnap.metadata.hasPendingWrites
-        });
-    }, errorCallback);
+        callback(docSnap.exists() ? docSnap.data() : null);
+    });
 };
 
 // ==================== WORKOUTS ====================
@@ -84,11 +79,7 @@ export const subscribeToWorkouts = (userId, callback, errorCallback, limitCount 
             id: doc.id,
             ...doc.data()
         }));
-        callback(workouts, {
-            fromCache: snapshot.metadata.fromCache,
-            hasPendingWrites: snapshot.metadata.hasPendingWrites,
-            count: snapshot.size
-        });
+        callback(workouts);
     }, errorCallback);
 };
 
@@ -127,11 +118,7 @@ export const subscribeToGoals = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(goals, {
-            fromCache: snapshot.metadata.fromCache,
-            hasPendingWrites: snapshot.metadata.hasPendingWrites,
-            count: snapshot.size
-        });
+        callback(goals);
     }, errorCallback);
 };
 
@@ -177,11 +164,7 @@ export const subscribeToBodyWeight = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         })).sort((a, b) => new Date(a.date) - new Date(b.date));
-        callback(weights, {
-            fromCache: snapshot.metadata.fromCache,
-            hasPendingWrites: snapshot.metadata.hasPendingWrites,
-            count: snapshot.size
-        });
+        callback(weights);
     }, errorCallback);
 };
 
@@ -224,11 +207,7 @@ export const subscribeToRecovery = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(recovery, {
-            fromCache: snapshot.metadata.fromCache,
-            hasPendingWrites: snapshot.metadata.hasPendingWrites,
-            count: snapshot.size
-        });
+        callback(recovery);
     }, errorCallback);
 };
 
@@ -267,11 +246,7 @@ export const subscribeToPlannedWorkouts = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(planned, {
-            fromCache: snapshot.metadata.fromCache,
-            hasPendingWrites: snapshot.metadata.hasPendingWrites,
-            count: snapshot.size
-        });
+        callback(planned);
     }, errorCallback);
 };
 
@@ -300,11 +275,7 @@ export const subscribeToCalendarNotes = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(notes, {
-            fromCache: snapshot.metadata.fromCache,
-            hasPendingWrites: snapshot.metadata.hasPendingWrites,
-            count: snapshot.size
-        });
+        callback(notes);
     }, errorCallback);
 };
 
@@ -325,18 +296,12 @@ export const subscribeToAICoachingData = (userId, callback, errorCallback) => {
     const docRef = doc(db, 'users', userId, 'aiProgram', 'data');
     return onSnapshot(docRef, (docSnap) => {
         if (!docSnap.exists()) {
-            callback({ program: null, questionnaire: null }, {
-                fromCache: docSnap.metadata.fromCache,
-                hasPendingWrites: docSnap.metadata.hasPendingWrites
-            });
+            callback({ program: null, questionnaire: null });
         } else {
             const data = docSnap.data();
             callback({
                 program: data.program || null,
                 questionnaire: data.questionnaire || null
-            }, {
-                fromCache: docSnap.metadata.fromCache,
-                hasPendingWrites: docSnap.metadata.hasPendingWrites
             });
         }
     }, errorCallback);
@@ -386,11 +351,7 @@ export const subscribeToCustomExercises = (userId, callback, errorCallback) => {
             id: doc.id,
             ...doc.data()
         }));
-        callback(exercises, {
-            fromCache: snapshot.metadata.fromCache,
-            hasPendingWrites: snapshot.metadata.hasPendingWrites,
-            count: snapshot.size
-        });
+        callback(exercises);
     }, errorCallback);
 };
 
@@ -398,6 +359,43 @@ export const addCustomExercise = async (userId, exerciseData) => {
     const exercisesRef = collection(db, 'users', userId, 'customExercises');
     const docRef = await addDoc(exercisesRef, exerciseData);
     return docRef.id;
+};
+
+// ==================== MOBILITY LOGS ====================
+
+export const getMobilityLogs = async (userId, limitCount = null) => {
+    const mobilityRef = collection(db, 'users', userId, 'mobilityLogs');
+    let q = query(mobilityRef, orderBy('date', 'desc'));
+    if (limitCount) {
+        q = query(mobilityRef, orderBy('date', 'desc'), limit(limitCount));
+    }
+    const querySnapshot = await getDocs(q);
+
+    return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+};
+
+export const addMobilityLog = async (userId, mobilityData) => {
+    const mobilityRef = collection(db, 'users', userId, 'mobilityLogs');
+    const docRef = await addDoc(mobilityRef, {
+        ...mobilityData,
+        createdAt: new Date().toISOString()
+    });
+    return docRef.id;
+};
+
+export const subscribeToMobilityLogs = (userId, callback, errorCallback) => {
+    const mobilityRef = collection(db, 'users', userId, 'mobilityLogs');
+    const q = query(mobilityRef, orderBy('date', 'desc'), limit(100));
+    return onSnapshot(q, (snapshot) => {
+        const logs = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        callback(logs);
+    }, errorCallback);
 };
 
 // ==================== SETTINGS ====================
@@ -411,36 +409,6 @@ export const getSettings = async (userId) => {
 export const updateSettings = async (userId, settings) => {
     const docRef = doc(db, 'users', userId, 'profile', 'data');
     await setDoc(docRef, { settings }, { merge: true });
-};
-
-export const forceSyncNetwork = async () => {
-    try {
-        await disableNetwork(db);
-        await enableNetwork(db);
-        return true;
-    } catch (error) {
-        console.error('Force sync failed:', error);
-        throw error;
-    }
-};
-
-export const testFirestoreConnection = async (userId) => {
-    const testRef = doc(db, 'users', userId, 'profile', 'connectionTest');
-    try {
-        // Wrap setDoc in a timeout promise
-        const timeout = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('TIMEOUT: Server did not respond in 10s')), 10000)
-        );
-
-        await Promise.race([
-            setDoc(testRef, { lastTest: new Date().toISOString(), status: 'ok' }, { merge: true }),
-            timeout
-        ]);
-        return { success: true };
-    } catch (error) {
-        console.error('Connection test failed:', error);
-        return { success: false, code: error.code || 'timeout', message: error.message };
-    }
 };
 
 // ==================== BOOTSTRAP ====================
@@ -459,13 +427,14 @@ export const getCachedBootstrapData = () => {
 
 export const getBootstrapData = async (userId) => {
     const profileRef = doc(db, 'users', userId, 'profile', 'data');
-    const [profileSnap, workouts, weights, recovery, coaching, goals] = await Promise.all([
+    const [profileSnap, workouts, weights, recovery, coaching, goals, mobilityLogs] = await Promise.all([
         getDoc(profileRef),
         getWorkouts(userId, 50),
         getBodyWeightHistory(userId, 90),
         getRecoveryHistory(userId, 90),
         getAICoachingData(userId),
-        getGoals(userId)
+        getGoals(userId),
+        getMobilityLogs(userId, 100)
     ]);
 
     const profileData = profileSnap.exists() ? profileSnap.data() : {};
@@ -478,7 +447,8 @@ export const getBootstrapData = async (userId) => {
         weights,
         recovery,
         coaching,
-        goals
+        goals,
+        mobilityLogs
     };
 
     // Save to cache for next instant load
