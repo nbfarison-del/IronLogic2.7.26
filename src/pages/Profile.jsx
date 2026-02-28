@@ -3,7 +3,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
-import { getFirestore, clearIndexedDbPersistence } from 'firebase/firestore';
+import { getFirestore, clearIndexedDbPersistence, terminate } from 'firebase/firestore';
 
 const Profile = () => {
     const { user } = useAuth();
@@ -17,19 +17,8 @@ const Profile = () => {
         notesHistory,
         maxes: syncedMaxes,
         isLoading,
-        syncStatus,
-        syncTimestamps,
-        syncError
+        syncStatus
     } = useData();
-
-    const counts = {
-        workouts: workouts?.length || 0,
-        weights: weights?.length || 0,
-        recovery: recovery?.length || 0,
-        goals: goals?.length || 0,
-        planned: plannedWorkouts?.length || 0,
-        notes: notesHistory?.length || 0
-    };
 
     const [maxes, setMaxes] = useState({
         squat: '',
@@ -39,68 +28,11 @@ const Profile = () => {
     });
     const [notifications, setNotifications] = useState('');
 
-    const [isTesting, setIsTesting] = useState(false);
-    const [connectionStatus, setConnectionStatus] = useState('Idle');
-    const [error, setError] = useState(null);
-    const [diagData, setDiagData] = useState({ xray: { projectId: '...', apiKey: '...' } });
-
     useEffect(() => {
         if (syncedMaxes) {
             setMaxes(syncedMaxes);
         }
-        // Load diagnostics once
-        import('../config/firebaseConfig').then(mod => {
-            setDiagData(mod.SDK_AUTO_DIAGNOSTIC);
-        });
     }, [syncedMaxes]);
-
-    // Browser-robust YYYY-MM-DD
-    const getTodayStr = () => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
-
-    const handleTestConnection = async () => {
-        if (!user || !user.id) {
-            setError('User session invalid');
-            return;
-        }
-
-        setIsTesting(true);
-        setConnectionStatus('Testing...');
-        setError(null);
-
-        try {
-            const result = await firestoreService.testFirestoreConnection(user.id);
-            if (result.success) {
-                setConnectionStatus('Online');
-                setError(null);
-            } else {
-                setConnectionStatus('Failed');
-                setError(`${result.code}: ${result.message}`);
-            }
-        } catch (err) {
-            setConnectionStatus('Error');
-            setError(err.message);
-        } finally {
-            setIsTesting(false);
-        }
-    };
-
-    const handleForceRefresh = async () => {
-        if (window.confirm('This will wipe all local caches (including Firebase persistence) and force a full reload. Continue?')) {
-            try {
-                localStorage.clear();
-                const db = getFirestore();
-                await clearIndexedDbPersistence(db);
-                // Redirect to root to avoid 404 on re-load
-                window.location.href = '/';
-            } catch (err) {
-                console.error('Refresh error:', err);
-                window.location.reload();
-            }
-        }
-    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -203,9 +135,9 @@ const Profile = () => {
                 </form>
             </div>
 
-            {/* SYNC DIAGNOSTICS - Super Safe Version */}
+            {/* SYNC & MAINTENANCE */}
             <div className="card" style={{ border: '1px solid #444', background: '#1a1a1a' }}>
-                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: 'var(--primary)' }}>Sync Diagnostics</h3>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: 'var(--primary)' }}>System Status</h3>
 
                 <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -213,162 +145,18 @@ const Profile = () => {
                         <span style={{ color: '#888' }}>{user?.email}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>User ID:</span>
-                        <span style={{ color: '#888', fontSize: '0.65rem', wordBreak: 'break-all', marginLeft: '1rem' }}>{user?.id || 'N/A'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v2.3.0 (Hard Reset)</span>
-                    </div>
-
-                    {/* Tier 1: Connection Trace (The Truth) */}
-                    <div style={{ margin: '8px 0', padding: '8px', background: '#212121', borderRadius: '4px', border: '1px solid #ff5252' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#ff5252' }}>⚠️ FIREBASE AUTH TRACE</span>
-                        </div>
-                        <div style={{ fontSize: '0.65rem' }}>
-                            Status: <span style={{ color: connectionStatus === 'Online' ? '#00e676' : '#ff5252' }}>{connectionStatus || 'Idle'}</span>
-                        </div>
-                        {error && (
-                            <div style={{ marginTop: '4px', padding: '4px', background: '#000', color: '#ff5252', fontSize: '0.6rem', fontFamily: 'monospace', overflow: 'auto' }}>
-                                ERROR: {error}
-                            </div>
-                        )}
-                        {error && error.includes('TIMEOUT') && (
-                            <button
-                                onClick={async () => {
-                                    const { initFirestoreWithProtocol } = await import('../config/firebaseConfig');
-                                    initFirestoreWithProtocol(true);
-                                    alert('Protocol Switched: WEBSOCKETS. Try Testing again!');
-                                }}
-                                style={{ marginTop: '8px', width: '100%', fontSize: '0.65rem', padding: '4px', background: '#d32f2f', color: 'white', border: 'none', borderRadius: '2px', cursor: 'pointer' }}
-                            >
-                                EMERGENCY: Switch to WebSockets 🔌
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Tier 2: Key X-Ray (Integrity Check) */}
-                    <div style={{ margin: '8px 0', padding: '8px', background: '#1a1a1a', borderRadius: '4px', border: '1px solid #444' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #333', paddingBottom: '4px', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#aaa' }}>2. Key X-Ray Audit</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem' }}>
-                            <span>Project ID:</span>
-                            <span style={{ color: '#00e676', fontFamily: 'monospace' }}>{diagData.xray.projectId}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', marginTop: '2px' }}>
-                            <span>API Key:</span>
-                            <span style={{ color: '#00e676', fontFamily: 'monospace' }}>{diagData.xray.apiKey}</span>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Hostname:</span>
-                        <span style={{ color: '#888', fontSize: '0.65rem' }}>{window.location.hostname}</span>
+                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v3.0.0 (Stable)</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Env Config:</span>
-                        <span style={{ color: import.meta.env.VITE_FIREBASE_API_KEY ? '#00e676' : '#ff5252', fontWeight: 'bold' }}>
-                            {import.meta.env.VITE_FIREBASE_API_KEY ? 'DETECTED ✅' : 'MISSING ❌'}
-                        </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>System Time:</span>
-                        <span style={{ color: '#888' }}>{new Date().toLocaleTimeString()}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Firestore Status:</span>
+                        <span>Status:</span>
                         <span style={{ color: syncStatus === 'online' ? '#4caf50' : '#f44336' }}>
-                            {syncStatus?.toUpperCase() || 'UNKNOWN'}
+                            {syncStatus?.toUpperCase() || 'STABLE'}
                         </span>
                     </div>
-
-                    {syncError && (
-                        <div style={{ padding: '0.5rem', background: 'rgba(244, 67, 54, 0.1)', border: '1px solid #f44336', borderRadius: '4px', color: '#f44336', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                            <strong>Sync Error:</strong> {syncError}
-                        </div>
-                    )}
-
-                    <div style={{ marginTop: '1rem', borderTop: '1px solid #333' }}>
-                        <div style={{ padding: '0.5rem 0', fontWeight: 'bold' }}>Last Received Updates:</div>
-                        {Object.entries(syncTimestamps || {}).length === 0 ? (
-                            <div style={{ color: '#666' }}>No live updates received yet.</div>
-                        ) : (
-                            Object.entries(syncTimestamps).map(([key, meta]) => (
-                                <div key={key} style={{ padding: '5px 0', borderBottom: '1px solid #222' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <span style={{ textTransform: 'capitalize', fontWeight: 'bold' }}>{key} ({counts[key] || 0}):</span>
-                                        <span style={{ color: '#aaa', fontSize: '0.75rem' }}>{meta.time}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '2px', fontSize: '0.7rem' }}>
-                                        <span style={{ color: meta.fromCache ? '#ffa726' : '#4caf50' }}>
-                                            {meta.fromCache ? '● Local Cache' : '● Cloud Verified'}
-                                        </span>
-                                        {meta.hasPendingWrites && (
-                                            <span style={{ color: '#f44336', fontWeight: 'bold' }}>
-                                                ⚠️ {meta.pendingCount || 'Pending'} Upload
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem' }}>
-                        <button
-                            onClick={handleForceRefresh}
-                            className="btn"
-                            style={{
-                                flex: 2,
-                                background: '#333',
-                                fontSize: '0.8rem',
-                                padding: '0.5rem'
-                            }}
-                        >
-                            Hard Refresh Sync
-                        </button>
-                        <button
-                            onClick={handleTestConnection}
-                            disabled={isTesting}
-                            className="btn btn-primary"
-                            style={{
-                                flex: 3,
-                                background: connectionStatus === 'Online' ? '#00e676' : '#1e3a8a',
-                                fontSize: '0.8rem',
-                                padding: '0.5rem',
-                                color: 'white',
-                                cursor: isTesting ? 'not-allowed' : 'pointer'
-                            }}
-                        >
-                            {isTesting ? 'Testing...' : 'Test Cloud Connection'}
-                        </button>
-                    </div>
-
-                    {error && (
-                        <div style={{ marginTop: '0.5rem' }}>
-                            <button
-                                onClick={() => {
-                                    const diag = `v2.0.0 | ${window.location.hostname} | ${error}`;
-                                    navigator.clipboard.writeText(diag);
-                                    alert('Diagnostic Report copied!');
-                                }}
-                                style={{
-                                    width: '100%',
-                                    fontSize: '0.65rem',
-                                    background: '#111',
-                                    padding: '4px',
-                                    border: '1px solid #ff5252',
-                                    color: '#ff5252'
-                                }}
-                            >
-                                Copy Trace Report 📋
-                            </button>
-                        </div>
-                    )}
                 </div>
-                <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+
+                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
                     <button
                         onClick={async () => {
                             try {
@@ -387,31 +175,26 @@ const Profile = () => {
                             border: '1px solid #444'
                         }}
                     >
-                        Resume Network
+                        Resume Sync
                     </button>
                     <button
                         onClick={async () => {
-                            if (window.confirm('PURGE EVERYTHING: This will unregister all Service Workers and wipe LocalStorage. Use this if the site feels "stale" or old versions keep coming back. Continue?')) {
+                            if (window.confirm('PURGE SYSTEM: This will unregister all Service Workers and wipe LocalStorage. Use this if the site feels "stale" or old versions keep coming back. Continue?')) {
                                 try {
-                                    // 1. Unregister Service Workers
                                     if ('serviceWorker' in navigator) {
                                         const registrations = await navigator.serviceWorker.getRegistrations();
                                         for (let registration of registrations) {
                                             await registration.unregister();
                                         }
                                     }
-                                    // 2. Clear Local Storage
                                     localStorage.clear();
-                                    // 3. Firestore reset (if possible)
-                                    const { terminate, clearIndexedDbPersistence } = await import('firebase/firestore');
-                                    const dbInstance = (await import('../config/firebaseConfig')).db;
+                                    const dbInstance = getFirestore();
                                     await terminate(dbInstance);
                                     await clearIndexedDbPersistence(dbInstance);
 
                                     alert('System Purged! Refreshing...');
-                                    window.location.href = '/profile';
+                                    window.location.reload();
                                 } catch (err) {
-                                    alert('Purge had issues. Hard Refreshing instead.');
                                     window.location.reload();
                                 }
                             }
@@ -425,12 +208,9 @@ const Profile = () => {
                             border: '1px solid #7e57c2'
                         }}
                     >
-                        Purge Cache & Workers
+                        Hard Reset App
                     </button>
                 </div>
-                <p style={{ fontSize: '0.7rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
-                    Test Connection reveals the EXACT error code blocking your sync.
-                </p>
             </div>
         </div>
     );

@@ -2,8 +2,6 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { initializeFirestore, getFirestore } from 'firebase/firestore';
 
-console.log('--- IRONLOGIC HEARTBEAT: v2.3.0 (Feb 26, 04:50) ---');
-
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -14,26 +12,13 @@ const firebaseConfig = {
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-28F6H5KY12"
 };
 
-// Diagnostics for UI
-export const SDK_AUTO_DIAGNOSTIC = {
-    env_keys: Object.keys(import.meta.env).filter(k => k.startsWith('VITE_FIREBASE_')).length,
-    fallback_active: !import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-    protocol: 'HARD_RESET_V2.3',
-    // Key X-Ray: Show start and end to catch (copy) or spaces
-    xray: {
-        apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 5)}...${firebaseConfig.apiKey.slice(-3)}` : 'MISSING',
-        projectId: firebaseConfig.projectId ? `${firebaseConfig.projectId.substring(0, 5)}...${firebaseConfig.projectId.slice(-3)}` : 'MISSING'
-    }
-};
-
 // Initialize App (Safe Singleton)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Auth
 const auth = getAuth(app);
 
-// Initialize Firestore with Dynamic Protocol
-let db;
+// Initialize Firestore with Protocol Safety
 export const initFirestoreWithProtocol = (useWebSockets = false) => {
     try {
         const settings = {
@@ -41,24 +26,22 @@ export const initFirestoreWithProtocol = (useWebSockets = false) => {
         };
 
         if (useWebSockets) {
-            console.log("Firestore: Using WebSockets (Default)");
+            // Default WebSockets (Standard)
         } else {
-            console.log("Firestore: Forcing Long-Polling");
+            // Long-Polling fallback for restricted networks
             settings.experimentalForceLongPolling = true;
             settings.experimentalAutoDetectLongPolling = false;
             settings.useFetchStreams = false;
         }
 
-        db = initializeFirestore(app, settings);
-        return db;
+        return initializeFirestore(app, settings);
     } catch (e) {
-        console.warn("Firestore Init Error:", e);
         return getFirestore(app);
     }
 };
 
-// Default Init (Long Polling)
-db = initFirestoreWithProtocol(false);
+// Default to Long-Polling as it proved most robust for the user's network
+const db = initFirestoreWithProtocol(false);
 
 export { auth, db };
 export default app;
