@@ -21,6 +21,9 @@ const Register = () => {
             // Record signup for admin tracking
             if (result && result.user) {
                 await recordUserSignup(result.user.uid, email);
+            } else if (result === true) {
+                // If register just returns true, we might need a different way to get the user
+                // but usually register (from AuthContext) should return something or we can get it from auth
             }
             navigate('/');
         } catch (err) {

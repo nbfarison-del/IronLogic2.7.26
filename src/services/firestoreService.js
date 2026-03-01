@@ -376,10 +376,16 @@ export const subscribeToCustomExercises = (userId, callback, errorCallback) => {
     }, errorCallback);
 };
 
-export const addCustomExercise = async (userId, exerciseData) => {
+export const addCustomExercise = async (userId, exerciseData, customId = null) => {
     const exercisesRef = collection(db, 'users', userId, 'customExercises');
-    const docRef = await addDoc(exercisesRef, exerciseData);
-    return docRef.id;
+    if (customId) {
+        const docRef = doc(exercisesRef, customId);
+        await setDoc(docRef, exerciseData);
+        return customId;
+    } else {
+        const docRef = await addDoc(exercisesRef, exerciseData);
+        return docRef.id;
+    }
 };
 
 
@@ -387,26 +393,29 @@ export const ensureCustomExercisesExist = async (userId, program) => {
     if (!program || !program.weeks) return;
 
     const existingCustom = await getCustomExercises(userId);
-    const existingNames = new Set(existingCustom.map(e => e.name.toLowerCase()));
+    const existingIds = new Set(existingCustom.map(e => e.id));
 
     const newExercises = [];
     program.weeks.forEach(week => {
         week.days.forEach(day => {
             day.exercises.forEach(ex => {
-                if (ex.isNew && ex.name && !existingNames.has(ex.name.toLowerCase())) {
+                if (ex.isNew && ex.exerciseId && !existingIds.has(ex.exerciseId)) {
                     newExercises.push({
-                        name: ex.name,
-                        category: ex.category || 'Custom',
-                        createdAt: new Date().toISOString()
+                        id: ex.exerciseId,
+                        data: {
+                            name: ex.name || ex.exerciseId,
+                            category: ex.category || 'Custom',
+                            createdAt: new Date().toISOString()
+                        }
                     });
-                    existingNames.add(ex.name.toLowerCase()); // Avoid duplicates in same batch
+                    existingIds.add(ex.exerciseId); // Avoid duplicates in same batch
                 }
             });
         });
     });
 
     if (newExercises.length > 0) {
-        const promises = newExercises.map(ex => addCustomExercise(userId, ex));
+        const promises = newExercises.map(ex => addCustomExercise(userId, ex.data, ex.id));
         await Promise.all(promises);
     }
 };
