@@ -3,6 +3,18 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
+const MISSING_KEY_ERROR = `
+AI Chat Error: Gemini API Key missing. 
+
+### How to fix:
+1. **Local**: Ensure VITE_GEMINI_API_KEY is in your .env.local file.
+2. **Production (Vercel)**: 
+   - Go to your Vercel Dashboard.
+   - Project Settings -> Environment Variables.
+   - Add VITE_GEMINI_API_KEY with your key.
+   - Trigger a new deployment.
+`;
+
 const SYSTEM_PROMPT = `
 You are an expert Powerlifting Coach specializing in the "IronLogic" framework.
 Your goal is to help users build highly effective, autoregulated workout programs.
@@ -45,7 +57,7 @@ If the user is just chatting, respond with helpful, encouraging coaching advice 
 
 export const chatWithAI = async (messages, userContext = {}) => {
   if (!API_KEY) {
-    throw new Error("Gemini API Key missing. Please check your .env.local file.");
+    throw new Error(MISSING_KEY_ERROR);
   }
 
   const { workouts = [], questionnaire = {}, goals = [] } = userContext;
