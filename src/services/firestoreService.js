@@ -15,6 +15,27 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
 
+// ==================== ADMIN & TRACKING ====================
+
+export const recordUserSignup = async (userId, email) => {
+    const docRef = doc(db, 'registered_users', userId);
+    await setDoc(docRef, {
+        email,
+        signupDate: new Date().toISOString(),
+        role: 'user' // Default role
+    }, { merge: true });
+};
+
+export const getAllRegisteredUsers = async () => {
+    const usersRef = collection(db, 'registered_users');
+    const q = query(usersRef, orderBy('signupDate', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+};
+
 // ==================== USER PROFILE ====================
 
 // ==================== USER PROFILE ====================

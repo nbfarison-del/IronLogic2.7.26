@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
         if (!auth) throw new Error("Firebase Auth not initialized");
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            return true;
+            return userCredential;
         } catch (error) {
             console.error('Registration error:', error.message);
             throw error;

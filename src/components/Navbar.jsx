@@ -69,6 +69,9 @@ const Navbar = () => {
                         <Link to="/calendar" className={isActive('/calendar')}>Calendar</Link>
                         <Link to="/progress" className={isActive('/progress')}>Progress</Link>
                         <Link to="/profile" className={isActive('/profile')}>Profile</Link>
+                        {user.email === 'nbfarison@gmail.com' && (
+                            <Link to="/admin" className={isActive('/admin')}>Admin</Link>
+                        )}
                         <button onClick={handleLogout} className="btn" style={{ marginLeft: '1rem' }}>Logout</button>
                     </>
                 ) : (

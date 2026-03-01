@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { recordUserSignup } from '../services/firestoreService';
 
 const Register = () => {
     const [email, setEmail] = useState('');
@@ -16,7 +17,11 @@ const Register = () => {
         setLoading(true);
 
         try {
-            await register(email, password);
+            const result = await register(email, password);
+            // Record signup for admin tracking
+            if (result && result.user) {
+                await recordUserSignup(result.user.uid, email);
+            }
             navigate('/');
         } catch (err) {
             console.error(err);

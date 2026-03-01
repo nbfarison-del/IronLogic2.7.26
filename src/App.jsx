@@ -16,6 +16,7 @@ const Progress = lazy(() => import('./pages/Progress'));
 const Profile = lazy(() => import('./pages/Profile'));
 const CalendarView = lazy(() => import('./pages/CalendarView'));
 const Questionnaire = lazy(() => import('./pages/Questionnaire'));
+const Admin = lazy(() => import('./pages/Admin'));
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -70,6 +71,11 @@ function App() {
                 <Route path="/questionnaire" element={
                   <ProtectedRoute>
                     <Questionnaire />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <ProtectedRoute>
+                    <Admin />
                   </ProtectedRoute>
                 } />
               </Route>
