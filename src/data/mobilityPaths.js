@@ -2,7 +2,7 @@ import { mobilityExercises } from './mobilityExercises';
 
 // Each path has:
 //   sessionType: 'timer'  → countdown-based (like existing ROMWOD flow)
-//   sessionType: 'reps'   → checklist-based (ATG-style)
+//   sessionType: 'reps'   → checklist-based (IronLogic-style)
 //
 // All paths are designed for ~10 minutes total.
 
@@ -13,7 +13,7 @@ export const mobilityPaths = [
     {
         id: 'traditional',
         name: 'Traditional',
-        subtitle: 'ROMWOD-Style Flexibility',
+        subtitle: 'IronLogic-Style Flexibility',
         description: 'Passive holds and deep stretches to improve flexibility, recovery, and range of motion.',
         icon: '🧘',
         color: '#9c27b0',
@@ -22,14 +22,14 @@ export const mobilityPaths = [
     },
 
     // ─────────────────────────────────────────────
-    // ATG GENERAL  (reps, ~10 min)
+    // IRONLOGIC GENERAL  (reps, ~10 min)
     // Knee Ability Zero — foundational knee-health protocol
     // Tibialis Raise 2×25 ~2min + Patrick Step 2×25/s ~3min +
-    // KOT Calf Raise 2×25 ~2min + ATG Split Squat 3×5/s ~3min = ~10min
+    // KOT Calf Raise 2×25 ~2min + IronLogic Split Squat 3×5/s ~3min = ~10min
     // ─────────────────────────────────────────────
     {
-        id: 'atg_general',
-        name: 'ATG General',
+        id: 'ironlogic_general',
+        name: 'IronLogic General',
         subtitle: 'Knee Ability Zero',
         description: 'Build bulletproof knees through full-range strengthening from the ground up.',
         icon: '🦵',
@@ -43,7 +43,7 @@ export const mobilityPaths = [
                 prescription: '2 × 25 reps',
                 estimatedMins: 2,
                 cue: 'Back against wall, feet out front. Lift toes toward knees. Feel the burn in your shins.',
-                youtubeQuery: 'knees over toes tibialis raise Ben Patrick',
+                youtubeQuery: 'knees over toes tibialis raise',
                 description: 'Strengthens the tibialis anterior — the most neglected muscle for knee health and shin splint prevention.',
             },
             {
@@ -54,7 +54,7 @@ export const mobilityPaths = [
                 estimatedMins: 3,
                 cue: 'Balance on one leg, hips forward. Slowly bend the knee forward over toes. Tap heel, return.',
                 youtubeQuery: 'knees over toes Patrick step exercise',
-                description: 'Core ATG movement for developing safe, pain-free knee-over-toe strength.',
+                description: 'Core IronLogic movement for developing safe, pain-free knee-over-toe strength.',
             },
             {
                 id: 'kot_calf_raise',
@@ -63,31 +63,31 @@ export const mobilityPaths = [
                 prescription: '2 × 25 reps',
                 estimatedMins: 2,
                 cue: 'Push knees forward over toes as you rise. Slow and controlled through the full range.',
-                youtubeQuery: 'knees over toes calf raise soleus Ben Patrick',
+                youtubeQuery: 'knees over toes calf raise soleus',
                 description: 'Isolates the soleus — often the missing link in chronic knee pain.',
             },
             {
-                id: 'atg_split_squat',
-                name: 'ATG Split Squat',
+                id: 'ironlogic_split_squat',
+                name: 'IronLogic Split Squat',
                 type: 'unilateral',
                 prescription: '3 × 5 reps/side',
                 estimatedMins: 3,
                 cue: 'Front knee drives far over toes. Hamstring covers calf at the bottom. Heel stays flat.',
-                youtubeQuery: 'ATG split squat knees over toes tutorial',
-                description: 'The signature ATG movement. Builds quad strength, ankle mobility, and hip flexor length simultaneously.',
+                youtubeQuery: 'split squat knees over toes tutorial',
+                description: 'The signature IronLogic movement. Builds quad strength, ankle mobility, and hip flexor length simultaneously.',
             },
         ],
     },
 
     // ─────────────────────────────────────────────
-    // ATG JUMP TRAINING  (reps, ~10 min)
+    // IRONLOGIC JUMP TRAINING  (reps, ~10 min)
     // Plyometric / athletic performance protocol
     // Pogo 3×20 ~2min + Depth Drop 3×5 ~1.5min + Broad Jump 3×5 ~1.5min +
     // Single-Leg Hop 3×8/s ~2.5min + Split Squat Jump 2×8/s ~2min = ~9.5min
     // ─────────────────────────────────────────────
     {
-        id: 'atg_jump',
-        name: 'ATG Jump Training',
+        id: 'ironlogic_jump',
+        name: 'IronLogic Jump Training',
         subtitle: 'Plyometric Performance',
         description: 'Develop explosive power, reactive strength, and athletic jumping ability.',
         icon: '🚀',
@@ -142,7 +142,7 @@ export const mobilityPaths = [
                 estimatedMins: 2,
                 cue: 'Lower into a split squat then explode up. Keep the torso tall. Land with control.',
                 youtubeQuery: 'split squat jump plyometric lunge explosion',
-                description: 'Combines knee-over-toe strength with explosive power — the best of both ATG worlds.',
+                description: 'Combines knee-over-toe strength with explosive power — the best of both IronLogic worlds.',
             },
         ],
     },

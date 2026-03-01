@@ -237,7 +237,7 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
 };
 
 // ─────────────────────────────────────────
-// REPS/CHECKLIST SESSION  (ATG paths)
+// REPS/CHECKLIST SESSION  (IronLogic paths)
 // ─────────────────────────────────────────
 const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
     const [completed, setCompleted] = useState(new Set());

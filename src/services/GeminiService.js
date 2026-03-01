@@ -1,0 +1,90 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(API_KEY);
+
+const SYSTEM_PROMPT = `
+You are an expert Powerlifting Coach specializing in the "IronLogic" framework.
+Your goal is to help users build highly effective, autoregulated workout programs.
+
+### CORE PRINCIPLES OF IRONLOGIC:
+1. **Autoregulation (RPE)**: Every set should have an RPE (Relative Perceived Exertion) target.
+2. **Bottom-Up Periodization**: We don't guess how long a block lasts. We repeat a successful microcycle (Development Block) until it stops working.
+3. **Pivot Blocks**: When progress stalls, we use a low-stress Pivot block to shed fatigue and maintain readiness.
+4. **Specific Stress**: Focus on competition lifts (Squat, Bench, Deadlift) or close variations.
+5. **High Frequency**: Often training competition lifts 2-4 times per week depending on recovery.
+
+### PROGRAM FORMAT REQUIREMENTS:
+You MUST respond with a JSON object if the user asks for a program. The JSON must follow this structure:
+{
+  "name": "Program Name",
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "days": [
+        {
+          "dayNumber": 1, 
+          "dayName": "Monday: Competition Squat",
+          "exercises": [
+            { "exerciseId": "bb_squat", "sets": 1, "reps": "1", "rpe": 8, "notes": "Single @8" },
+            { "exerciseId": "bb_squat", "sets": 3, "reps": "5", "rpe": 7, "notes": "Back-offs @7" }
+          ]
+        }
+      ]
+    }
+  ],
+  "coachingNotes": "Explain the logic here."
+}
+
+**IMPORTANT**: "dayNumber" should be 1-7, where 1 is Monday and 7 is Sunday. This helps the app sync to the user's calendar.
+
+Use these exercise IDs: bb_squat, bb_bench, bb_deadlift, sumo_deadlift, db_press, lat_pulldown, db_row, leg_press, ssb_squat, etc.
+
+If the user is just chatting, respond with helpful, encouraging coaching advice consistent with IronLogic principles.
+`;
+
+export const chatWithAI = async (messages, userContext = {}) => {
+  if (!API_KEY) {
+    throw new Error("Gemini API Key missing. Please check your .env.local file.");
+  }
+
+  const { workouts = [], questionnaire = {}, goals = [] } = userContext;
+
+  const contextPrompt = `
+### USER CONTEXT:
+- **Workout History**: ${workouts.length > 0 ? (workouts.slice(0, 5).map(w => `${w.exerciseName}: ${w.weight}${w.unit || ''}x${w.reps} @ RPE${w.rpe}`).join(', ')) : 'No history yet.'}
+- **Current Goals**: ${goals.length > 0 ? goals.map(g => g.text).join(', ') : 'Not specified.'}
+- **Questionnaire Profile**: ${Object.entries(questionnaire).map(([k, v]) => `${k}: ${v}`).join(', ') || 'Not completed.'}
+
+Please use this context to provide personalized advice. Reference their previous lifts if relevant.
+    `;
+
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  // Convert messages to Gemini format
+  const history = messages.slice(0, -1).map(m => ({
+    role: m.role === 'user' ? 'user' : 'model',
+    parts: [{ text: m.content }]
+  }));
+
+  const chat = model.startChat({
+    history: history,
+    systemInstruction: SYSTEM_PROMPT + "\n" + contextPrompt,
+  });
+
+  const result = await chat.sendMessage(messages[messages.length - 1].content);
+  const response = await result.response;
+  return response.text();
+};
+
+export const parseProgramFromResponse = (text) => {
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+  } catch (e) {
+    console.error("Failed to parse program JSON:", e);
+  }
+  return null;
+};

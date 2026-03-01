@@ -11,6 +11,7 @@ import RecoveryTracker from '../components/RecoveryTracker';
 import WeightTracker from '../components/WeightTracker';
 import GoalTracker from '../components/GoalTracker';
 import MobilityTab from '../components/MobilityTab';
+import AIAgentTab from '../components/AIAgentTab';
 import { generateProgram } from '../services/ProgramGenerator';
 
 // DOTS Utilities
@@ -165,142 +166,161 @@ const Home = () => {
                 >
                     Mobility
                 </button>
+                <button
+                    onClick={() => setActiveTab('ai-agent')}
+                    style={{
+                        background: 'none',
+                        border: 'none',
+                        color: activeTab === 'ai-agent' ? 'var(--primary)' : '#888',
+                        borderBottom: activeTab === 'ai-agent' ? '2px solid var(--primary)' : '2px solid transparent',
+                        padding: '0.5rem 1rem',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '1.1rem'
+                    }}
+                >
+                    AI Agent
+                </button>
             </div>
 
-            {activeTab === 'dashboard' ? (
-                <>
-                    <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginBottom: '2rem', fontStyle: 'italic' }}>
-                        Train like a Champion Today!
-                    </p>
+            {
+                activeTab === 'dashboard' ? (
+                    <>
+                        <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginBottom: '2rem', fontStyle: 'italic' }}>
+                            Train like a Champion Today!
+                        </p>
 
-                    {aiProgram && (
-                        <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                <div>
-                                    <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
-                                    <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
-                                </div>
-                                <Link to="/questionnaire">
-                                    <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
-                                </Link>
-                            </div>
-                            <div style={{ marginTop: '1.5rem' }}>
-                                <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
-                                <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                                    {aiProgram.weeks[0]?.days.map((day, i) => (
-                                        <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
-                                            <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
-                                            <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
-                                                {day.exercises.slice(0, 3).map((ex, j) => (
-                                                    <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
-                                                ))}
-                                                {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
-                                            </ul>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
-                                Load Program into Planner
-                            </button>
-                        </div>
-                    )}
-
-                    <div className="card" style={{ marginBottom: '2rem' }}>
-                        <h2>Powerlifting DOTS Progress</h2>
-                        {dotsData.length > 1 ? (
-                            <div style={{ height: '300px', width: '100%' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={dotsData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                                        <XAxis dataKey="date" stroke="#888" />
-                                        <YAxis stroke="#888" domain={['auto', 'auto']} />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#222', border: '1px solid #444' }}
-                                            formatter={(value, name) => [value, name === 'dots' ? 'DOTS Score' : name]}
-                                        />
-                                        <Line type="monotone" dataKey="dots" stroke="#2196f3" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                        ) : (
-                            <p style={{ fontStyle: 'italic', color: '#666' }}>
-                                Need more data (Body Weight logs + SBD maxes) to generate DOTS graph.
-                            </p>
-                        )}
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
-                        <RecoveryTracker />
-                        <WeightTracker />
-                    </div>
-
-                    <div className="card" style={{ marginBottom: '2rem' }}>
-                        <h2>🏆 Recent PRs</h2>
-                        {recentPRs.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                {recentPRs.map((pr, i) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem', background: '#222', borderRadius: '6px', borderLeft: '4px solid gold' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 'bold' }}>{pr.exerciseName}</div>
-                                            <div style={{ fontSize: '0.8rem', color: '#aaa' }}>
-                                                {pr.date.includes('T') ? pr.date.split('T')[0] : pr.date}
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'gold' }}>{pr.estimated1RM} <span style={{ fontSize: '0.8rem' }}>e1RM</span></div>
-                                            {!pr.isFirst && (
-                                                <div style={{ fontSize: '0.8rem', color: '#4caf50' }}>+{pr.increase.toFixed(1)}</div>
-                                            )}
-                                        </div>
+                        {aiProgram && (
+                            <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div>
+                                        <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
+                                        <p style={{ color: '#aaa', margin: 0 }}>Based on your recent questionnaire.</p>
                                     </div>
-                                ))}
+                                    <Link to="/questionnaire">
+                                        <button className="btn" style={{ fontSize: '0.8rem' }}>Update Goals</button>
+                                    </Link>
+                                </div>
+                                <div style={{ marginTop: '1.5rem' }}>
+                                    <h3 style={{ fontSize: '1rem', color: '#fff' }}>Week 1 Preview:</h3>
+                                    <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                                        {aiProgram.weeks[0]?.days.map((day, i) => (
+                                            <div key={i} style={{ minWidth: '200px', background: '#333', padding: '1rem', borderRadius: '8px' }}>
+                                                <div style={{ fontWeight: 'bold', marginBottom: '0.5rem', color: '#ddd' }}>{day.dayName}</div>
+                                                <ul style={{ paddingLeft: '1.2rem', margin: 0, fontSize: '0.85rem', color: '#aaa' }}>
+                                                    {day.exercises.slice(0, 3).map((ex, j) => (
+                                                        <li key={j}>{ex.sets}x{ex.reps} ({ex.exerciseId})</li>
+                                                    ))}
+                                                    {day.exercises.length > 3 && <li>+ {day.exercises.length - 3} more</li>}
+                                                </ul>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
+                                    Load Program into Planner
+                                </button>
                             </div>
-                        ) : (
-                            <p style={{ fontStyle: 'italic', color: '#666' }}>No PRs set yet.</p>
                         )}
-                    </div>
 
-                    <GoalTracker />
+                        <div className="card" style={{ marginBottom: '2rem' }}>
+                            <h2>Powerlifting DOTS Progress</h2>
+                            {dotsData.length > 1 ? (
+                                <div style={{ height: '300px', width: '100%' }}>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={dotsData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                                            <XAxis dataKey="date" stroke="#888" />
+                                            <YAxis stroke="#888" domain={['auto', 'auto']} />
+                                            <Tooltip
+                                                contentStyle={{ backgroundColor: '#222', border: '1px solid #444' }}
+                                                formatter={(value, name) => [value, name === 'dots' ? 'DOTS Score' : name]}
+                                            />
+                                            <Line type="monotone" dataKey="dots" stroke="#2196f3" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <p style={{ fontStyle: 'italic', color: '#666' }}>
+                                    Need more data (Body Weight logs + SBD maxes) to generate DOTS graph.
+                                </p>
+                            )}
+                        </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-                        <div className="card">
-                            <h2>Start Workout</h2>
-                            <p>Log your daily exercise and keep track of your sets.</p>
-                            <Link to="/log">
-                                <button className="btn btn-primary" style={{ marginTop: '1rem' }}>Log Now</button>
-                            </Link>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+                            <RecoveryTracker />
+                            <WeightTracker />
                         </div>
-                        <div className="card">
-                            <h2>View Progress</h2>
-                            <p>See your stats and improvements over time.</p>
-                            <Link to="/progress">
-                                <button className="btn" style={{ marginTop: '1rem' }}>View Dashboard</button>
-                            </Link>
-                        </div>
-                        <div className="card">
-                            <h2>Recent Activity</h2>
-                            {workouts.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                    {workouts.slice(0, 5).map((w, i) => (
-                                        <div key={i} style={{ fontSize: '0.9rem', padding: '0.5rem', background: '#222', borderRadius: '4px', borderLeft: '3px solid #666' }}>
-                                            <div style={{ fontWeight: 'bold' }}>{w.exerciseName}</div>
-                                            <div style={{ color: '#aaa', fontSize: '0.8rem' }}>
-                                                {w.date.includes('T') ? w.date.split('T')[0] : w.date} • {w.weight ? `${w.weight}${appUnit} x ` : ''}{w.reps ? `${w.reps} reps` : (w.duration ? `${w.duration}m` : '')}
+
+                        <div className="card" style={{ marginBottom: '2rem' }}>
+                            <h2>🏆 Recent PRs</h2>
+                            {recentPRs.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    {recentPRs.map((pr, i) => (
+                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem', background: '#222', borderRadius: '6px', borderLeft: '4px solid gold' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 'bold' }}>{pr.exerciseName}</div>
+                                                <div style={{ fontSize: '0.8rem', color: '#aaa' }}>
+                                                    {pr.date.includes('T') ? pr.date.split('T')[0] : pr.date}
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'gold' }}>{pr.estimated1RM} <span style={{ fontSize: '0.8rem' }}>e1RM</span></div>
+                                                {!pr.isFirst && (
+                                                    <div style={{ fontSize: '0.8rem', color: '#4caf50' }}>+{pr.increase.toFixed(1)}</div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <p style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No recent activity to show.</p>
+                                <p style={{ fontStyle: 'italic', color: '#666' }}>No PRs set yet.</p>
                             )}
                         </div>
-                    </div>
-                </>
-            ) : (
-                <MobilityTab />
-            )}
-        </div>
+
+                        <GoalTracker />
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
+                            <div className="card">
+                                <h2>Start Workout</h2>
+                                <p>Log your daily exercise and keep track of your sets.</p>
+                                <Link to="/log">
+                                    <button className="btn btn-primary" style={{ marginTop: '1rem' }}>Log Now</button>
+                                </Link>
+                            </div>
+                            <div className="card">
+                                <h2>View Progress</h2>
+                                <p>See your stats and improvements over time.</p>
+                                <Link to="/progress">
+                                    <button className="btn" style={{ marginTop: '1rem' }}>View Dashboard</button>
+                                </Link>
+                            </div>
+                            <div className="card">
+                                <h2>Recent Activity</h2>
+                                {workouts.length > 0 ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                        {workouts.slice(0, 5).map((w, i) => (
+                                            <div key={i} style={{ fontSize: '0.9rem', padding: '0.5rem', background: '#222', borderRadius: '4px', borderLeft: '3px solid #666' }}>
+                                                <div style={{ fontWeight: 'bold' }}>{w.exerciseName}</div>
+                                                <div style={{ color: '#aaa', fontSize: '0.8rem' }}>
+                                                    {w.date.includes('T') ? w.date.split('T')[0] : w.date} • {w.weight ? `${w.weight}${appUnit} x ` : ''}{w.reps ? `${w.reps} reps` : (w.duration ? `${w.duration}m` : '')}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No recent activity to show.</p>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                ) : activeTab === 'mobility' ? (
+                    <MobilityTab />
+                ) : (
+                    <AIAgentTab />
+                )
+            }
+        </div >
     );
 };
 
