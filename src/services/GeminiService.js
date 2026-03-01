@@ -50,7 +50,12 @@ You MUST respond with a JSON object if the user asks for a program. The JSON mus
 
 **IMPORTANT**: "dayNumber" should be 1-7, where 1 is Monday and 7 is Sunday. This helps the app sync to the user's calendar.
 
-Use these exercise IDs: bb_squat, bb_bench, bb_deadlift, sumo_deadlift, db_press, lat_pulldown, db_row, leg_press, ssb_squat, etc.
+Use these standard exercise IDs when possible: bb_squat, bb_bench, bb_deadlift, sumo_deadlift, db_press, lat_pulldown, db_row, leg_press, ssb_squat, etc.
+
+**CUSTOM EXERCISES**: If the user needs an exercise NOT in the standard library, you MAY generate a new ID. For any such exercise, you MUST include:
+- "isNew": true
+- "name": "Human-readable Name"
+- "category": "Barbell", "Dumbbell", "Cable", "Machine", "Bodyweight", "Core", or "Cardio"
 
 If the user is just chatting, respond with helpful, encouraging coaching advice consistent with IronLogic principles.
 `;

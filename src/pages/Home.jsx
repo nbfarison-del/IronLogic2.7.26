@@ -13,6 +13,7 @@ import GoalTracker from '../components/GoalTracker';
 import MobilityTab from '../components/MobilityTab';
 import AIAgentTab from '../components/AIAgentTab';
 import { generateProgram } from '../services/ProgramGenerator';
+import logo from '../assets/logo.png';
 
 // DOTS Utilities
 const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
@@ -47,6 +48,7 @@ const Home = () => {
             const loadProgram = async () => {
                 try {
                     const newProgram = generateProgram(coaching.questionnaire);
+                    await firestoreService.ensureCustomExercisesExist(user.id, newProgram);
                     setAiProgram(newProgram);
                     await firestoreService.saveAIProgram(user.id, newProgram);
                 } catch (err) {
@@ -183,6 +185,7 @@ const Home = () => {
                 </button>
             </div>
 
+
             {
                 activeTab === 'dashboard' ? (
                     <>
@@ -191,7 +194,12 @@ const Home = () => {
                         </p>
 
                         {aiProgram && (
-                            <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(45deg, #222 0%, #2a2a2a 100%)' }}>
+                            <div className="card" style={{
+                                marginBottom: '2rem',
+                                borderLeft: '4px solid var(--primary)',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div>
                                         <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>

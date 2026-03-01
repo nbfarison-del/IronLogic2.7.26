@@ -1,7 +1,8 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 
+// Firebase configuration from environment variables
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -9,39 +10,40 @@ const firebaseConfig = {
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-28F6H5KY12"
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize App (Safe Singleton)
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// Initialize Firebase variables
+let app;
+let auth;
+let db;
 
-// Initialize Auth
-const auth = getAuth(app);
-
-// Initialize Firestore with Protocol Safety
-export const initFirestoreWithProtocol = (useWebSockets = false) => {
-    try {
-        const settings = {
-            ignoreUndefinedProperties: true
-        };
-
-        if (useWebSockets) {
-            // Default WebSockets (Standard)
-        } else {
-            // Long-Polling fallback for restricted networks
-            settings.experimentalForceLongPolling = true;
-            settings.experimentalAutoDetectLongPolling = false;
-            settings.useFetchStreams = false;
-        }
-
-        return initializeFirestore(app, settings);
-    } catch (e) {
-        return getFirestore(app);
+try {
+    // CRITICAL: Check for missing keys to prevent "Blank Screen" crash
+    if (!firebaseConfig.apiKey) {
+        throw new Error("FIREBASE CONFIG MISSING! Check your Vercel Environment Variables.");
     }
-};
 
-// Default to Long-Polling as it proved most robust for the user's network
-const db = initFirestoreWithProtocol(false);
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+
+    // Enable Multi-Tab Persistence
+    import('firebase/firestore').then(({ enableMultiTabIndexedDbPersistence }) => {
+        enableMultiTabIndexedDbPersistence(db).catch((err) => {
+            if (err.code === 'failed-precondition') {
+                console.warn('Firestore persistence failed: Multiple tabs open (Old Browser or Conflict)');
+            } else if (err.code === 'unimplemented') {
+                console.warn('Firestore persistence failed: Browser not supported');
+            }
+        });
+    });
+
+} catch (error) {
+    console.error("FIREBASE INITIALIZATION ERROR:", error);
+    // We swallow the error here so the app doesn't crash at the top level.
+    // The ErrorBoundary will catch the inevitable failure when components try to use 'auth' or 'db'.
+}
 
 export { auth, db };
 export default app;

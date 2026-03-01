@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { mobilityPaths } from '../data/mobilityPaths';
 import * as firestoreService from '../services/firestoreService';
+import mobilityHero from '../assets/mobility_hero.png';
+import logo from '../assets/logo.png';
 
 const LAST_PATH_KEY = 'mobility_last_path';
 
@@ -33,43 +35,61 @@ const PathSelectionView = ({ onSelect, mobilityLogs }) => {
             )}
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.25rem' }}>
-                {mobilityPaths.map(path => (
-                    <button
-                        key={path.id}
-                        onClick={() => onSelect(path)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
-                    >
-                        <div
-                            className="card"
-                            style={{
-                                borderLeft: `5px solid ${path.color}`,
-                                transition: 'transform 0.15s, box-shadow 0.15s',
-                                position: 'relative',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 6px 20px ${path.color}33`; }}
-                            onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+                {mobilityPaths.map(path => {
+                    const isTraditional = path.id === 'traditional' || path.id === 'maternal_prep';
+                    const isIronLogic = path.id.startsWith('ironlogic');
+                    const bgImage = isTraditional ? mobilityHero : (isIronLogic ? logo : null);
+
+                    return (
+                        <button
+                            key={path.id}
+                            onClick={() => onSelect(path)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
                         >
-                            {path.id === lastPathId && (
-                                <div style={{
-                                    position: 'absolute', top: '0.75rem', right: '0.75rem',
-                                    background: path.color, color: 'white',
-                                    fontSize: '0.65rem', fontWeight: 'bold',
-                                    padding: '0.2rem 0.5rem', borderRadius: '10px'
-                                }}>
-                                    Last Used
+                            <div
+                                className="card"
+                                style={{
+                                    borderLeft: `5px solid ${path.color}`,
+                                    transition: 'transform 0.15s, box-shadow 0.15s',
+                                    position: 'relative',
+                                    backgroundImage: bgImage ? `linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url(${bgImage})` : 'none',
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    overflow: 'hidden'
+                                }}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                    e.currentTarget.style.boxShadow = `0 6px 20px ${path.color}33`;
+                                    if (bgImage) e.currentTarget.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url(${bgImage})`;
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.transform = 'none';
+                                    e.currentTarget.style.boxShadow = 'none';
+                                    if (bgImage) e.currentTarget.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url(${bgImage})`;
+                                }}
+                            >
+                                {path.id === lastPathId && (
+                                    <div style={{
+                                        position: 'absolute', top: '0.75rem', right: '0.75rem',
+                                        background: path.color, color: 'white',
+                                        fontSize: '0.65rem', fontWeight: 'bold',
+                                        padding: '0.2rem 0.5rem', borderRadius: '10px'
+                                    }}>
+                                        Last Used
+                                    </div>
+                                )}
+                                <div style={{ fontSize: '2rem', marginBottom: '0.6rem' }}>{path.icon}</div>
+                                <h3 style={{ margin: '0 0 0.2rem 0', color: path.color }}>{path.name}</h3>
+                                <div style={{ fontSize: '0.78rem', color: '#777', marginBottom: '0.6rem' }}>{path.subtitle}</div>
+                                <p style={{ color: '#aaa', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>{path.description}</p>
+                                <div style={{ marginTop: '1rem', fontSize: '0.78rem', color: '#555' }}>
+                                    ⏱ ~10 min &nbsp;·&nbsp;
+                                    {path.sessionType === 'timer' ? '🕐 Timed holds' : '✅ Exercise checklist'}
                                 </div>
-                            )}
-                            <div style={{ fontSize: '2rem', marginBottom: '0.6rem' }}>{path.icon}</div>
-                            <h3 style={{ margin: '0 0 0.2rem 0', color: path.color }}>{path.name}</h3>
-                            <div style={{ fontSize: '0.78rem', color: '#777', marginBottom: '0.6rem' }}>{path.subtitle}</div>
-                            <p style={{ color: '#aaa', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>{path.description}</p>
-                            <div style={{ marginTop: '1rem', fontSize: '0.78rem', color: '#555' }}>
-                                ⏱ ~10 min &nbsp;·&nbsp;
-                                {path.sessionType === 'timer' ? '🕐 Timed holds' : '✅ Exercise checklist'}
                             </div>
-                        </div>
-                    </button>
-                ))}
+                        </button>
+                    );
+                })}
             </div>
         </div>
     );

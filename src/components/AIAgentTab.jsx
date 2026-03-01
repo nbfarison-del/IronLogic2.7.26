@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
 import { chatWithAI, parseProgramFromResponse } from '../services/GeminiService';
+import aiCoachAvatar from '../assets/ai_coach.png';
 
 const AIAgentTab = () => {
     const { user } = useAuth();
@@ -57,6 +58,7 @@ const AIAgentTab = () => {
     const handleSaveProgram = async () => {
         if (!generatedProgram || !user) return;
         try {
+            await firestoreService.ensureCustomExercisesExist(user.id, generatedProgram);
             await firestoreService.saveAIProgram(user.id, generatedProgram);
             alert("Program saved to your Profile!");
             setGeneratedProgram(null);
@@ -77,6 +79,7 @@ const AIAgentTab = () => {
         if (!generatedProgram || !user) return;
         setLoading(true);
         try {
+            await firestoreService.ensureCustomExercisesExist(user.id, generatedProgram);
             const baseDate = new Date(startDate);
             // IronLogic usually starts on Monday. Let's just use the selected date as "Day 1" or align it to the week.
             // If dayNumber is 1-7 (Mon-Sun), we should adjust each workout based on its dayNumber and weekNumber.
@@ -117,17 +120,31 @@ const AIAgentTab = () => {
             <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {messages.map((m, i) => (
                     <div key={i} style={{
+                        display: 'flex',
+                        flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
+                        alignItems: 'flex-end',
+                        gap: '0.8rem',
                         alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-                        maxWidth: '80%',
-                        background: m.role === 'user' ? 'var(--primary)' : '#333',
-                        color: m.role === 'user' ? '#000' : '#fff',
-                        padding: '0.8rem 1.2rem',
-                        borderRadius: m.role === 'user' ? '18px 18px 0 18px' : '18px 18px 18px 0',
-                        fontSize: '0.95rem',
-                        lineHeight: '1.4',
-                        boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                        maxWidth: '85%'
                     }}>
-                        {m.content.split('\n').map((line, j) => <p key={j} style={{ margin: 0 }}>{line}</p>)}
+                        {m.role === 'model' && (
+                            <img
+                                src={aiCoachAvatar}
+                                alt="AI Coach"
+                                style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid var(--primary)', flexShrink: 0 }}
+                            />
+                        )}
+                        <div style={{
+                            background: m.role === 'user' ? 'var(--primary)' : '#333',
+                            color: m.role === 'user' ? '#000' : '#fff',
+                            padding: '0.8rem 1.2rem',
+                            borderRadius: m.role === 'user' ? '18px 18px 0 18px' : '18px 18px 18px 0',
+                            fontSize: '0.95rem',
+                            lineHeight: '1.4',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                        }}>
+                            {m.content.split('\n').map((line, j) => <p key={j} style={{ margin: 0 }}>{line}</p>)}
+                        </div>
                     </div>
                 ))}
                 {loading && (

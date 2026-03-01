@@ -1,6 +1,6 @@
 @echo off
-cd /d "%~dp0"
-echo Starting IronLogic from D: Drive...
-echo App starting! Visit http://localhost:5173 on this PC.
+cd /d "c:\Users\nbfar\Documents\FitnessApp"
+echo Starting IronLogic...
+echo App starting! Look for the "Network" URL below to access from your phone.
 npm.cmd run dev
 pause

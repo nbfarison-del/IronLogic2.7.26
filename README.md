@@ -1,6 +1,3 @@
-# IronLogic (Latest Hybrid Experience: 2026-02-15)
-<!-- Phase 5 Syntax Fix Trigger -->
-
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

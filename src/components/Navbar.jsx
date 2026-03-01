@@ -1,6 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import logo from '../assets/logo.png';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
@@ -18,7 +19,10 @@ const Navbar = () => {
     return (
         <nav>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Link to="/" className="nav-brand" style={{ margin: 0 }}>IronLogic</Link>
+                <Link to="/" className="nav-brand" style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+                    <img src={logo} alt="IronLogic" style={{ height: '32px', marginRight: '8px' }} />
+                    <span style={{ display: 'none' }}>IronLogic</span>
+                </Link>
                 {user && (
                     <div style={{
                         display: 'flex',

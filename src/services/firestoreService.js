@@ -361,6 +361,35 @@ export const addCustomExercise = async (userId, exerciseData) => {
     return docRef.id;
 };
 
+
+export const ensureCustomExercisesExist = async (userId, program) => {
+    if (!program || !program.weeks) return;
+
+    const existingCustom = await getCustomExercises(userId);
+    const existingNames = new Set(existingCustom.map(e => e.name.toLowerCase()));
+
+    const newExercises = [];
+    program.weeks.forEach(week => {
+        week.days.forEach(day => {
+            day.exercises.forEach(ex => {
+                if (ex.isNew && ex.name && !existingNames.has(ex.name.toLowerCase())) {
+                    newExercises.push({
+                        name: ex.name,
+                        category: ex.category || 'Custom',
+                        createdAt: new Date().toISOString()
+                    });
+                    existingNames.add(ex.name.toLowerCase()); // Avoid duplicates in same batch
+                }
+            });
+        });
+    });
+
+    if (newExercises.length > 0) {
+        const promises = newExercises.map(ex => addCustomExercise(userId, ex));
+        await Promise.all(promises);
+    }
+};
+
 // ==================== MOBILITY LOGS ====================
 
 export const getMobilityLogs = async (userId, limitCount = null) => {

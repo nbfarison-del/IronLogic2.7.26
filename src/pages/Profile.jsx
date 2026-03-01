@@ -3,7 +3,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
-import { getFirestore, clearIndexedDbPersistence, terminate } from 'firebase/firestore';
+import { getFirestore, clearIndexedDbPersistence } from 'firebase/firestore';
 
 const Profile = () => {
     const { user } = useAuth();
@@ -17,8 +17,19 @@ const Profile = () => {
         notesHistory,
         maxes: syncedMaxes,
         isLoading,
-        syncStatus
+        syncStatus,
+        syncTimestamps,
+        syncError
     } = useData();
+
+    const counts = {
+        workouts: workouts?.length || 0,
+        weights: weights?.length || 0,
+        recovery: recovery?.length || 0,
+        goals: goals?.length || 0,
+        planned: plannedWorkouts?.length || 0,
+        notes: notesHistory?.length || 0
+    };
 
     const [maxes, setMaxes] = useState({
         squat: '',
@@ -33,6 +44,27 @@ const Profile = () => {
             setMaxes(syncedMaxes);
         }
     }, [syncedMaxes]);
+
+    // Browser-robust YYYY-MM-DD
+    const getTodayStr = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const handleForceRefresh = async () => {
+        if (window.confirm('This will wipe all local caches (including Firebase persistence) and force a full reload. Continue?')) {
+            try {
+                localStorage.clear();
+                const db = getFirestore();
+                await clearIndexedDbPersistence(db);
+                // Redirect to root to avoid 404 on re-load
+                window.location.href = '/';
+            } catch (err) {
+                console.error('Refresh error:', err);
+                window.location.reload();
+            }
+        }
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -135,9 +167,9 @@ const Profile = () => {
                 </form>
             </div>
 
-            {/* SYNC & MAINTENANCE */}
+            {/* SYNC DIAGNOSTICS - Super Safe Version */}
             <div className="card" style={{ border: '1px solid #444', background: '#1a1a1a' }}>
-                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: 'var(--primary)' }}>System Status</h3>
+                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: 'var(--primary)' }}>Sync Diagnostics</h3>
 
                 <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -145,71 +177,52 @@ const Profile = () => {
                         <span style={{ color: '#888' }}>{user?.email}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>App Version:</span>
-                        <span style={{ color: '#00e676', fontWeight: 'bold' }}>v3.0.0 (Stable)</span>
+                        <span>User ID:</span>
+                        <span style={{ color: '#888', fontSize: '0.7rem' }}>{user?.id ? `${user.id.substring(0, 8)}...` : 'N/A'}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Status:</span>
+                        <span>Firestore Status:</span>
                         <span style={{ color: syncStatus === 'online' ? '#4caf50' : '#f44336' }}>
-                            {syncStatus?.toUpperCase() || 'STABLE'}
+                            {syncStatus?.toUpperCase() || 'UNKNOWN'}
                         </span>
                     </div>
-                </div>
 
-                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '0.5rem' }}>
+                    {syncError && (
+                        <div style={{ padding: '0.5rem', background: 'rgba(244, 67, 54, 0.1)', border: '1px solid #f44336', borderRadius: '4px', color: '#f44336', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                            <strong>Sync Error:</strong> {syncError}
+                        </div>
+                    )}
+
+                    <div style={{ marginTop: '1rem', borderTop: '1px solid #333' }}>
+                        <div style={{ padding: '0.5rem 0', fontWeight: 'bold' }}>Last Received Updates:</div>
+                        {Object.entries(syncTimestamps || {}).length === 0 ? (
+                            <div style={{ color: '#666' }}>No live updates received yet.</div>
+                        ) : (
+                            Object.entries(syncTimestamps).map(([key, time]) => (
+                                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
+                                    <span style={{ textTransform: 'capitalize' }}>{key} ({counts[key] || 0}):</span>
+                                    <span style={{ color: '#aaa' }}>{time}</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
                     <button
-                        onClick={async () => {
-                            try {
-                                await firestoreService.forceSyncNetwork();
-                                alert('Network sync resumed! Checking for uploads...');
-                            } catch (err) {
-                                alert('Failed to resume network.');
-                            }
-                        }}
+                        onClick={handleForceRefresh}
                         className="btn"
                         style={{
-                            flex: 1,
+                            marginTop: '1.5rem',
+                            width: '100%',
+                            background: '#333',
                             fontSize: '0.8rem',
-                            padding: '0.5rem',
-                            background: '#222',
-                            border: '1px solid #444'
+                            padding: '0.5rem'
                         }}
                     >
-                        Resume Sync
+                        Hard Refresh Sync
                     </button>
-                    <button
-                        onClick={async () => {
-                            if (window.confirm('PURGE SYSTEM: This will unregister all Service Workers and wipe LocalStorage. Use this if the site feels "stale" or old versions keep coming back. Continue?')) {
-                                try {
-                                    if ('serviceWorker' in navigator) {
-                                        const registrations = await navigator.serviceWorker.getRegistrations();
-                                        for (let registration of registrations) {
-                                            await registration.unregister();
-                                        }
-                                    }
-                                    localStorage.clear();
-                                    const dbInstance = getFirestore();
-                                    await terminate(dbInstance);
-                                    await clearIndexedDbPersistence(dbInstance);
-
-                                    alert('System Purged! Refreshing...');
-                                    window.location.reload();
-                                } catch (err) {
-                                    window.location.reload();
-                                }
-                            }
-                        }}
-                        className="btn"
-                        style={{
-                            flex: 2,
-                            fontSize: '0.8rem',
-                            padding: '0.5rem',
-                            background: '#311b92',
-                            border: '1px solid #7e57c2'
-                        }}
-                    >
-                        Hard Reset App
-                    </button>
+                    <p style={{ fontSize: '0.7rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
+                        Clears local cache and reloads from server
+                    </p>
                 </div>
             </div>
         </div>
