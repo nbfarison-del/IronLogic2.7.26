@@ -150,12 +150,12 @@ const CalendarView = () => {
             const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
             const dateStr = getDateStr(date);
 
-            const hasWorkout = workouts.some(w => w.date.startsWith(dateStr));
-            const hasPlanned = plannedWorkouts.some(p => p.date.startsWith(dateStr));
-            const recoveryEntry = recoveryHistory.find(r => r.date.startsWith(dateStr));
-            const hasWeight = weightHistory.some(w => w.date.startsWith(dateStr));
-            const hasNote = notesHistory.some(n => n.date.startsWith(dateStr));
-            const hasMobility = mobilityLogs.some(m => m.date.startsWith(dateStr));
+            const hasWorkout = workouts.some(w => w.date?.startsWith(dateStr));
+            const hasPlanned = plannedWorkouts.some(p => p.date?.startsWith(dateStr));
+            const recoveryEntry = recoveryHistory.find(r => r.date?.startsWith(dateStr));
+            const hasWeight = weightHistory.some(w => w.date?.startsWith(dateStr));
+            const hasNote = notesHistory.some(n => n.date?.startsWith(dateStr));
+            const hasMobility = mobilityLogs.some(m => m.date?.startsWith(dateStr));
 
             const isSelected = isSameDay(date, selectedDate);
             const isToday = isSameDay(date, new Date());
@@ -212,7 +212,7 @@ const CalendarView = () => {
     }
 
     const selectedDateStr = getDateStr(selectedDate);
-    const dayWorkouts = workouts.filter(w => w.date.startsWith(selectedDateStr));
+    const dayWorkouts = workouts.filter(w => w.date?.startsWith(selectedDateStr));
     const dayPlanned = plannedWorkouts.filter(p => p.date === selectedDateStr);
     const dayRecovery = recoveryHistory.find(r => r.date === selectedDateStr);
     const dayMobility = mobilityLogs.filter(m => m.date === selectedDateStr);
@@ -272,7 +272,7 @@ const CalendarView = () => {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     {dayPlanned.map((p, i) => (
                                         <div key={i} style={{ padding: '0.5rem', background: '#222', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span>{p.planName}</span>
+                                            <span>{p.planName || p.name || 'Unnamed Plan'}</span>
                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                 <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => startWorkout(p)}>Start</button>
                                                 <button className="btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => { setEditingProgram(p); setIsPlanning(true); }}>Edit</button>

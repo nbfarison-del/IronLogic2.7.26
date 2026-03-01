@@ -86,16 +86,21 @@ const AIAgentTab = () => {
 
             const promises = [];
             generatedProgram.weeks.forEach(week => {
+                if (!week.weekNumber) return;
                 week.days.forEach(day => {
+                    if (!day.dayNumber) return;
                     const targetDate = new Date(baseDate);
                     // (weekNumber-1)*7 + (dayNumber-1)
                     const offset = (week.weekNumber - 1) * 7 + (day.dayNumber - 1);
+                    if (isNaN(offset)) return;
+
                     targetDate.setDate(targetDate.getDate() + offset);
 
                     const dateStr = targetDate.toISOString().split('T')[0];
                     promises.push(firestoreService.addPlannedWorkout(user.id, {
                         date: dateStr,
                         planName: `${generatedProgram.name} - W${week.weekNumber}D${day.dayNumber}`,
+                        name: `${generatedProgram.name} - W${week.weekNumber}D${day.dayNumber}`,
                         exercises: day.exercises,
                         notes: day.dayName
                     }));

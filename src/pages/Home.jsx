@@ -41,6 +41,52 @@ const Home = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [aiProgram, setAiProgram] = useState(null);
 
+    // Load Program logic
+    const [showSyncDateModal, setShowSyncDateModal] = useState(false);
+    const [startDate, setStartDate] = useState(() => {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        return tomorrow.toISOString().split('T')[0];
+    });
+
+    const handleLoadProgram = async () => {
+        if (!aiProgram || !user) return;
+        try {
+            await firestoreService.ensureCustomExercisesExist(user.id, aiProgram);
+            const baseDate = new Date(startDate);
+            const promises = [];
+
+            aiProgram.weeks.forEach(week => {
+                if (!week.weekNumber) return;
+                week.days.forEach(day => {
+                    if (!day.dayNumber) return;
+                    const targetDate = new Date(baseDate);
+                    const offset = (week.weekNumber - 1) * 7 + (day.dayNumber - 1);
+                    if (isNaN(offset)) return;
+
+                    targetDate.setDate(targetDate.getDate() + offset);
+                    const dateStr = targetDate.toISOString().split('T')[0];
+
+                    promises.push(firestoreService.addPlannedWorkout(user.id, {
+                        date: dateStr,
+                        planName: `${aiProgram.name} - W${week.weekNumber}D${day.dayNumber}`,
+                        name: `${aiProgram.name} - W${week.weekNumber}D${day.dayNumber}`,
+                        exercises: day.exercises,
+                        notes: day.dayName
+                    }));
+                });
+            });
+
+            await Promise.all(promises);
+            await firestoreService.clearAIProgram(user.id);
+            alert(`Succesfully synced ${promises.length} workouts to your calendar!`);
+            setShowSyncDateModal(false);
+        } catch (error) {
+            console.error("Error loading program:", error);
+            alert("Failed to load program.");
+        }
+    };
+
     useEffect(() => {
         if (coaching.program) {
             setAiProgram(coaching.program);
@@ -200,6 +246,16 @@ const Home = () => {
                                 position: 'relative',
                                 overflow: 'hidden'
                             }}>
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('Dismiss this action plan? You can regenerate it later.')) {
+                                            await firestoreService.clearAIProgram(user.id);
+                                        }
+                                    }}
+                                    style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1.2rem' }}
+                                >
+                                    &times;
+                                </button>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                     <div>
                                         <h2 style={{ margin: '0 0 0.5rem 0', color: 'var(--primary)' }}>⚡ AI Action Plan: {aiProgram.name}</h2>
@@ -225,9 +281,26 @@ const Home = () => {
                                         ))}
                                     </div>
                                 </div>
-                                <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => alert('Feature coming soon: Load this program directly into your planner!')}>
-                                    Load Program into Planner
-                                </button>
+
+                                {showSyncDateModal ? (
+                                    <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#222', borderRadius: '8px', border: '1px solid var(--primary)' }}>
+                                        <h4 style={{ margin: '0 0 1rem 0' }}>📅 Select Start Date (Week 1 Monday)</h4>
+                                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                            <input
+                                                type="date"
+                                                value={startDate}
+                                                onChange={(e) => setStartDate(e.target.value)}
+                                                style={{ padding: '0.5rem' }}
+                                            />
+                                            <button className="btn btn-primary" onClick={handleLoadProgram}>Sync Now</button>
+                                            <button className="btn" onClick={() => setShowSyncDateModal(false)}>Cancel</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button className="btn btn-primary" style={{ marginTop: '1.5rem' }} onClick={() => setShowSyncDateModal(true)}>
+                                        Load Program into Planner
+                                    </button>
+                                )}
                             </div>
                         )}
 

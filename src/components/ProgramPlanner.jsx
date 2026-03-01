@@ -124,6 +124,7 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
             id: initialData?.id || Date.now().toString(),
             date: todayStr,
             name: programName,
+            planName: programName,
             exercises: filteredExercises
         });
     };
