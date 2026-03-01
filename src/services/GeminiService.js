@@ -101,9 +101,20 @@ Please use this context to provide personalized advice. Reference their previous
     },
   });
 
-  const result = await chat.sendMessage(messages[messages.length - 1].content);
-  const response = await result.response;
-  return response.text();
+  try {
+    const result = await chat.sendMessage(messages[messages.length - 1].content);
+    const response = await result.response;
+    return response.text();
+  } catch (err) {
+    if (err.message?.includes('Failed to fetch') || err.message?.includes('network')) {
+      console.warn("Gemini Network Error. Retrying in 1s...");
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const result = await chat.sendMessage(messages[messages.length - 1].content);
+      const response = await result.response;
+      return response.text();
+    }
+    throw err;
+  }
 };
 
 export const parseProgramFromResponse = (text) => {

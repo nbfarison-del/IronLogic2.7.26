@@ -307,8 +307,8 @@ const Home = () => {
                         <div className="card" style={{ marginBottom: '2rem' }}>
                             <h2>Powerlifting DOTS Progress</h2>
                             {dotsData.length > 1 ? (
-                                <div style={{ height: '300px', width: '100%' }}>
-                                    <ResponsiveContainer width="100%" height="100%">
+                                <div style={{ height: '300px', width: '100%', minHeight: '300px' }}>
+                                    <ResponsiveContainer width="100%" height="100%" minHeight={300}>
                                         <LineChart data={dotsData}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#444" />
                                             <XAxis dataKey="date" stroke="#888" />

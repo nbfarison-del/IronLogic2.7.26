@@ -1,6 +1,11 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import {
+    getFirestore,
+    initializeFirestore,
+    persistentLocalCache,
+    persistentMultipleTabManager
+} from 'firebase/firestore';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -26,17 +31,12 @@ try {
 
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
-    db = getFirestore(app);
 
-    // Enable Multi-Tab Persistence
-    import('firebase/firestore').then(({ enableMultiTabIndexedDbPersistence }) => {
-        enableMultiTabIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Firestore persistence failed: Multiple tabs open (Old Browser or Conflict)');
-            } else if (err.code === 'unimplemented') {
-                console.warn('Firestore persistence failed: Browser not supported');
-            }
-        });
+    // Modern Firestore Persistence (Replacement for enableMultiTabIndexedDbPersistence)
+    db = initializeFirestore(app, {
+        localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager()
+        })
     });
 
 } catch (error) {
