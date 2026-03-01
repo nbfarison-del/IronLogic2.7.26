@@ -59,17 +59,29 @@ export const chatWithAI = async (messages, userContext = {}) => {
 Please use this context to provide personalized advice. Reference their previous lifts if relevant.
     `;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
   // Convert messages to Gemini format
-  const history = messages.slice(0, -1).map(m => ({
+  // CRITICAL: Gemini requires the history to start with a 'user' message.
+  // We skip the initial model greeting if it's the first message.
+  let history = messages.slice(0, -1);
+  const firstUserIndex = history.findIndex(m => m.role === 'user');
+  if (firstUserIndex !== -1) {
+    history = history.slice(firstUserIndex);
+  } else {
+    history = [];
+  }
+
+  const formattedHistory = history.map(m => ({
     role: m.role === 'user' ? 'user' : 'model',
     parts: [{ text: m.content }]
   }));
 
   const chat = model.startChat({
-    history: history,
-    systemInstruction: SYSTEM_PROMPT + "\n" + contextPrompt,
+    history: formattedHistory,
+    systemInstruction: {
+      parts: [{ text: SYSTEM_PROMPT + "\n" + contextPrompt }]
+    },
   });
 
   const result = await chat.sendMessage(messages[messages.length - 1].content);
