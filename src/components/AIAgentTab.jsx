@@ -70,9 +70,12 @@ const AIAgentTab = () => {
 
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [startDate, setStartDate] = useState(() => {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return tomorrow.toISOString().split('T')[0];
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     });
 
     const handleSyncToCalendar = async () => {
@@ -80,26 +83,37 @@ const AIAgentTab = () => {
         setLoading(true);
         try {
             await firestoreService.ensureCustomExercisesExist(user.id, generatedProgram);
-            const [year, month, day] = startDate.split('-').map(Number);
-            const baseDate = new Date(year, month - 1, day);
+
+            // Parse input date and anchor to UTC Noon to avoid timezone/DST shifts
+            const [y, m, d] = startDate.split('-').map(Number);
+            const baseDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+
+            // Align to the Monday of that week so "Day 1" (Monday) is correct
+            // getUTCDay: 0=Sun, 1=Mon...
+            const dayOfWeek = baseDate.getUTCDay();
+            const diffToMonday = (dayOfWeek + 6) % 7;
+            baseDate.setUTCDate(baseDate.getUTCDate() - diffToMonday);
 
             const promises = [];
             generatedProgram.weeks.forEach(week => {
-                if (!week.weekNumber) return;
-                week.days.forEach(day => {
-                    if (!day.dayNumber) return;
-                    const targetDate = new Date(baseDate);
-                    const offset = (week.weekNumber - 1) * 7 + (day.dayNumber - 1);
-                    if (isNaN(offset)) return;
+                const wNum = parseInt(week.weekNumber);
+                if (isNaN(wNum)) return;
 
-                    targetDate.setDate(targetDate.getDate() + offset);
+                week.days.forEach(dayObj => {
+                    const dNum = parseInt(dayObj.dayNumber);
+                    if (isNaN(dNum)) return;
 
-                    const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+                    const targetDate = new Date(baseDate.getTime());
+                    const offset = (wNum - 1) * 7 + (dNum - 1);
+
+                    targetDate.setUTCDate(targetDate.getUTCDate() + offset);
+
+                    const dateStr = targetDate.toISOString().split('T')[0];
                     promises.push(firestoreService.addPlannedWorkout(user.id, {
                         date: dateStr,
-                        planName: `${generatedProgram.name} - W${week.weekNumber}D${day.dayNumber}`,
-                        name: `${generatedProgram.name} - W${week.weekNumber}D${day.dayNumber}`,
-                        exercises: day.exercises.map(ex => ({
+                        planName: `${generatedProgram.name} - W${wNum}D${dNum}`,
+                        name: `${generatedProgram.name} - W${wNum}D${dNum}`,
+                        exercises: dayObj.exercises.map(ex => ({
                             ...ex,
                             sets: Array.from({ length: parseInt(ex.sets) || 1 }, (_, i) => ({
                                 id: Date.now() + i + Math.random(),
@@ -108,7 +122,7 @@ const AIAgentTab = () => {
                                 targetRpe: ex.rpe || ''
                             }))
                         })),
-                        notes: day.dayName
+                        notes: dayObj.dayName
                     }));
                 });
             });
