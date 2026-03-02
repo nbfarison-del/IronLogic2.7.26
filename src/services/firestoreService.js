@@ -335,7 +335,7 @@ export const getAIProgram = async (userId) => {
 
 export const saveAIProgram = async (userId, programData) => {
     const docRef = doc(db, 'users', userId, 'aiProgram', 'data');
-    await setDoc(docRef, { program: programData }, { merge: true });
+    await setDoc(docRef, { program: programData, dismissed: false }, { merge: true });
 };
 
 export const getQuestionnaire = async (userId) => {
@@ -345,12 +345,12 @@ export const getQuestionnaire = async (userId) => {
 
 export const saveQuestionnaire = async (userId, questionnaireData) => {
     const docRef = doc(db, 'users', userId, 'aiProgram', 'data');
-    await setDoc(docRef, { questionnaire: questionnaireData }, { merge: true });
+    await setDoc(docRef, { questionnaire: questionnaireData, program: null, dismissed: false }, { merge: true });
 };
 
 export const clearAIProgram = async (userId) => {
     const docRef = doc(db, 'users', userId, 'aiProgram', 'data');
-    await setDoc(docRef, { program: null }, { merge: true });
+    await setDoc(docRef, { program: null, dismissed: true }, { merge: true });
 };
 
 // ==================== CUSTOM EXERCISES ====================

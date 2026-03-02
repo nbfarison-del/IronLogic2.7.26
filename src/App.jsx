@@ -15,7 +15,6 @@ const WorkoutLog = lazy(() => import('./pages/WorkoutLog'));
 const Progress = lazy(() => import('./pages/Progress'));
 const Profile = lazy(() => import('./pages/Profile'));
 const CalendarView = lazy(() => import('./pages/CalendarView'));
-const Questionnaire = lazy(() => import('./pages/Questionnaire'));
 const Admin = lazy(() => import('./pages/Admin'));
 
 const ProtectedRoute = ({ children }) => {
@@ -66,11 +65,6 @@ function App() {
                 <Route path="/calendar" element={
                   <ProtectedRoute>
                     <CalendarView />
-                  </ProtectedRoute>
-                } />
-                <Route path="/questionnaire" element={
-                  <ProtectedRoute>
-                    <Questionnaire />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin" element={

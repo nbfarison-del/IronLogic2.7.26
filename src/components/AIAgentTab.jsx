@@ -80,9 +80,8 @@ const AIAgentTab = () => {
         setLoading(true);
         try {
             await firestoreService.ensureCustomExercisesExist(user.id, generatedProgram);
-            const baseDate = new Date(startDate);
-            // IronLogic usually starts on Monday. Let's just use the selected date as "Day 1" or align it to the week.
-            // If dayNumber is 1-7 (Mon-Sun), we should adjust each workout based on its dayNumber and weekNumber.
+            const [year, month, day] = startDate.split('-').map(Number);
+            const baseDate = new Date(year, month - 1, day);
 
             const promises = [];
             generatedProgram.weeks.forEach(week => {
@@ -90,13 +89,12 @@ const AIAgentTab = () => {
                 week.days.forEach(day => {
                     if (!day.dayNumber) return;
                     const targetDate = new Date(baseDate);
-                    // (weekNumber-1)*7 + (dayNumber-1)
                     const offset = (week.weekNumber - 1) * 7 + (day.dayNumber - 1);
                     if (isNaN(offset)) return;
 
                     targetDate.setDate(targetDate.getDate() + offset);
 
-                    const dateStr = targetDate.toISOString().split('T')[0];
+                    const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
                     promises.push(firestoreService.addPlannedWorkout(user.id, {
                         date: dateStr,
                         planName: `${generatedProgram.name} - W${week.weekNumber}D${day.dayNumber}`,
