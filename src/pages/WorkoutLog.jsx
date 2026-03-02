@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useSettings } from '../context/SettingsContext';
@@ -10,12 +10,26 @@ import * as firestoreService from '../services/firestoreService';
 const WorkoutLog = () => {
     const { user } = useAuth();
     const { unit } = useSettings();
+    const location = useLocation();
     const {
         workouts: syncedWorkouts,
         customExercises: syncedCustom,
+        plannedWorkouts,
         isLoading: dataLoading,
         maxes
     } = useData();
+
+    // Browser-robust YYYY-MM-DD helper
+    const getDateStr = (date) => {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+
+    // Detect Planned Workout (either from navigation state or today's schedule)
+    const activePlannedWorkout = useMemo(() => {
+        if (location.state?.plannedWorkout) return location.state.plannedWorkout;
+        const todayStr = getDateStr(new Date());
+        return plannedWorkouts.find(p => p.date === todayStr);
+    }, [location.state, plannedWorkouts]);
 
     // Combined Exercise List (Default + Custom)
     const allExercises = useMemo(() => [
@@ -24,6 +38,7 @@ const WorkoutLog = () => {
     ], [syncedCustom]);
 
     const [selectedExerciseId, setSelectedExerciseId] = useState('');
+    const [selectedPlannedExId, setSelectedPlannedExId] = useState(null);
     const [workoutType, setWorkoutType] = useState('strength');
     const [setRows, setSetRows] = useState([{ id: Date.now(), weight: '', reps: '', targetRpe: '', actualRpe: '' }]);
     const [notes, setNotes] = useState('');
@@ -33,20 +48,47 @@ const WorkoutLog = () => {
     const [isCreatingExercise, setIsCreatingExercise] = useState(false);
     const [newExerciseName, setNewExerciseName] = useState('');
 
-    const [modifiers, setModifiers] = useState({
-        grip: '', bar: '', pause: '', tempo: '', isBelt: false,
-        isKneeWraps: false, isSquatSuit: false, isSquatSuitStrapsUp: false,
-        isBenchShirt: false, isSlingshot: false, board: '',
-        isDeadliftSuit: false, isDeadliftSuitStrapsUp: false, isFeetUp: false
-    });
+    // Handle Auto-loading of Planned Exercise
+    const loadPlannedExercise = (plannedEx) => {
+        if (!plannedEx) return;
 
-    // Filter today's sets from the global syncedWorkouts stream
+        setSelectedPlannedExId(plannedEx.id);
+
+        // Find existing id in allExercises for lookup
+        const exMatch = allExercises.find(e => e.id === plannedEx.exerciseId || e.name === plannedEx.exerciseName);
+        if (exMatch) {
+            setSelectedExerciseId(exMatch.id);
+            setWorkoutType(exMatch.category === EXERCISE_CATEGORIES.CARDIO ? 'cardio' : 'strength');
+        } else {
+            // Fallback for exercises not in library
+            setSelectedExerciseId(plannedEx.exerciseId);
+        }
+
+        // Initialize sets
+        if (plannedEx.sets && Array.isArray(plannedEx.sets)) {
+            setSetRows(plannedEx.sets.map(s => ({
+                id: Date.now() + Math.random(),
+                weight: s.weight || '',
+                reps: s.reps || '',
+                targetRpe: s.targetRpe || '',
+                actualRpe: ''
+            })));
+        }
+        setNotes(plannedEx.notes || '');
+    };
+
+    // Initial load if planned workout exists
+    useEffect(() => {
+        if (activePlannedWorkout && activePlannedWorkout.exercises?.length > 0 && !selectedExerciseId) {
+            loadPlannedExercise(activePlannedWorkout.exercises[0]);
+        }
+    }, [activePlannedWorkout, allExercises]);
+
+    // Filter today's sets
     const loggedSets = useMemo(() => {
         if (!syncedWorkouts) return [];
-        const todayObj = new Date();
-        const today = `${todayObj.getFullYear()}-${String(todayObj.getMonth() + 1).padStart(2, '0')}-${String(todayObj.getDate()).padStart(2, '0')}`;
+        const today = getDateStr(new Date());
         return syncedWorkouts.filter(w => {
-            // w.date is either 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm:ss...'
             const workoutDate = w.date.includes('T') ? w.date.split('T')[0] : w.date;
             return workoutDate === today;
         });
@@ -186,6 +228,37 @@ const WorkoutLog = () => {
                 <h1>Log Workout</h1>
                 <Link to="/profile" className="btn">Update Maxes</Link>
             </div>
+
+            {activePlannedWorkout && (
+                <div className="card" style={{ marginBottom: '1rem', border: '1px solid #2196f3', background: 'rgba(33, 150, 243, 0.05)' }}>
+                    <h3 style={{ margin: '0 0 1rem 0', color: '#2196f3' }}>
+                        Today's Plan: {activePlannedWorkout.planName || activePlannedWorkout.name}
+                    </h3>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {activePlannedWorkout.exercises.map((ex, idx) => {
+                            const isSelected = selectedPlannedExId === ex.id;
+                            const isLogged = loggedSets.some(s => s.exerciseId === ex.exerciseId || s.exerciseName === ex.exerciseName);
+
+                            return (
+                                <button
+                                    key={ex.id || idx}
+                                    onClick={() => loadPlannedExercise(ex)}
+                                    className={`btn ${isSelected ? 'btn-primary' : ''}`}
+                                    style={{
+                                        fontSize: '0.8rem',
+                                        padding: '0.4rem 0.8rem',
+                                        opacity: isLogged && !isSelected ? 0.6 : 1,
+                                        border: isLogged ? '1px solid #4caf50' : isSelected ? '1px solid var(--primary)' : '1px solid #444'
+                                    }}
+                                >
+                                    {isLogged && '✓ '}
+                                    {ex.exerciseName || ex.exerciseId}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <div className="card" style={{ marginBottom: '2rem' }}>
                 {!isCreatingExercise ? (

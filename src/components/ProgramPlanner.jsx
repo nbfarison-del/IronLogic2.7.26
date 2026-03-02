@@ -11,17 +11,24 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
     const [allExercises, setAllExercises] = useState(defaultExercises);
     const [programName, setProgramName] = useState(initialData?.name || 'New Program');
     const [plannedExercises, setPlannedExercises] = useState(() => {
-        const exercises = initialData?.exercises || [];
-        return exercises.map(ex => ({
-            ...ex,
-            id: ex.id || Date.now() + Math.random(),
-            sets: Array.isArray(ex.sets) ? ex.sets : Array.from({ length: parseInt(ex.sets) || 1 }, (_, i) => ({
-                id: Date.now() + i + Math.random(),
-                weight: '',
-                reps: ex.reps || '',
-                targetRpe: ex.rpe || ''
-            }))
-        }));
+        const exercisesInPlan = initialData?.exercises || [];
+        return exercisesInPlan.map(ex => {
+            // Fallback for missing exercise names in old synced programs
+            const standardEx = defaultExercises.find(e => e.id === ex.exerciseId);
+            const finalName = ex.exerciseName || ex.name || standardEx?.name || ex.exerciseId;
+
+            return {
+                ...ex,
+                exerciseName: finalName,
+                id: ex.id || Date.now() + Math.random(),
+                sets: Array.isArray(ex.sets) ? ex.sets : Array.from({ length: parseInt(ex.sets) || 1 }, (_, i) => ({
+                    id: Date.now() + i + Math.random(),
+                    weight: '',
+                    reps: ex.reps || '',
+                    targetRpe: ex.rpe || ''
+                }))
+            };
+        });
     });
 
     // Load custom exercises

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
 import { chatWithAI, parseProgramFromResponse } from '../services/GeminiService';
+import { exercises } from '../data/exercises';
 import aiCoachAvatar from '../assets/ai_coach.png';
 
 const AIAgentTab = () => {
@@ -113,15 +114,22 @@ const AIAgentTab = () => {
                         date: dateStr,
                         planName: `${generatedProgram.name} - W${wNum}D${dNum}`,
                         name: `${generatedProgram.name} - W${wNum}D${dNum}`,
-                        exercises: dayObj.exercises.map(ex => ({
-                            ...ex,
-                            sets: Array.from({ length: parseInt(ex.sets) || 1 }, (_, i) => ({
-                                id: Date.now() + i + Math.random(),
-                                weight: '',
-                                reps: ex.reps || '',
-                                targetRpe: ex.rpe || ''
-                            }))
-                        })),
+                        exercises: dayObj.exercises.map(ex => {
+                            // Look up human readable name from ID if not provided
+                            const standardEx = exercises.find(e => e.id === ex.exerciseId);
+                            const finalName = ex.name || standardEx?.name || ex.exerciseId;
+
+                            return {
+                                ...ex,
+                                exerciseName: finalName,
+                                sets: Array.from({ length: parseInt(ex.sets) || 1 }, (_, i) => ({
+                                    id: Date.now() + i + Math.random(),
+                                    weight: '',
+                                    reps: ex.reps || '',
+                                    targetRpe: ex.rpe || ''
+                                }))
+                            };
+                        }),
                         notes: dayObj.dayName
                     }));
                 });

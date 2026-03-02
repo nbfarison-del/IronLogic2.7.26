@@ -222,7 +222,19 @@ const CalendarView = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h1>Calendar Tracking</h1>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button className="btn btn-primary" onClick={() => navigate('/log')}>Log Workout</button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => {
+                            const planned = plannedWorkouts.find(p => p.date === selectedDateStr);
+                            if (planned) {
+                                startWorkout(planned);
+                            } else {
+                                navigate('/log');
+                            }
+                        }}
+                    >
+                        Log Workout
+                    </button>
                     <button className="btn" onClick={() => setIsPlanning(true)}>+ Plan Program</button>
                 </div>
             </div>
