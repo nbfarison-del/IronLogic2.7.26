@@ -10,7 +10,19 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
     const { user } = useAuth();
     const [allExercises, setAllExercises] = useState(defaultExercises);
     const [programName, setProgramName] = useState(initialData?.name || 'New Program');
-    const [plannedExercises, setPlannedExercises] = useState(initialData?.exercises || []);
+    const [plannedExercises, setPlannedExercises] = useState(() => {
+        const exercises = initialData?.exercises || [];
+        return exercises.map(ex => ({
+            ...ex,
+            id: ex.id || Date.now() + Math.random(),
+            sets: Array.isArray(ex.sets) ? ex.sets : Array.from({ length: parseInt(ex.sets) || 1 }, (_, i) => ({
+                id: Date.now() + i + Math.random(),
+                weight: '',
+                reps: ex.reps || '',
+                targetRpe: ex.rpe || ''
+            }))
+        }));
+    });
 
     // Load custom exercises
     useEffect(() => {

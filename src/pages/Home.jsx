@@ -71,7 +71,15 @@ const Home = () => {
                         date: dateStr,
                         planName: `${aiProgram.name} - W${week.weekNumber}D${day.dayNumber}`,
                         name: `${aiProgram.name} - W${week.weekNumber}D${day.dayNumber}`,
-                        exercises: day.exercises,
+                        exercises: day.exercises.map(ex => ({
+                            ...ex,
+                            sets: Array.from({ length: parseInt(ex.sets) || 1 }, (_, i) => ({
+                                id: Date.now() + i + Math.random(),
+                                weight: '',
+                                reps: ex.reps || '',
+                                targetRpe: ex.rpe || ''
+                            }))
+                        })),
                         notes: day.dayName
                     }));
                 });
