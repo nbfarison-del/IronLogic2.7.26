@@ -47,7 +47,7 @@ export const mobilityPaths = [
                 estimatedMins: 2,
                 cue: 'Back against wall, feet out front. Lift toes toward knees. Feel the burn in your shins.',
                 youtubeQuery: 'knees over toes tibialis raise',
-                description: 'Strengthens the tibialis anterior — the most neglected muscle for knee health and specialty prevention.',
+                description: 'Strengthens the tibialis anterior — the most neglected muscle for knee health and shin splint prevention.',
             },
             {
                 id: 'patrick_step',
