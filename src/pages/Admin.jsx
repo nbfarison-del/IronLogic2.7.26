@@ -69,7 +69,7 @@ const Admin = () => {
         return <Navigate to="/" />;
     }
 
-    const coaches = users.filter(u => u.role === 'coach');
+    const coaches = users.filter(u => u.role === 'coach' || u.role === 'admin');
 
     return (
         <div className="container" style={{ padding: '1rem' }}>
@@ -132,7 +132,7 @@ const Admin = () => {
                                                 >
                                                     <option value="">No Coach</option>
                                                     {coaches.map(c => (
-                                                        <option key={c.id} value={c.id}>{c.email}</option>
+                                                        <option key={c.id} value={c.id}>{c.email} ({c.role})</option>
                                                     ))}
                                                 </select>
                                             )}

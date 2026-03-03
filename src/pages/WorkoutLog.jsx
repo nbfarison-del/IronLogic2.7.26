@@ -105,6 +105,32 @@ const WorkoutLog = () => {
         isBenchShirt: false, isSlingshot: false, board: '',
         isDeadliftSuit: false, isDeadliftSuitStrapsUp: false, isFeetUp: false
     });
+    const [isSessionComplete, setIsSessionComplete] = useState(false);
+
+    useEffect(() => {
+        if (!targetUserId || !selectedDate) return;
+        const dateStr = getDateStr(selectedDate);
+        const unsubscribe = firestoreService.subscribeToSessionStatus(targetUserId, dateStr, (status) => {
+            setIsSessionComplete(status);
+        });
+        return () => unsubscribe();
+    }, [targetUserId, selectedDate]);
+
+    const handleFinalizeWorkout = async () => {
+        try {
+            await firestoreService.markSessionComplete(targetUserId, getDateStr(selectedDate), true);
+        } catch (error) {
+            console.error('Error finalizing workout:', error);
+        }
+    };
+
+    const handleReopenWorkout = async () => {
+        try {
+            await firestoreService.markSessionComplete(targetUserId, getDateStr(selectedDate), false);
+        } catch (error) {
+            console.error('Error reopening workout:', error);
+        }
+    };
 
     // Handle Auto-loading of Planned Exercise
     const loadPlannedExercise = (plannedEx) => {
@@ -299,7 +325,7 @@ const WorkoutLog = () => {
             </div>
 
             {/* Today's Plan Section (Athlete Only) */}
-            {!isCoachViewing && activePlannedWorkout && (
+            {!isCoachViewing && activePlannedWorkout && !isSessionComplete && (
                 <div className="card" style={{ marginBottom: '1rem', border: '1px solid #2196f3', background: 'rgba(33, 150, 243, 0.05)' }}>
                     <h3 style={{ margin: '0 0 1rem 0', color: '#2196f3' }}>
                         Today's Plan: {activePlannedWorkout.planName || activePlannedWorkout.name}
@@ -331,7 +357,7 @@ const WorkoutLog = () => {
             )}
 
             {/* Log Workout Form (Athlete Only) */}
-            {!isCoachViewing && (
+            {!isCoachViewing && !isSessionComplete && (
                 <div className="card" style={{ marginBottom: '2rem' }}>
                     {!isCreatingExercise ? (
                         <div className="input-group">
@@ -511,7 +537,27 @@ const WorkoutLog = () => {
                 </div>
             )}
 
-            <h2>{isCoachViewing ? 'Session Results' : "Today's Session"}</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', marginBottom: '1rem' }}>
+                <h2 style={{ margin: 0 }}>{isCoachViewing ? 'Session Results' : "Today's Session"}</h2>
+                {!isCoachViewing && loggedSets.length > 0 && (
+                    isSessionComplete ? (
+                        <button onClick={handleReopenWorkout} className="btn" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', border: '1px solid #444', color: '#aaa' }}>
+                            Edit Session
+                        </button>
+                    ) : (
+                        <button onClick={handleFinalizeWorkout} className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', background: '#4caf50', border: 'none' }}>
+                            ✔️ Complete Workout
+                        </button>
+                    )
+                )}
+            </div>
+
+            {isSessionComplete && (
+                <div style={{ padding: '1rem', background: 'rgba(76, 175, 80, 0.1)', border: '1px solid #4caf50', borderRadius: '8px', color: '#4caf50', textAlign: 'center', marginBottom: '1rem' }}>
+                    <strong>🎉 Workout Completed!</strong> Great job crushing this session.
+                </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {loggedSets.length === 0 ? <p>No logs recorded for this day.</p> : loggedSets.map(entry => (
                     <div key={entry.id} className="card" style={{ border: checkPR(entry) ? '1px solid gold' : 'none' }}>

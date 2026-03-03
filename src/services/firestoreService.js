@@ -70,8 +70,15 @@ export const updateSubscriptionStatus = async (userId, status) => {
 };
 
 export const assignAthleteToCoach = async (athleteId, coachId) => {
+    // Update both registered_users and profile data for consistency
+    const regDocRef = doc(db, 'registered_users', athleteId);
     const profileDocRef = doc(db, 'users', athleteId, 'profile', 'data');
-    await updateDoc(profileDocRef, { coach_id: coachId });
+
+    const updates = { coach_id: coachId };
+    await Promise.all([
+        updateDoc(regDocRef, updates),
+        setDoc(profileDocRef, updates, { merge: true })
+    ]);
 };
 
 export const getAssignedAthletes = async (coachId) => {
@@ -176,6 +183,24 @@ export const subscribeToWorkouts = (userId, callback, errorCallback, limitCount 
         }));
         callback(workouts);
     }, errorCallback);
+};
+
+// ==================== SESSIONS ====================
+
+export const markSessionComplete = async (userId, dateStr, isComplete) => {
+    const sessionRef = doc(db, 'users', userId, 'sessions', dateStr);
+    await setDoc(sessionRef, { isComplete }, { merge: true });
+};
+
+export const subscribeToSessionStatus = (userId, dateStr, callback) => {
+    const sessionRef = doc(db, 'users', userId, 'sessions', dateStr);
+    return onSnapshot(sessionRef, (docSnap) => {
+        if (docSnap.exists()) {
+            callback(docSnap.data().isComplete || false);
+        } else {
+            callback(false);
+        }
+    });
 };
 
 // ==================== GOALS ====================

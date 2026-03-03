@@ -175,32 +175,7 @@ const Home = () => {
                             Train like a Champion Today!
                         </p>
 
-                        {/* Today's Planned Workout Section */}
-                        {(() => {
-                            const todayStr = new Date().toISOString().split('T')[0];
-                            const todayPlan = plannedWorkouts?.find(p => p.date === todayStr);
-                            if (todayPlan) {
-                                return (
-                                    <div className="card" style={{ marginBottom: '2rem', border: '2px solid var(--primary)', background: 'rgba(33, 150, 243, 0.1)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <div>
-                                                <h3 style={{ margin: 0, color: 'var(--primary)' }}>Today's Planned Session</h3>
-                                                <p style={{ margin: '0.5rem 0 0 0', fontWeight: 'bold' }}>{todayPlan.planName || todayPlan.name}</p>
-                                                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                                                    {todayPlan.exercises?.length || 0} Exercises planned
-                                                </p>
-                                            </div>
-                                            <Link to="/log" state={{ plannedWorkout: todayPlan }}>
-                                                <button className="btn btn-primary" style={{ padding: '0.8rem 1.5rem', fontSize: '1rem' }}>
-                                                    Start Workout
-                                                </button>
-                                            </Link>
-                                        </div>
-                                    </div>
-                                );
-                            }
-                            return null;
-                        })()}
+
 
 
 
