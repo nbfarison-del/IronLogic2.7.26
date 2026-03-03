@@ -18,7 +18,10 @@ export const mobilityPaths = [
         icon: '🧘',
         color: '#9c27b0',
         sessionType: 'timer',
-        exercises: mobilityExercises, // 5 are randomly selected at runtime
+        exercises: mobilityExercises.filter(ex =>
+            !ex.id.endsWith('_maternal') &&
+            !['deep_birth_squat', 'adductor_rock_back', '90_90_rocks', 'standing_lunge', 'ql_doorway_stretch'].includes(ex.id)
+        ),
     },
 
     // ─────────────────────────────────────────────
