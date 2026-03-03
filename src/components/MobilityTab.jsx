@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { mobilityPaths } from '../data/mobilityPaths';
 import * as firestoreService from '../services/firestoreService';
+import { seededShuffle, getDailySeed } from '../utils/randomUtils';
 import mobilityHero from '../assets/mobility_hero.png';
 import logo from '../assets/logo.png';
 
@@ -107,8 +108,10 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
 
     const buildProgram = useCallback(() => {
         let exercises;
-        if (path.id === 'traditional') {
-            const shuffled = [...path.exercises].sort(() => 0.5 - Math.random());
+        const seed = getDailySeed();
+
+        if (path.id === 'traditional' || path.id === 'maternal_prep') {
+            const shuffled = seededShuffle(path.exercises, seed);
             exercises = shuffled.slice(0, 5);
         } else {
             exercises = path.exercises;
