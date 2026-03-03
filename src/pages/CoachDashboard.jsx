@@ -21,7 +21,16 @@ const CoachDashboard = () => {
     const fetchAthletes = async () => {
         setLoading(true);
         try {
-            const data = await getAssignedAthletes(user.id);
+            let data;
+            if (user.email === 'nbfarison@gmail.com') {
+                // Master access for super admin
+                const allUsers = await firestoreService.getAllRegisteredUsers();
+                // Filter out the admin themselves so they aren't coaching themselves (optional, but cleaner)
+                data = allUsers.filter(u => u.email !== 'nbfarison@gmail.com');
+            } else {
+                data = await getAssignedAthletes(user.id);
+            }
+
             setAthletes(data);
 
             // Fetch quick metrics for each athlete
