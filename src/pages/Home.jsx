@@ -35,6 +35,7 @@ const Home = () => {
         recovery: recoveryHistory,
         goals,
         coaching,
+        plannedWorkouts,
         isLoading: loading
     } = useData();
 
@@ -174,30 +175,35 @@ const Home = () => {
                             Train like a Champion Today!
                         </p>
 
+                        {/* Today's Planned Workout Section */}
+                        {(() => {
+                            const todayStr = new Date().toISOString().split('T')[0];
+                            const todayPlan = plannedWorkouts?.find(p => p.date === todayStr);
+                            if (todayPlan) {
+                                return (
+                                    <div className="card" style={{ marginBottom: '2rem', border: '2px solid var(--primary)', background: 'rgba(33, 150, 243, 0.1)' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div>
+                                                <h3 style={{ margin: 0, color: 'var(--primary)' }}>Today's Planned Session</h3>
+                                                <p style={{ margin: '0.5rem 0 0 0', fontWeight: 'bold' }}>{todayPlan.planName || todayPlan.name}</p>
+                                                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                                    {todayPlan.exercises?.length || 0} Exercises planned
+                                                </p>
+                                            </div>
+                                            <Link to="/log" state={{ plannedWorkout: todayPlan }}>
+                                                <button className="btn btn-primary" style={{ padding: '0.8rem 1.5rem', fontSize: '1rem' }}>
+                                                    Start Workout
+                                                </button>
+                                            </Link>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
 
-                        <div className="card" style={{ marginBottom: '2rem' }}>
-                            <h2>Powerlifting DOTS Progress</h2>
-                            {dotsData.length > 1 ? (
-                                <div style={{ height: '300px', width: '100%', minHeight: '300px' }}>
-                                    <ResponsiveContainer width="100%" height="100%" minHeight={300}>
-                                        <LineChart data={dotsData}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                                            <XAxis dataKey="date" stroke="#888" />
-                                            <YAxis stroke="#888" domain={['auto', 'auto']} />
-                                            <Tooltip
-                                                contentStyle={{ backgroundColor: '#222', border: '1px solid #444' }}
-                                                formatter={(value, name) => [value, name === 'dots' ? 'DOTS Score' : name]}
-                                            />
-                                            <Line type="monotone" dataKey="dots" stroke="#2196f3" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            ) : (
-                                <p style={{ fontStyle: 'italic', color: '#666' }}>
-                                    Need more data (Body Weight logs + SBD maxes) to generate DOTS graph.
-                                </p>
-                            )}
-                        </div>
+
+
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
                             <RecoveryTracker />

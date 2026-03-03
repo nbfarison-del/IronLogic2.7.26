@@ -26,8 +26,16 @@ Your goal is to help users build highly effective, autoregulated workout program
 4. **Specific Stress**: Focus on competition lifts (Squat, Bench, Deadlift) or close variations.
 5. **High Frequency**: Often training competition lifts 2-4 times per week depending on recovery.
 
+### RESPONSE FORMATTING:
+- Use **Markdown** for all responses.
+- Use **headings** (###) to organize long responses.
+- Use **bullet points** and **numbered lists** for clarity.
+- Use **bold** and *italics* to emphasize key points.
+- Use **tables** for comparing stats or exercise options if requested.
+- If you provide a workout program, follow the JSON format below.
+
 ### PROGRAM FORMAT REQUIREMENTS:
-You MUST respond with a JSON object if the user asks for a program. The JSON must follow this structure:
+You MUST respond with a JSON object IF AND ONLY IF the user asks for a program. The JSON must follow this structure:
 {
   "name": "Program Name",
   "weeks": [
@@ -57,8 +65,12 @@ Use these standard exercise IDs when possible: bb_squat, bb_bench, bb_deadlift, 
 - "name": "Human-readable Name"
 - "category": "Barbell", "Dumbbell", "Cable", "Machine", "Bodyweight", "Core", or "Cardio"
 
-If the user is just chatting, respond with helpful, encouraging coaching advice consistent with IronLogic principles.
+### CONTEXT & FOLLOW-UPS:
+- You are aware of the conversation history. Do not repeat information already given unless asked.
+- Answer follow-up questions concisely and within the context of the previous discussion.
+- If the user is just chatting, respond with helpful, encouraging coaching advice consistent with IronLogic principles.
 `;
+
 
 export const chatWithAI = async (messages, userContext = {}) => {
   if (!API_KEY) {
@@ -78,11 +90,15 @@ Please use this context to provide personalized advice. Reference their previous
 
   const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-  // Convert messages to Gemini format
-  // CRITICAL: Gemini requires the history to start with a 'user' message.
-  // We skip the initial model greeting if it's the first message.
-  let history = messages.slice(0, -1);
+
+
+
+
+
+  // Truncate history to avoid large context slowing down response
+  let history = messages.slice(-10, -1);
   const firstUserIndex = history.findIndex(m => m.role === 'user');
+
   if (firstUserIndex !== -1) {
     history = history.slice(firstUserIndex);
   } else {
@@ -101,20 +117,68 @@ Please use this context to provide personalized advice. Reference their previous
     },
   });
 
+  const sendMessageWithTimeout = async (content, timeoutMs = 15000) => {
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Timeout: AI took too long to respond.")), timeoutMs)
+    );
+    return Promise.race([chat.sendMessage(content), timeoutPromise]);
+  };
+
   try {
-    const result = await chat.sendMessage(messages[messages.length - 1].content);
+    const result = await sendMessageWithTimeout(messages[messages.length - 1].content);
     const response = await result.response;
     return response.text();
   } catch (err) {
-    if (err.message?.includes('Failed to fetch') || err.message?.includes('network')) {
-      console.warn("Gemini Network Error. Retrying in 1s...");
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const result = await chat.sendMessage(messages[messages.length - 1].content);
-      const response = await result.response;
-      return response.text();
+    const errorMsg = err.message || "";
+    const isRetryable =
+      errorMsg.includes('503') ||
+      errorMsg.includes('529') ||
+      errorMsg.includes('high demand') ||
+      errorMsg.includes('too many requests') ||
+      errorMsg.includes('429') ||
+      errorMsg.includes('Timeout') ||
+      errorMsg.includes('network') ||
+      errorMsg.includes('Failed to fetch');
+
+    if (isRetryable) {
+      console.warn(`Gemini API busy or timeout (${errorMsg}). Retrying in 2s...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Second attempt with slightly longer timeout
+      try {
+        const result = await sendMessageWithTimeout(messages[messages.length - 1].content, 20000);
+        const response = await result.response;
+        return response.text();
+      } catch (retryErr) {
+        throw new Error("Coach is currently overloaded. Please try again in a few minutes.");
+      }
     }
     throw err;
   }
+};
+
+
+
+export const generateStrengthBlock = async (userContext, goal = 'Strength') => {
+  const prompt = `
+    Generate a 4-6 week ${goal} based strength block following IronLogic principles.
+    The user is a powerlifter. 
+    Focus on: ${goal === 'Hypertrophy' ? 'higher volume variations' : goal === 'Peaking' ? 'high intensity singles' : 'balanced volume and intensity'}.
+    Please provide the response in the JSON format specified in the system prompt.
+  `;
+  const responseText = await chatWithAI([{ role: 'user', content: prompt }], userContext);
+  return parseProgramFromResponse(responseText);
+};
+
+export const analyzeTrends = async (userContext) => {
+  const prompt = `
+    Analyze the user's recent workout history and provide 3-5 specific, data-driven coaching suggestions.
+    Consider: 
+    1. Are they overreaching? (Look at RPE trends vs intended).
+    2. Are SBD maxes trending up?
+    3. Suggest an exercise variation change if progress is stalled.
+    Respond in a human-friendly coaching style.
+  `;
+  return await chatWithAI([{ role: 'user', content: prompt }], userContext);
 };
 
 export const parseProgramFromResponse = (text) => {

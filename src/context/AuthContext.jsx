@@ -26,14 +26,34 @@ export const AuthProvider = ({ children }) => {
         }
 
         // Listen for auth state changes (handles session persistence)
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                // User is signed in
-                setUser({
-                    id: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    name: firebaseUser.email.split('@')[0]
-                });
+                try {
+                    // Import firestoreService dynamically to avoid circular dependency if any
+                    const { getUserProfile } = await import('../services/firestoreService');
+                    const profile = await getUserProfile(firebaseUser.uid);
+
+                    // User is signed in
+                    const isAdmin = firebaseUser.email === 'nbfarison@gmail.com';
+                    setUser({
+                        id: firebaseUser.uid,
+                        email: firebaseUser.email,
+                        name: profile?.name || firebaseUser.email.split('@')[0],
+                        role: isAdmin ? 'admin' : (profile?.role || 'athlete'),
+                        coachId: profile?.coach_id || null,
+                        subscriptionStatus: profile?.subscription_status || 'beta'
+                    });
+                } catch (error) {
+                    console.error("Error fetching user profile:", error);
+                    // Fallback to basic user info if profile fetch fails
+                    const isAdmin = firebaseUser.email === 'nbfarison@gmail.com';
+                    setUser({
+                        id: firebaseUser.uid,
+                        email: firebaseUser.email,
+                        name: firebaseUser.email.split('@')[0],
+                        role: isAdmin ? 'admin' : 'athlete'
+                    });
+                }
             } else {
                 // User is signed out
                 setUser(null);

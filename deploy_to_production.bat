@@ -5,7 +5,8 @@ echo ==========================================
 echo.
 echo 1. Saving all changes...
 git add .
-git commit -m "🚀 Rebrand: IronLogic AI Agent & Mobility Integration"
+git commit -m "feat: AI Chat upgrade (markdown, history, retry) + DOTS moved to Progress + chat layout fixes"
+
 
 echo.
 echo 2. Pushing directly to Production (Main Branch)...

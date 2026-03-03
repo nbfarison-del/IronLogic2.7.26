@@ -10,6 +10,11 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
     const { user } = useAuth();
     const [allExercises, setAllExercises] = useState(defaultExercises);
     const [programName, setProgramName] = useState(initialData?.name || 'New Program');
+    const [isTemplate, setIsTemplate] = useState(initialData?.isTemplate || false);
+    const [targetAthleteId, setTargetAthleteId] = useState(user?.id);
+    const [myAthletes, setMyAthletes] = useState([]);
+    const [templates, setTemplates] = useState([]);
+    const [showTemplatePicker, setShowTemplatePicker] = useState(false);
     const [plannedExercises, setPlannedExercises] = useState(() => {
         const exercisesInPlan = initialData?.exercises || [];
         return exercisesInPlan.map(ex => {
@@ -31,18 +36,28 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
         });
     });
 
-    // Load custom exercises
+    // Load custom exercises and athletes
     useEffect(() => {
-        const loadCustomExercises = async () => {
+        const loadInitialData = async () => {
             if (!user) return;
             try {
-                const custom = await firestoreService.getCustomExercises(user.id);
+                const [custom, athletes, fetchedTemplates] = await Promise.all([
+                    firestoreService.getCustomExercises(user.id),
+                    (user.role === 'coach' || user.role === 'admin')
+                        ? firestoreService.getAssignedAthletes(user.id)
+                        : Promise.resolve([]),
+                    (user.role === 'coach' || user.role === 'admin')
+                        ? firestoreService.getProgramTemplates()
+                        : Promise.resolve([])
+                ]);
                 setAllExercises([...defaultExercises, ...custom]);
+                setMyAthletes(athletes);
+                setTemplates(fetchedTemplates);
             } catch (error) {
-                console.error('Error loading custom exercises:', error);
+                console.error('Error loading planner data:', error);
             }
         };
-        loadCustomExercises();
+        loadInitialData();
     }, [user]);
 
     const addExercise = () => {
@@ -115,6 +130,16 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
         }));
     };
 
+    const handleLoadTemplate = (template) => {
+        setProgramName(template.name);
+        setPlannedExercises(template.exercises.map(ex => ({
+            ...ex,
+            id: Date.now() + Math.random(),
+            sets: ex.sets.map(s => ({ ...s, id: Date.now() + Math.random() }))
+        })));
+        setShowTemplatePicker(false);
+    };
+
     const handleExerciseNotesChange = (exerciseId, notes) => {
         setPlannedExercises(plannedExercises.map(ex =>
             ex.id === exerciseId ? { ...ex, notes } : ex
@@ -130,7 +155,7 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
         }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!programName) return alert('Please enter a program name');
         if (plannedExercises.length === 0) return alert('Please add at least one exercise');
 
@@ -139,31 +164,110 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
 
         const getDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const todayStr = getDateStr(date);
-        onSave({
-            id: initialData?.id || Date.now().toString(),
-            date: todayStr,
+
+        const programData = {
             name: programName,
             planName: programName,
-            exercises: filteredExercises
-        });
+            exercises: filteredExercises,
+            authorId: user.id
+        };
+
+        try {
+            if (isTemplate) {
+                await firestoreService.addProgramTemplate(programData);
+                alert('Template saved successfully!');
+            }
+
+            if (targetAthleteId) {
+                await firestoreService.assignProgramToAthlete(targetAthleteId, {
+                    ...programData,
+                    date: todayStr
+                });
+            }
+
+            // Also call onSave for local UI update if assignment is for current user
+            if (targetAthleteId === user.id) {
+                onSave({
+                    id: initialData?.id || Date.now().toString(),
+                    date: todayStr,
+                    ...programData
+                });
+            } else {
+                onSave(null); // Just close the planner
+            }
+        } catch (error) {
+            console.error('Error saving program:', error);
+            alert('Error saving program');
+        }
     };
 
     return (
         <div className="card" style={{ background: '#222', border: '1px solid var(--primary)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h2 style={{ margin: 0 }}>Plan Workout for {date.toLocaleDateString()}</h2>
-                <button className="btn" onClick={onCancel}>Cancel</button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {(user.role === 'coach' || user.role === 'admin') && (
+                        <button className="btn" onClick={() => setShowTemplatePicker(!showTemplatePicker)}>
+                            {showTemplatePicker ? 'Close Library' : '📁 Load Template'}
+                        </button>
+                    )}
+                    <button className="btn" onClick={onCancel}>Cancel</button>
+                </div>
             </div>
+
+            {showTemplatePicker && (
+                <div className="card" style={{ marginBottom: '1rem', background: '#333', border: '1px solid var(--primary)' }}>
+                    <h3>Template Library</h3>
+                    {templates.length > 0 ? (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.5rem' }}>
+                            {templates.map(t => (
+                                <button
+                                    key={t.id}
+                                    className="btn"
+                                    style={{ textAlign: 'left', padding: '0.8rem' }}
+                                    onClick={() => handleLoadTemplate(t)}
+                                >
+                                    <div style={{ fontWeight: 'bold' }}>{t.name}</div>
+                                    <div style={{ fontSize: '0.7rem', color: '#aaa' }}>{t.exercises?.length || 0} exercises</div>
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <p style={{ color: '#888', fontStyle: 'italic' }}>No templates saved yet.</p>
+                    )}
+                </div>
+            )}
 
             <div className="input-group">
                 <label>Program Name</label>
-                <input
-                    type="text"
-                    value={programName}
-                    onChange={e => setProgramName(e.target.value)}
-                    placeholder="e.g. Leg Day A"
-                />
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <input
+                        type="text"
+                        value={programName}
+                        onChange={e => setProgramName(e.target.value)}
+                        placeholder="e.g. Leg Day A"
+                        style={{ flex: 1 }}
+                    />
+                    {(user.role === 'coach' || user.role === 'admin') && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', fontSize: '0.9rem' }}>
+                            <input type="checkbox" checked={isTemplate} onChange={e => setIsTemplate(e.target.checked)} />
+                            Save as Template
+                        </label>
+                    )}
+                </div>
             </div>
+
+            {(user.role === 'coach' || user.role === 'admin') && (
+                <div className="input-group">
+                    <label>Assign to Athlete</label>
+                    <select value={targetAthleteId} onChange={e => setTargetAthleteId(e.target.value)}>
+                        <option value={user.id}>Myself</option>
+                        {myAthletes.map(a => (
+                            <option key={a.id} value={a.id}>{a.email} ({a.name || 'Athlete'})</option>
+                        ))}
+                    </select>
+                </div>
+            )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
                 {plannedExercises.map((ex, exIndex) => (

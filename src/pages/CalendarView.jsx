@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -19,8 +19,22 @@ const CalendarView = () => {
         isLoading
     } = useData();
     const navigate = useNavigate();
+    const { athleteId: paramAthleteId } = useParams();
+    const location = useLocation();
+    const targetUserId = paramAthleteId || user?.id;
+    const isCoachViewing = paramAthleteId && paramAthleteId !== user?.id;
+
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
+
+    // External Data State (for Coach viewing)
+    const [extWorkouts, setExtWorkouts] = useState([]);
+    const [extPlanned, setExtPlanned] = useState([]);
+    const [extRecovery, setExtRecovery] = useState([]);
+    const [extWeights, setExtWeights] = useState([]);
+    const [extNotes, setExtNotes] = useState([]);
+    const [extMobility, setExtMobility] = useState([]);
+    const [extLoading, setExtLoading] = useState(false);
 
     // UI State
     const [isPlanning, setIsPlanning] = useState(false);
@@ -35,29 +49,58 @@ const CalendarView = () => {
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     };
 
-    // Sync Weight and Note Input when selected date changes
+    // Fetch Athlete Data if Coach is viewing
+    useEffect(() => {
+        if (!isCoachViewing) return;
+
+        setExtLoading(true);
+        const unsubWorkouts = firestoreService.subscribeToWorkouts(targetUserId, setExtWorkouts, () => { });
+        const unsubPlanned = firestoreService.subscribeToPlannedWorkouts(targetUserId, setExtPlanned, () => { });
+        const unsubRecovery = firestoreService.subscribeToRecovery(targetUserId, setExtRecovery, () => { });
+        const unsubWeights = firestoreService.subscribeToBodyWeight(targetUserId, setExtWeights, () => { });
+        const unsubNotes = firestoreService.subscribeToCalendarNotes(targetUserId, setExtNotes, () => { });
+        const unsubMobility = firestoreService.subscribeToMobilityLogs(targetUserId, setExtMobility, () => { });
+
+        return () => {
+            unsubWorkouts();
+            unsubPlanned();
+            unsubRecovery();
+            unsubWeights();
+            unsubNotes();
+            unsubMobility();
+        };
+    }, [targetUserId, isCoachViewing]);
+
+    // Effective Data based on role
+    const effectiveWorkouts = isCoachViewing ? extWorkouts : workouts;
+    const effectivePlanned = isCoachViewing ? extPlanned : plannedWorkouts;
+    const effectiveRecovery = isCoachViewing ? extRecovery : recoveryHistory;
+    const effectiveWeights = isCoachViewing ? extWeights : weightHistory;
+    const effectiveNotes = isCoachViewing ? extNotes : notesHistory;
+    const effectiveMobility = isCoachViewing ? extMobility : mobilityLogs;
+
+    // Sync Weight and Note Input
     useEffect(() => {
         const dateStr = getDateStr(selectedDate);
-
-        const weightEntry = weightHistory.find(w => w.date === dateStr);
+        const weightEntry = effectiveWeights.find(w => w.date === dateStr);
         setWeightInput(weightEntry ? weightEntry.weight : '');
 
-        const noteEntry = notesHistory.find(n => n.date === dateStr);
+        const noteEntry = effectiveNotes.find(n => n.date === dateStr);
         setNoteInput(noteEntry ? noteEntry.text : '');
-    }, [selectedDate, weightHistory, notesHistory]);
+    }, [selectedDate, effectiveWeights, effectiveNotes, isCoachViewing]);
 
     const saveWeight = async (e) => {
         e.preventDefault();
-        if (!user) return;
+        if (!user || isCoachViewing) return;
         const dateStr = getDateStr(selectedDate);
         const newEntry = { date: dateStr, weight: parseFloat(weightInput) };
 
         try {
-            const existingEntry = weightHistory.find(w => w.date === dateStr);
+            const existingEntry = effectiveWeights.find(w => w.date === dateStr);
             if (existingEntry) {
-                await firestoreService.updateBodyWeight(user.id, existingEntry.id, newEntry);
+                await firestoreService.updateBodyWeight(targetUserId, existingEntry.id, newEntry);
             } else if (weightInput) {
-                await firestoreService.addBodyWeight(user.id, newEntry);
+                await firestoreService.addBodyWeight(targetUserId, newEntry);
             }
         } catch (error) {
             console.error('Error saving weight:', error);
@@ -66,20 +109,20 @@ const CalendarView = () => {
 
     const saveNote = async (e) => {
         e.preventDefault();
-        if (!user) return;
+        if (!user || isCoachViewing) return;
         const dateStr = getDateStr(selectedDate);
 
         try {
-            const existingEntry = notesHistory.find(n => n.date === dateStr);
+            const existingEntry = effectiveNotes.find(n => n.date === dateStr);
             if (existingEntry) {
                 if (noteInput.trim()) {
-                    await firestoreService.updateCalendarNote(user.id, existingEntry.id, { text: noteInput });
+                    await firestoreService.updateCalendarNote(targetUserId, existingEntry.id, { text: noteInput });
                 } else {
-                    await firestoreService.deleteCalendarNote(user.id, existingEntry.id);
+                    await firestoreService.deleteCalendarNote(targetUserId, existingEntry.id);
                 }
             } else if (noteInput.trim()) {
                 const newNote = { date: dateStr, text: noteInput };
-                await firestoreService.addCalendarNote(user.id, newNote);
+                await firestoreService.addCalendarNote(targetUserId, newNote);
             }
         } catch (error) {
             console.error('Error saving note:', error);
@@ -90,9 +133,9 @@ const CalendarView = () => {
         if (!user) return;
         try {
             if (editingProgram) {
-                await firestoreService.updatePlannedWorkout(user.id, program.id, program);
+                await firestoreService.updatePlannedWorkout(targetUserId, program.id, program);
             } else {
-                await firestoreService.addPlannedWorkout(user.id, program);
+                await firestoreService.addPlannedWorkout(targetUserId, program);
             }
             setIsPlanning(false);
             setEditingProgram(null);
@@ -104,7 +147,7 @@ const CalendarView = () => {
     const deletePlannedWorkout = async (id) => {
         if (!user || !confirm('Are you sure you want to delete this planned workout?')) return;
         try {
-            await firestoreService.deletePlannedWorkout(user.id, id);
+            await firestoreService.deletePlannedWorkout(targetUserId, id);
         } catch (error) {
             console.error('Error deleting planned workout:', error);
         }
@@ -143,19 +186,19 @@ const CalendarView = () => {
         const days = [];
 
         for (let i = 0; i < startDay; i++) {
-            days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
+            days.push(<div key={`empty - ${i} `} className="calendar-day empty"></div>);
         }
 
         for (let d = 1; d <= totalDays; d++) {
             const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
             const dateStr = getDateStr(date);
 
-            const hasWorkout = workouts.some(w => w.date?.startsWith(dateStr));
-            const hasPlanned = plannedWorkouts.some(p => p.date?.startsWith(dateStr));
-            const recoveryEntry = recoveryHistory.find(r => r.date?.startsWith(dateStr));
-            const hasWeight = weightHistory.some(w => w.date?.startsWith(dateStr));
-            const hasNote = notesHistory.some(n => n.date?.startsWith(dateStr));
-            const hasMobility = mobilityLogs.some(m => m.date?.startsWith(dateStr));
+            const hasWorkout = effectiveWorkouts.some(w => w.date?.startsWith(dateStr));
+            const hasPlanned = effectivePlanned.some(p => p.date?.startsWith(dateStr));
+            const recoveryEntry = effectiveRecovery.find(r => r.date?.startsWith(dateStr));
+            const hasWeight = effectiveWeights.some(w => w.date?.startsWith(dateStr));
+            const hasNote = effectiveNotes.some(n => n.date?.startsWith(dateStr));
+            const hasMobility = effectiveMobility.some(m => m.date?.startsWith(dateStr));
 
             const isSelected = isSameDay(date, selectedDate);
             const isToday = isSameDay(date, new Date());
@@ -163,7 +206,7 @@ const CalendarView = () => {
             days.push(
                 <div
                     key={d}
-                    className={`calendar-day ${isSelected ? 'selected' : ''}`}
+                    className={`calendar - day ${isSelected ? 'selected' : ''} `}
                     onClick={() => setSelectedDate(date)}
                     style={{
                         border: isSelected ? '2px solid var(--primary)' : '1px solid #444',
@@ -182,7 +225,7 @@ const CalendarView = () => {
                             <div style={{
                                 width: '6px', height: '6px', borderRadius: '50%',
                                 background: recoveryEntry.score >= 8 ? '#4caf50' : recoveryEntry.score >= 5 ? '#ff9800' : '#f44336'
-                            }} title={`Recovery: ${recoveryEntry.score}`}></div>
+                            }} title={`Recovery: ${recoveryEntry.score} `}></div>
                         )}
                         {hasWeight && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#9c27b0' }} title="Weight Logged"></div>}
                         {hasNote && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffeb3b' }} title="Note Added"></div>}
@@ -212,30 +255,32 @@ const CalendarView = () => {
     }
 
     const selectedDateStr = getDateStr(selectedDate);
-    const dayWorkouts = workouts.filter(w => w.date?.startsWith(selectedDateStr));
-    const dayPlanned = plannedWorkouts.filter(p => p.date === selectedDateStr);
-    const dayRecovery = recoveryHistory.find(r => r.date === selectedDateStr);
-    const dayMobility = mobilityLogs.filter(m => m.date === selectedDateStr);
+    const dayWorkouts = effectiveWorkouts.filter(w => w.date?.startsWith(selectedDateStr));
+    const dayPlanned = effectivePlanned.filter(p => p.date === selectedDateStr);
+    const dayRecovery = effectiveRecovery.find(r => r.date === selectedDateStr);
+    const dayMobility = effectiveMobility.filter(m => m.date === selectedDateStr);
 
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>Calendar Tracking</h1>
+                <h1>{isCoachViewing ? `Athlete Calendar` : 'Calendar Tracking'}</h1>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button
-                        className="btn btn-primary"
-                        onClick={() => {
-                            const planned = plannedWorkouts.find(p => p.date === selectedDateStr);
-                            if (planned) {
-                                startWorkout(planned);
-                            } else {
-                                navigate('/log');
-                            }
-                        }}
-                    >
-                        Log Workout
-                    </button>
-                    <button className="btn" onClick={() => setIsPlanning(true)}>+ Plan Program</button>
+                    {!isCoachViewing && (
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => {
+                                const planned = effectivePlanned.find(p => p.date === selectedDateStr);
+                                if (planned) {
+                                    startWorkout(planned);
+                                } else {
+                                    navigate('/log');
+                                }
+                            }}
+                        >
+                            Log Workout
+                        </button>
+                    )}
+                    <button className="btn" onClick={() => setIsPlanning(true)}>{isCoachViewing ? '+ Assign Program' : '+ Plan Program'}</button>
                 </div>
             </div>
 
@@ -315,7 +360,7 @@ const CalendarView = () => {
                             </form>
 
                             {dayRecovery && (
-                                <div style={{ padding: '1rem', background: '#222', borderRadius: '8px', borderLeft: `4px solid ${dayRecovery.score >= 8 ? '#4caf50' : dayRecovery.score >= 5 ? '#ff9800' : '#f44336'}` }}>
+                                <div style={{ padding: '1rem', background: '#222', borderRadius: '8px', borderLeft: `4px solid ${dayRecovery.score >= 8 ? '#4caf50' : dayRecovery.score >= 5 ? '#ff9800' : '#f44336'} ` }}>
                                     <div style={{ fontWeight: 'bold' }}>Recovery Score: {dayRecovery.score}/10</div>
                                 </div>
                             )}

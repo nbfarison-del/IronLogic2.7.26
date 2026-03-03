@@ -67,6 +67,9 @@ const Navbar = () => {
                     <>
                         <Link to="/" className={isActive('/')}>Home</Link>
                         <Link to="/calendar" className={isActive('/calendar')}>Calendar</Link>
+                        {(user.role === 'coach' || user.role === 'admin') && (
+                            <Link to="/coach" className={isActive('/coach')}>Coach</Link>
+                        )}
                         <Link to="/progress" className={isActive('/progress')}>Progress</Link>
                         <Link to="/profile" className={isActive('/profile')}>Profile</Link>
                         {user.email === 'nbfarison@gmail.com' && (

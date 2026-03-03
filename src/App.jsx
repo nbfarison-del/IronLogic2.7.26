@@ -24,6 +24,46 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const RoleProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <div className="card">Checking permissions...</div>;
+  if (!user) return <Navigate to="/login" />;
+  if (user && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Double-security for Admin specifically
+  if (allowedRoles.includes('admin') && user.email !== 'nbfarison@gmail.com') {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+const SubscriptionGuard = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+
+  // For now, allow 'beta' and 'active'
+  const isSubscriber = user?.subscriptionStatus === 'beta' || user?.subscriptionStatus === 'active';
+
+  if (!isSubscriber) {
+    return (
+      <div className="container" style={{ textAlign: 'center', marginTop: '5rem' }}>
+        <h2>Subscription Required</h2>
+        <p>Your trial has expired or you do not have an active subscription.</p>
+        <Link to="/profile" className="btn btn-primary">Upgrade Now</Link>
+      </div>
+    );
+  }
+
+  return children;
+};
+
+// ... inside App component ...
+const CoachDashboard = lazy(() => import('./pages/CoachDashboard'));
+
 function App() {
   return (
     <AuthProvider>
@@ -67,10 +107,33 @@ function App() {
                     <CalendarView />
                   </ProtectedRoute>
                 } />
+
+                {/* Role-Specific Routes */}
+                <Route path="/coach" element={
+                  <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                    <SubscriptionGuard>
+                      <CoachDashboard />
+                    </SubscriptionGuard>
+                  </RoleProtectedRoute>
+                } />
+                <Route path="/coach/athlete/:athleteId" element={
+                  <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                    <SubscriptionGuard>
+                      <WorkoutLog />
+                    </SubscriptionGuard>
+                  </RoleProtectedRoute>
+                } />
+                <Route path="/calendar/:athleteId" element={
+                  <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                    <SubscriptionGuard>
+                      <CalendarView />
+                    </SubscriptionGuard>
+                  </RoleProtectedRoute>
+                } />
                 <Route path="/admin" element={
-                  <ProtectedRoute>
+                  <RoleProtectedRoute allowedRoles={['admin']}>
                     <Admin />
-                  </ProtectedRoute>
+                  </RoleProtectedRoute>
                 } />
               </Route>
             </Routes>

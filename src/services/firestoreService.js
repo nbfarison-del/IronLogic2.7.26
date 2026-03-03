@@ -22,7 +22,17 @@ export const recordUserSignup = async (userId, email) => {
     await setDoc(docRef, {
         email,
         signupDate: new Date().toISOString(),
-        role: 'user' // Default role
+        role: 'athlete', // Changed default from 'user' to 'athlete'
+        subscription_status: 'beta'
+    }, { merge: true });
+
+    // Also initialize user profile document
+    const profileRef = doc(db, 'users', userId, 'profile', 'data');
+    await setDoc(profileRef, {
+        email,
+        role: 'athlete',
+        subscription_status: 'beta',
+        createdAt: new Date().toISOString()
     }, { merge: true });
 };
 
@@ -34,6 +44,70 @@ export const getAllRegisteredUsers = async () => {
         id: doc.id,
         ...doc.data()
     }));
+};
+
+export const updateUserRole = async (userId, role) => {
+    // Update both registered_users and profile data for consistency
+    const regDocRef = doc(db, 'registered_users', userId);
+    const profileDocRef = doc(db, 'users', userId, 'profile', 'data');
+
+    const updates = { role };
+    await Promise.all([
+        updateDoc(regDocRef, updates),
+        setDoc(profileDocRef, updates, { merge: true })
+    ]);
+};
+
+export const updateSubscriptionStatus = async (userId, status) => {
+    const regDocRef = doc(db, 'registered_users', userId);
+    const profileDocRef = doc(db, 'users', userId, 'profile', 'data');
+
+    const updates = { subscription_status: status };
+    await Promise.all([
+        updateDoc(regDocRef, updates),
+        setDoc(profileDocRef, updates, { merge: true })
+    ]);
+};
+
+export const assignAthleteToCoach = async (athleteId, coachId) => {
+    const profileDocRef = doc(db, 'users', athleteId, 'profile', 'data');
+    await updateDoc(profileDocRef, { coach_id: coachId });
+};
+
+export const getAssignedAthletes = async (coachId) => {
+    // Note: This requires a composite index on role and coach_id if we query 'registered_users'
+    // but for now we can query the 'users' collection sub-documents or 'registered_users' if we sync coach_id there.
+    // Let's assume we sync coach_id to 'registered_users' for easier global querying.
+    const usersRef = collection(db, 'registered_users');
+    const q = query(usersRef, where('coach_id', '==', coachId));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+};
+
+// ==================== WORKOUT COMMENTS ====================
+
+export const addWorkoutComment = async (userId, workoutId, commentData) => {
+    const commentsRef = collection(db, 'users', userId, 'workouts', workoutId, 'comments');
+    const docRef = await addDoc(commentsRef, {
+        ...commentData,
+        timestamp: new Date().toISOString()
+    });
+    return docRef.id;
+};
+
+export const subscribeToWorkoutComments = (userId, workoutId, callback) => {
+    const commentsRef = collection(db, 'users', userId, 'workouts', workoutId, 'comments');
+    const q = query(commentsRef, orderBy('timestamp', 'asc'));
+    return onSnapshot(q, (snapshot) => {
+        const comments = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        callback(comments);
+    });
 };
 
 // ==================== USER PROFILE ====================
@@ -271,6 +345,38 @@ export const subscribeToPlannedWorkouts = (userId, callback, errorCallback) => {
     }, errorCallback);
 };
 
+// ==================== PROGRAM TEMPLATES ====================
+
+export const getProgramTemplates = async () => {
+    const templatesRef = collection(db, 'program_templates');
+    const querySnapshot = await getDocs(templatesRef);
+    return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+};
+
+export const addProgramTemplate = async (templateData) => {
+    const templatesRef = collection(db, 'program_templates');
+    const docRef = await addDoc(templatesRef, {
+        ...templateData,
+        isTemplate: true,
+        createdAt: new Date().toISOString()
+    });
+    return docRef.id;
+};
+
+export const assignProgramToAthlete = async (athleteId, programData) => {
+    // This creates a copy of the program for the athlete
+    const plannedRef = collection(db, 'users', athleteId, 'plannedWorkouts');
+    const docRef = await addDoc(plannedRef, {
+        ...programData,
+        assignedAt: new Date().toISOString(),
+        isInstance: true
+    });
+    return docRef.id;
+};
+
 // ==================== CALENDAR NOTES ====================
 
 export const getCalendarNotes = async (userId) => {
@@ -352,6 +458,34 @@ export const clearAIProgram = async (userId) => {
     const docRef = doc(db, 'users', userId, 'aiProgram', 'data');
     await setDoc(docRef, { program: null, dismissed: true }, { merge: true });
 };
+
+// ==================== CHAT HISTORY ====================
+
+export const saveChatMessage = async (userId, message) => {
+    const chatRef = collection(db, 'users', userId, 'chatHistory');
+    await addDoc(chatRef, {
+        ...message,
+        timestamp: new Date().toISOString()
+    });
+};
+
+export const getChatHistory = async (userId, limitCount = 50) => {
+    const chatRef = collection(db, 'users', userId, 'chatHistory');
+    const q = query(chatRef, orderBy('timestamp', 'asc'), limit(limitCount));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+};
+
+export const clearChatHistory = async (userId) => {
+    const chatRef = collection(db, 'users', userId, 'chatHistory');
+    const querySnapshot = await getDocs(chatRef);
+    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+    await Promise.all(deletePromises);
+};
+
 
 // ==================== CUSTOM EXERCISES ====================
 
