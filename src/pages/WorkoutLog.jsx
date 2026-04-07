@@ -6,6 +6,7 @@ import { useSettings } from '../context/SettingsContext';
 import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } from '../data/exercises';
 import ExerciseTools from '../components/ExerciseTools';
 import * as firestoreService from '../services/firestoreService';
+import { runDMAICCycle } from '../services/DMAICService';
 
 const WorkoutLog = () => {
     const { user } = useAuth();
@@ -119,6 +120,12 @@ const WorkoutLog = () => {
     const handleFinalizeWorkout = async () => {
         try {
             await firestoreService.markSessionComplete(targetUserId, getDateStr(selectedDate), true);
+            
+            // If coach/admin is reviewing, trigger the DMAIC cycle for that athlete
+            if (isCoachViewing) {
+                console.log("Triggering DMAIC Analysis for athlete:", targetUserId);
+                await runDMAICCycle(targetUserId);
+            }
         } catch (error) {
             console.error('Error finalizing workout:', error);
         }

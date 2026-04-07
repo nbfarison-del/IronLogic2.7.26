@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { mobilityPaths } from '../data/mobilityPaths';
@@ -437,6 +437,45 @@ const MobilityTab = () => {
     const { mobilityLogs } = useData();
     const [view, setView] = useState('select');   // 'select' | 'session'
     const [selectedPath, setSelectedPath] = useState(null);
+    const wakeLockRef = useRef(null);
+
+    useEffect(() => {
+        const manageWakeLock = async () => {
+            if (view === 'session' && 'wakeLock' in navigator) {
+                try {
+                    wakeLockRef.current = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.warn(`WakeLock failed: ${err.message}`);
+                }
+            } else if (view !== 'session' && wakeLockRef.current) {
+                try {
+                    await wakeLockRef.current.release();
+                    wakeLockRef.current = null;
+                } catch (err) {}
+            }
+        };
+
+        manageWakeLock();
+
+        // Also handle visibility change to re-request if tab becomes visible again while in session
+        const handleVisibilityChange = async () => {
+            if (document.visibilityState === 'visible' && view === 'session' && 'wakeLock' in navigator) {
+                try {
+                    wakeLockRef.current = await navigator.wakeLock.request('screen');
+                } catch (err) {}
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (wakeLockRef.current) {
+                wakeLockRef.current.release().catch(() => {});
+                wakeLockRef.current = null;
+            }
+        };
+    }, [view]);
 
     const handleSelectPath = path => {
         localStorage.setItem(LAST_PATH_KEY, path.id);

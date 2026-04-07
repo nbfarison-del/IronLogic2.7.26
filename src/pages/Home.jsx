@@ -11,7 +11,7 @@ import RecoveryTracker from '../components/RecoveryTracker';
 import WeightTracker from '../components/WeightTracker';
 import GoalTracker from '../components/GoalTracker';
 import MobilityTab from '../components/MobilityTab';
-import AIAgentTab from '../components/AIAgentTab';
+import IronLogicTab from '../components/IronLogicTab';
 import { generateProgram } from '../services/ProgramGenerator';
 import logo from '../assets/logo.png';
 
@@ -151,19 +151,19 @@ const Home = () => {
                     Mobility
                 </button>
                 <button
-                    onClick={() => setActiveTab('ai-agent')}
+                    onClick={() => setActiveTab('ironlogic-method')}
                     style={{
                         background: 'none',
                         border: 'none',
-                        color: activeTab === 'ai-agent' ? 'var(--primary)' : '#888',
-                        borderBottom: activeTab === 'ai-agent' ? '2px solid var(--primary)' : '2px solid transparent',
+                        color: activeTab === 'ironlogic-method' ? 'var(--primary)' : '#888',
+                        borderBottom: activeTab === 'ironlogic-method' ? '2px solid var(--primary)' : '2px solid transparent',
                         padding: '0.5rem 1rem',
                         cursor: 'pointer',
                         fontWeight: 'bold',
                         fontSize: '1.1rem'
                     }}
                 >
-                    AI Agent
+                    IronLogic Method
                 </button>
             </div>
 
@@ -250,7 +250,7 @@ const Home = () => {
                 ) : activeTab === 'mobility' ? (
                     <MobilityTab />
                 ) : (
-                    <AIAgentTab />
+                    <IronLogicTab />
                 )
             }
         </div >

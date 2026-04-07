@@ -13,7 +13,25 @@ import {
     limit,
     onSnapshot
 } from 'firebase/firestore';
+
+export {
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    query,
+    where,
+    orderBy,
+    limit,
+    onSnapshot
+};
+
 import { db } from '../config/firebaseConfig';
+export { db };
 
 // ==================== ADMIN & TRACKING ====================
 
@@ -345,6 +363,28 @@ export const getPlannedWorkouts = async (userId) => {
 
 export const addPlannedWorkout = async (userId, plannedData) => {
     const plannedRef = collection(db, 'users', userId, 'plannedWorkouts');
+    
+    // Deduplication check
+    const checkName = plannedData.planName || plannedData.name;
+    if (plannedData.date && checkName) {
+        const qStr = query(
+            plannedRef, 
+            where('date', '==', plannedData.date), 
+            where('planName', '==', checkName)
+        );
+        const dupSnap = await getDocs(qStr);
+        if (!dupSnap.empty) return dupSnap.docs[0].id;
+        
+        // Also check by name as fallback
+        const qName = query(
+            plannedRef, 
+            where('date', '==', plannedData.date), 
+            where('name', '==', checkName)
+        );
+        const nameSnap = await getDocs(qName);
+        if (!nameSnap.empty) return nameSnap.docs[0].id;
+    }
+
     const docRef = await addDoc(plannedRef, plannedData);
     return docRef.id;
 };
@@ -394,6 +434,28 @@ export const addProgramTemplate = async (templateData) => {
 export const assignProgramToAthlete = async (athleteId, programData) => {
     // This creates a copy of the program for the athlete
     const plannedRef = collection(db, 'users', athleteId, 'plannedWorkouts');
+    
+    // Deduplication check
+    const checkName = programData.planName || programData.name;
+    if (programData.date && checkName) {
+        const qStr = query(
+            plannedRef, 
+            where('date', '==', programData.date), 
+            where('planName', '==', checkName)
+        );
+        const dupSnap = await getDocs(qStr);
+        if (!dupSnap.empty) return dupSnap.docs[0].id;
+        
+        // Check by name
+        const qName = query(
+            plannedRef, 
+            where('date', '==', programData.date), 
+            where('name', '==', checkName)
+        );
+        const nameSnap = await getDocs(qName);
+        if (!nameSnap.empty) return nameSnap.docs[0].id;
+    }
+
     const docRef = await addDoc(plannedRef, {
         ...programData,
         assignedAt: new Date().toISOString(),

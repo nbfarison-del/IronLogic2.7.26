@@ -1,11 +1,13 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useTimer } from '../context/TimerContext';
 import logo from '../assets/logo.png';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
     const { syncStatus } = useData();
+    const { toggleTimer, isActive, timePassed, formatTime } = useTimer();
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -14,7 +16,7 @@ const Navbar = () => {
         navigate('/login');
     };
 
-    const isActive = (path) => location.pathname === path ? 'active' : '';
+    const isActivePath = (path) => location.pathname === path ? 'active' : '';
 
     return (
         <nav>
@@ -65,22 +67,54 @@ const Navbar = () => {
             <div className="nav-links">
                 {user ? (
                     <>
-                        <Link to="/" className={isActive('/')}>Home</Link>
-                        <Link to="/calendar" className={isActive('/calendar')}>Calendar</Link>
+                        <Link to="/" className={isActivePath('/')}>Home</Link>
+                        <Link to="/calendar" className={isActivePath('/calendar')}>Calendar</Link>
+                        
+                        {/* Global Timer Button */}
+                        <button 
+                            onClick={toggleTimer} 
+                            style={{ 
+                                background: isActive ? 'rgba(76, 175, 80, 0.1)' : 'transparent', 
+                                border: isActive ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid transparent', 
+                                color: isActive ? '#4caf50' : '#fff', 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '6px',
+                                fontWeight: 'bold',
+                                borderRadius: '8px',
+                                padding: '0.4rem 0.8rem',
+                                transition: 'all 0.2s',
+                                fontSize: '0.9rem'
+                            }}
+                            onMouseEnter={e => {
+                                if (!isActive) {
+                                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                                }
+                            }}
+                            onMouseLeave={e => {
+                                if (!isActive) {
+                                    e.currentTarget.style.background = 'transparent';
+                                }
+                            }}
+                        >
+                            ⏱️ {isActive ? formatTime(timePassed) : 'Timer'}
+                        </button>
+
                         {(user.role === 'coach' || user.role === 'admin') && (
-                            <Link to="/coach" className={isActive('/coach')}>Coach</Link>
+                            <Link to="/coach" className={isActivePath('/coach')}>Coach</Link>
                         )}
-                        <Link to="/progress" className={isActive('/progress')}>Progress</Link>
-                        <Link to="/profile" className={isActive('/profile')}>Profile</Link>
+                        <Link to="/progress" className={isActivePath('/progress')}>Progress</Link>
+                        <Link to="/profile" className={isActivePath('/profile')}>Profile</Link>
                         {user.email === 'nbfarison@gmail.com' && (
-                            <Link to="/admin" className={isActive('/admin')}>Admin</Link>
+                            <Link to="/admin" className={isActivePath('/admin')}>Admin</Link>
                         )}
                         <button onClick={handleLogout} className="btn" style={{ marginLeft: '1rem' }}>Logout</button>
                     </>
                 ) : (
                     <>
-                        <Link to="/login" className={isActive('/login')}>Login</Link>
-                        <Link to="/register" className={isActive('/register')}>Register</Link>
+                        <Link to="/login" className={isActivePath('/login')}>Login</Link>
+                        <Link to="/register" className={isActivePath('/register')}>Register</Link>
                     </>
                 )}
             </div>

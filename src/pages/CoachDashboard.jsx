@@ -100,17 +100,23 @@ const CoachDashboard = () => {
 
                             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
                                 <Link to={`/coach/athlete/${athlete.id}`} className="btn" style={{ flex: 1, fontSize: '0.75rem', textAlign: 'center', minWidth: '80px' }}>
-                                    View History
+                                    History
                                 </Link>
                                 <Link to={`/calendar/${athlete.id}`} className="btn" style={{ flex: 1, fontSize: '0.75rem', textAlign: 'center', minWidth: '80px' }}>
-                                    Edit Program
+                                    Edit
+                                </Link>
+                                <Link to={`/coach/adaptive/${athlete.id}`} className="btn" style={{ flex: 1, fontSize: '0.75rem', background: '#333', border: 'none', textAlign: 'center' }}>
+                                    ILM Status
+                                </Link>
+                                <Link to={`/coach/checkin/${athlete.id}`} className="btn btn-primary" style={{ flex: 1, fontSize: '0.75rem', background: '#4caf50', border: 'none', textAlign: 'center' }}>
+                                    Weekly Review
                                 </Link>
                                 <button
                                     className="btn btn-primary"
                                     style={{ flex: '1 1 100%', fontSize: '0.8rem', background: 'linear-gradient(135deg, #2196f3, #9c27b0)', border: 'none' }}
                                     onClick={() => setSelectedAthleteForAI(athlete)}
                                 >
-                                    ✨ Consult AI Coach
+                                    ✨ Chat with AI Coach
                                 </button>
                             </div>
                         </div>

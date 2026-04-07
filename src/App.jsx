@@ -3,9 +3,11 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { TimerProvider } from './context/TimerContext';
 
 // Components
 import Layout from './components/Layout';
+import TimerWidget from './components/TimerWidget';
 
 // Pages - Lazy Loaded
 const Home = lazy(() => import('./pages/Home'));
@@ -63,18 +65,22 @@ const SubscriptionGuard = ({ children }) => {
 
 // ... inside App component ...
 const CoachDashboard = lazy(() => import('./pages/CoachDashboard'));
+const AdaptiveCoach = lazy(() => import('./pages/AdaptiveCoach'));
+const WeeklyCheckIn = lazy(() => import('./pages/WeeklyCheckIn'));
 
 function App() {
   return (
     <AuthProvider>
       <DataProvider>
         <SettingsProvider>
+          <TimerProvider>
           <Suspense fallback={
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#111', color: '#fff' }}>
               <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite' }}></div>
               <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             </div>
           }>
+            <TimerWidget />
             <Routes>
               <Route element={<Layout />}>
                 {/* Public Routes */}
@@ -97,6 +103,13 @@ function App() {
                     <Progress />
                   </ProtectedRoute>
                 } />
+                <Route path="/checkin" element={
+                  <ProtectedRoute>
+                    <SubscriptionGuard>
+                      <WeeklyCheckIn />
+                    </SubscriptionGuard>
+                  </ProtectedRoute>
+                } />
                 <Route path="/profile" element={
                   <ProtectedRoute>
                     <Profile />
@@ -116,6 +129,13 @@ function App() {
                     </SubscriptionGuard>
                   </RoleProtectedRoute>
                 } />
+                <Route path="/coach/adaptive/:athleteId" element={
+                  <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                    <SubscriptionGuard>
+                      <AdaptiveCoach />
+                    </SubscriptionGuard>
+                  </RoleProtectedRoute>
+                } />
                 <Route path="/coach/athlete/:athleteId" element={
                   <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
                     <SubscriptionGuard>
@@ -130,6 +150,13 @@ function App() {
                     </SubscriptionGuard>
                   </RoleProtectedRoute>
                 } />
+                <Route path="/coach/checkin/:athleteId" element={
+                  <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                    <SubscriptionGuard>
+                      <WeeklyCheckIn />
+                    </SubscriptionGuard>
+                  </RoleProtectedRoute>
+                } />
                 <Route path="/admin" element={
                   <RoleProtectedRoute allowedRoles={['admin']}>
                     <Admin />
@@ -138,6 +165,7 @@ function App() {
               </Route>
             </Routes>
           </Suspense>
+          </TimerProvider>
         </SettingsProvider>
       </DataProvider>
     </AuthProvider>

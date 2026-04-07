@@ -36,6 +36,9 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
         });
     });
 
+    const [lastCheckIn, setLastCheckIn] = useState(null);
+    const [showInsights, setShowInsights] = useState(false);
+
     // Load custom exercises and athletes
     useEffect(() => {
         const loadInitialData = async () => {
@@ -53,12 +56,30 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
                 setAllExercises([...defaultExercises, ...custom]);
                 setMyAthletes(athletes);
                 setTemplates(fetchedTemplates);
+
+                // Fetch last check-in for the target athlete
+                if (targetAthleteId) {
+                    const checkinRef = firestoreService.doc(firestoreService.db, 'users', targetAthleteId, 'weeklyCheckins', new Date().toISOString().split('T')[0]);
+                    const snap = await firestoreService.getDoc(checkinRef);
+                    if (snap.exists()) {
+                        setLastCheckIn(snap.data());
+                    } else {
+                        // Try finding the most recent if not today
+                        const q = firestoreService.query(
+                            firestoreService.collection(firestoreService.db, 'users', targetAthleteId, 'weeklyCheckins'),
+                            firestoreService.orderBy('date', 'desc'),
+                            firestoreService.limit(1)
+                        );
+                        const qSnap = await firestoreService.getDocs(q);
+                        if (!qSnap.empty) setLastCheckIn(qSnap.docs[0].data());
+                    }
+                }
             } catch (error) {
                 console.error('Error loading planner data:', error);
             }
         };
         loadInitialData();
-    }, [user]);
+    }, [user, targetAthleteId]);
 
     const addExercise = () => {
         setPlannedExercises([
@@ -178,21 +199,19 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
                 alert('Template saved successfully!');
             }
 
-            if (targetAthleteId) {
+            if (targetAthleteId === user.id) {
+                // Let the parent component handle the actual save (update or add) for current user
+                onSave({
+                    id: initialData?.id || null,
+                    date: todayStr,
+                    ...programData
+                });
+            } else if (targetAthleteId) {
+                // Save directly to target athlete
                 await firestoreService.assignProgramToAthlete(targetAthleteId, {
                     ...programData,
                     date: todayStr
                 });
-            }
-
-            // Also call onSave for local UI update if assignment is for current user
-            if (targetAthleteId === user.id) {
-                onSave({
-                    id: initialData?.id || Date.now().toString(),
-                    date: todayStr,
-                    ...programData
-                });
-            } else {
                 onSave(null); // Just close the planner
             }
         } catch (error) {
@@ -206,6 +225,15 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h2 style={{ margin: 0 }}>Plan Workout for {date.toLocaleDateString()}</h2>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {lastCheckIn && (
+                        <button 
+                            className="btn" 
+                            style={{ background: showInsights ? 'var(--primary)' : '#333', color: 'white' }}
+                            onClick={() => setShowInsights(!showInsights)}
+                        >
+                            {showInsights ? '📖 Hide Insights' : '💡 View Insights'}
+                        </button>
+                    )}
                     {(user.role === 'coach' || user.role === 'admin') && (
                         <button className="btn" onClick={() => setShowTemplatePicker(!showTemplatePicker)}>
                             {showTemplatePicker ? 'Close Library' : '📁 Load Template'}
@@ -214,6 +242,18 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
                     <button className="btn" onClick={onCancel}>Cancel</button>
                 </div>
             </div>
+
+            {showInsights && lastCheckIn && (
+                <div className="card" style={{ marginBottom: '1.5rem', background: 'rgba(33, 150, 243, 0.1)', border: '1px solid var(--primary)', padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <h3 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--primary)' }}>LATEST ILM RECOMMENDATION</h3>
+                        <span style={{ fontSize: '0.75rem', color: '#888' }}>{new Date(lastCheckIn.date).toLocaleDateString()}</span>
+                    </div>
+                    <div style={{ fontSize: '0.95rem', color: '#fff', fontStyle: 'italic', background: 'rgba(0,0,0,0.2)', padding: '0.8rem', borderRadius: '4px' }}>
+                        {lastCheckIn.recommendation}
+                    </div>
+                </div>
+            )}
 
             {showTemplatePicker && (
                 <div className="card" style={{ marginBottom: '1rem', background: '#333', border: '1px solid var(--primary)' }}>
