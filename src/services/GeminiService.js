@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY?.trim();
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 const MISSING_KEY_ERROR = `
