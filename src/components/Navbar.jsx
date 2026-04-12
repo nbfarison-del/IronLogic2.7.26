@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -11,14 +12,21 @@ const Navbar = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+
     const handleLogout = () => {
+        setIsMenuOpen(false);
         logout();
         navigate('/login');
     };
 
+    const handleClose = () => setIsMenuOpen(false);
+
     const isActivePath = (path) => location.pathname === path ? 'active' : '';
 
     return (
+        <>
+        <div className={`nav-overlay ${isMenuOpen ? 'open' : ''}`} onClick={handleClose}></div>
         <nav>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <Link to="/" className="nav-brand" style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
@@ -63,16 +71,19 @@ const Navbar = () => {
                         {user.email}
                     </div>
                 )}
+                <button className="hamburger" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+                    {isMenuOpen ? '✕' : '☰'}
+                </button>
             </div>
-            <div className="nav-links">
+            <div className={`nav-links ${isMenuOpen ? 'open' : ''}`}>
                 {user ? (
                     <>
-                        <Link to="/" className={isActivePath('/')}>Home</Link>
-                        <Link to="/calendar" className={isActivePath('/calendar')}>Calendar</Link>
+                        <Link to="/" className={isActivePath('/')} onClick={handleClose}>Home</Link>
+                        <Link to="/calendar" className={isActivePath('/calendar')} onClick={handleClose}>Calendar</Link>
                         
                         {/* Global Timer Button */}
                         <button 
-                            onClick={toggleTimer} 
+                            onClick={() => { toggleTimer(); handleClose(); }} 
                             style={{ 
                                 background: isActive ? 'rgba(76, 175, 80, 0.1)' : 'transparent', 
                                 border: isActive ? '1px solid rgba(76, 175, 80, 0.3)' : '1px solid transparent', 
@@ -83,7 +94,7 @@ const Navbar = () => {
                                 gap: '6px',
                                 fontWeight: 'bold',
                                 borderRadius: '8px',
-                                padding: '0.4rem 0.8rem',
+                                padding: '0.6rem 1rem', /* standard padding match */
                                 transition: 'all 0.2s',
                                 fontSize: '0.9rem'
                             }}
@@ -102,23 +113,24 @@ const Navbar = () => {
                         </button>
 
                         {(user.role === 'coach' || user.role === 'admin') && (
-                            <Link to="/coach" className={isActivePath('/coach')}>Coach</Link>
+                            <Link to="/coach" className={isActivePath('/coach')} onClick={handleClose}>Coach</Link>
                         )}
-                        <Link to="/progress" className={isActivePath('/progress')}>Progress</Link>
-                        <Link to="/profile" className={isActivePath('/profile')}>Profile</Link>
+                        <Link to="/progress" className={isActivePath('/progress')} onClick={handleClose}>Progress</Link>
+                        <Link to="/profile" className={isActivePath('/profile')} onClick={handleClose}>Profile</Link>
                         {user.email === 'nbfarison@gmail.com' && (
-                            <Link to="/admin" className={isActivePath('/admin')}>Admin</Link>
+                            <Link to="/admin" className={isActivePath('/admin')} onClick={handleClose}>Admin</Link>
                         )}
-                        <button onClick={handleLogout} className="btn" style={{ marginLeft: '1rem' }}>Logout</button>
+                        <button onClick={handleLogout} className="btn">Logout</button>
                     </>
                 ) : (
                     <>
-                        <Link to="/login" className={isActivePath('/login')}>Login</Link>
-                        <Link to="/register" className={isActivePath('/register')}>Register</Link>
+                        <Link to="/login" className={isActivePath('/login')} onClick={handleClose}>Login</Link>
+                        <Link to="/register" className={isActivePath('/register')} onClick={handleClose}>Register</Link>
                     </>
                 )}
             </div>
         </nav>
+        </>
     );
 };
 
