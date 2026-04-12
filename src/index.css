@@ -40,13 +40,19 @@ body {
 .btn {
   border-radius: 8px;
   border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+  padding: 0.8em 1.2em;
+  font-size: 1.1em;
   font-weight: 500;
   font-family: inherit;
   background-color: #1a1a1a;
   cursor: pointer;
   transition: border-color 0.25s;
+  min-height: 44px;
+  min-width: 44px;
+  margin: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .btn:hover {
   border-color: var(--primary);
@@ -58,9 +64,16 @@ body {
 .btn-primary {
   background-color: var(--primary);
   color: white;
+  font-weight: bold;
 }
 .btn-primary:hover {
   background-color: var(--primary-hover);
+}
+
+/* Base button and input resets for mobile */
+button, input, select, textarea {
+  min-height: 44px;
+  font-size: 16px; /* Prevent iOS zoom */
 }
 
 .card {
@@ -78,18 +91,26 @@ body {
   margin-bottom: 1rem;
 }
 
-input {
+input, select, textarea {
   padding: 0.8rem;
   border-radius: 6px;
-  border: 1px solid #444;
+  border: 1px solid #555; /* Higher contrast border */
   background-color: #1a1a1a;
   color: white;
-  font-size: 1rem;
+  font-size: 1.1rem;
+  min-height: 44px;
+  margin: 0.25rem 0;
 }
-input:focus {
+input:focus, select:focus, textarea:focus {
   outline: 2px solid var(--primary);
   border-color: transparent;
 }
+
+/* Ensure global typography is legible */
+h1 { font-size: 2rem; font-weight: bold; }
+h2 { font-size: 1.7rem; font-weight: bold; }
+h3 { font-size: 1.4rem; font-weight: bold; }
+p, div { font-size: 1rem; }
 
 /* Nav */
 nav {
@@ -108,10 +129,13 @@ nav {
 nav a {
   color: var(--text-main);
   text-decoration: none;
-  font-weight: 500;
-  padding: 0.5rem 1rem;
+  font-weight: bold;
+  padding: 0.8rem 1rem;
   border-radius: 6px;
   transition: background 0.2s;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 nav a:hover, nav a.active {
   background: rgba(255,255,255,0.1);

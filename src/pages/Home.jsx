@@ -171,14 +171,30 @@ const Home = () => {
             {
                 activeTab === 'dashboard' ? (
                     <>
-                        <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginBottom: '2rem', fontStyle: 'italic' }}>
+                        <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginBottom: '1.5rem', fontStyle: 'italic' }}>
                             Train like a Champion Today!
                         </p>
 
-
-
-
-
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '2rem' }}>
+                            <Link to="/log" style={{ textDecoration: 'none' }}>
+                                <div style={{ background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '12px', textAlign: 'center', fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '90px', boxShadow: '0 4px 6px rgba(0,0,0,0.2)' }}>
+                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>🏋️</span>
+                                    <span style={{ fontSize: '0.9rem' }}>Workout</span>
+                                </div>
+                            </Link>
+                            <Link to="/program-planner" style={{ textDecoration: 'none' }}>
+                                <div style={{ background: '#333', color: 'white', padding: '0.5rem', borderRadius: '12px', textAlign: 'center', fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '90px', border: '1px solid #444' }}>
+                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>📅</span>
+                                    <span style={{ fontSize: '0.9rem' }}>Program</span>
+                                </div>
+                            </Link>
+                            <Link to="/calendar" style={{ textDecoration: 'none' }}>
+                                <div style={{ background: '#333', color: 'white', padding: '0.5rem', borderRadius: '12px', textAlign: 'center', fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '90px', border: '1px solid #444' }}>
+                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>⏪</span>
+                                    <span style={{ fontSize: '0.9rem' }}>Past Logs</span>
+                                </div>
+                            </Link>
+                        </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
                             <RecoveryTracker />

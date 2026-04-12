@@ -7,6 +7,36 @@ import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } f
 import ExerciseTools from '../components/ExerciseTools';
 import * as firestoreService from '../services/firestoreService';
 import { runDMAICCycle } from '../services/DMAICService';
+import { useRef } from 'react';
+
+const useWakeLock = () => {
+    const [isWakeLockActive, setIsWakeLockActive] = useState(false);
+    const wakeLockRef = useRef(null);
+
+    const requestWakeLock = async () => {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLockRef.current = await navigator.wakeLock.request('screen');
+                setIsWakeLockActive(true);
+                wakeLockRef.current.addEventListener('release', () => {
+                    setIsWakeLockActive(false);
+                });
+            }
+        } catch (err) {
+            console.error(`${err.name}, ${err.message}`);
+        }
+    };
+
+    const releaseWakeLock = async () => {
+        if (wakeLockRef.current !== null) {
+            await wakeLockRef.current.release();
+            wakeLockRef.current = null;
+            setIsWakeLockActive(false);
+        }
+    };
+
+    return { isWakeLockActive, requestWakeLock, releaseWakeLock };
+};
 
 const WorkoutLog = () => {
     const { user } = useAuth();
@@ -107,6 +137,23 @@ const WorkoutLog = () => {
         isDeadliftSuit: false, isDeadliftSuitStrapsUp: false, isFeetUp: false
     });
     const [isSessionComplete, setIsSessionComplete] = useState(false);
+    
+    // Auto-focus refs
+    const weightInputRef = useRef([]);
+    const repsInputRef = useRef([]);
+
+    // Wake Lock
+    const { isWakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock();
+    const [keepAwake, setKeepAwake] = useState(false);
+
+    useEffect(() => {
+        if (keepAwake) {
+            requestWakeLock();
+        } else {
+            releaseWakeLock();
+        }
+        return () => releaseWakeLock();
+    }, [keepAwake]);
 
     useEffect(() => {
         if (!targetUserId || !selectedDate) return;
@@ -200,10 +247,28 @@ const WorkoutLog = () => {
         const lastRow = setRows[setRows.length - 1];
         setSetRows([...setRows, {
             id: Date.now(),
-            weight: lastRow.weight,
-            reps: lastRow.reps,
-            targetRpe: lastRow.targetRpe,
+            weight: lastRow?.weight || '',
+            reps: lastRow?.reps || '',
+            targetRpe: lastRow?.targetRpe || '',
             actualRpe: ''
+        }]);
+        // Focus the newest weight input after adding
+        setTimeout(() => {
+            if (weightInputRef.current[setRows.length]) {
+                weightInputRef.current[setRows.length].focus();
+            }
+        }, 50);
+    };
+
+    const handleDuplicateRow = (id) => {
+        const rowToDup = setRows.find(r => r.id === id) || setRows[setRows.length - 1];
+        if (!rowToDup) return;
+        setSetRows([...setRows, {
+            id: Date.now(),
+            weight: rowToDup.weight,
+            reps: rowToDup.reps,
+            targetRpe: rowToDup.targetRpe,
+            actualRpe: rowToDup.actualRpe
         }]);
     };
 
@@ -285,7 +350,7 @@ const WorkoutLog = () => {
             setVideoUrl('');
             if (workoutType === 'strength') {
                 const lastRow = setRows[setRows.length - 1];
-                setSetRows([{ id: Date.now(), weight: lastRow.weight, reps: lastRow.reps, targetRpe: '', actualRpe: '' }]);
+                setSetRows([{ id: Date.now(), weight: lastRow?.weight || '', reps: lastRow?.reps || '', targetRpe: '', actualRpe: '' }]);
             } else {
                 setDuration('');
                 setDistance('');
@@ -308,6 +373,19 @@ const WorkoutLog = () => {
         setSelectedExerciseId(id);
         const exercise = allExercisesList.find(ex => ex.id === id);
         setWorkoutType(exercise?.category === EXERCISE_CATEGORIES.CARDIO ? 'cardio' : 'strength');
+        
+        // Auto-fill last session data logic (naive approach for this example)
+        // Find last time this exercise was performed by user
+        const lastEntry = workouts.find(w => w.exerciseId === id);
+        if (lastEntry && workoutType === 'strength' && lastEntry.weight) {
+             setSetRows([{ 
+                 id: Date.now(), 
+                 weight: lastEntry.weight, 
+                 reps: lastEntry.reps, 
+                 targetRpe: lastEntry.targetRpe || '', 
+                 actualRpe: '' 
+             }]);
+        }
     };
 
     const checkPR = (entry) => {
@@ -324,12 +402,27 @@ const WorkoutLog = () => {
     const CommentSectionToRender = <CommentSection userId={targetUserId} selectedDate={selectedDate} />;
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left', paddingBottom: '100px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <Link to="/calendar" className="btn">&larr; Calendar</Link>
                 <h1>{isCoachViewing ? `Review: ${selectedDate.toLocaleDateString()}` : 'Log Workout'}</h1>
-                <Link to="/profile" className="btn">Update Maxes</Link>
+                <Link to="/profile" className="btn">Maxes</Link>
             </div>
+            
+            {/* Screen Awake Toggle */}
+            {!isCoachViewing && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', padding: '0.5rem', backgroundColor: '#333', borderRadius: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', width: '100%' }}>
+                        <input 
+                            type="checkbox" 
+                            checked={keepAwake} 
+                            onChange={(e) => setKeepAwake(e.target.checked)} 
+                            style={{ width: '24px', height: '24px', margin: 0 }}
+                        />
+                        <span style={{ fontWeight: 'bold' }}>Workout Mode - Keep Screen Awake</span>
+                    </label>
+                </div>
+            )}
 
             {/* Today's Plan Section (Athlete Only) */}
             {!isCoachViewing && activePlannedWorkout && !isSessionComplete && (
@@ -451,18 +544,26 @@ const WorkoutLog = () => {
                                                 <input
                                                     type="number"
                                                     value={row.weight}
+                                                    ref={el => weightInputRef.current[idx] = el}
                                                     onChange={e => handleRowChange(row.id, 'weight', e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') repsInputRef.current[idx]?.focus();
+                                                    }}
                                                     placeholder={`${unit}`}
                                                     required
-                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1rem' }}
+                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1.2rem', fontWeight: 'bold' }}
                                                 />
                                                 <input
                                                     type="number"
                                                     value={row.reps}
+                                                    ref={el => repsInputRef.current[idx] = el}
                                                     onChange={e => handleRowChange(row.id, 'reps', e.target.value)}
+                                                    onKeyDown={e => {
+                                                        if (e.key === 'Enter') document.getElementById('log-set-btn')?.focus();
+                                                    }}
                                                     placeholder="R"
                                                     required
-                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1rem' }}
+                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1.2rem', fontWeight: 'bold' }}
                                                 />
                                                 <input
                                                     type="number"
@@ -470,7 +571,7 @@ const WorkoutLog = () => {
                                                     value={row.targetRpe}
                                                     onChange={e => handleRowChange(row.id, 'targetRpe', e.target.value)}
                                                     placeholder="T"
-                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1rem', background: 'transparent', border: '1px solid #444' }}
+                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1.1rem', background: 'transparent', border: '1px solid #444' }}
                                                 />
                                                 <input
                                                     type="number"
@@ -479,20 +580,23 @@ const WorkoutLog = () => {
                                                     onChange={e => handleRowChange(row.id, 'actualRpe', e.target.value)}
                                                     placeholder="A"
                                                     required
-                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1rem', borderColor: '#2196f3', backgroundColor: 'rgba(33, 150, 243, 0.05)', borderWidth: '2px' }}
+                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1.1rem', borderColor: '#2196f3', backgroundColor: 'rgba(33, 150, 243, 0.05)', borderWidth: '2px' }}
                                                 />
                                                 {idx > 0 ? (
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRemoveRow(row.id)}
-                                                        style={{ color: '#ff5252', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                                                        style={{ color: '#ff5252', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, minHeight: '44px', minWidth: '44px' }}
                                                     >
                                                         &times;
                                                     </button>
                                                 ) : <div />}
                                             </div>
                                         ))}
-                                        <button type="button" onClick={handleAddRow} className="btn" style={{ width: '100%', maxWidth: '360px', border: '1px dashed #444', marginTop: '0.8rem', padding: '0.6rem', fontSize: '0.9rem' }}>+ Add Set</button>
+                                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '360px', marginTop: '0.8rem' }}>
+                                            <button type="button" onClick={handleAddRow} className="btn" style={{ flex: 1, border: '1px dashed #444', padding: '0.8rem', fontSize: '1rem' }}>+ Empty Set</button>
+                                            <button type="button" onClick={() => handleDuplicateRow()} className="btn btn-primary" style={{ flex: 1, padding: '0.8rem', fontSize: '1rem' }}>↻ Repeat Last Set</button>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
@@ -502,43 +606,52 @@ const WorkoutLog = () => {
                                 </div>
                             )}
 
-                            <div className="input-group" style={{ marginBottom: '1rem' }}>
-                                <label style={{ fontSize: '0.8rem' }}>Video Link (YouTube, Drive, etc.)</label>
-                                <input
-                                    type="url"
-                                    value={videoUrl}
-                                    onChange={e => setVideoUrl(e.target.value)}
-                                    placeholder="https://..."
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
+                            {/* Hide metadata from view initially, keep it simple */}
+                            <details style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#888' }}>
+                                <summary style={{ cursor: 'pointer', padding: '0.5rem' }}>Advanced Settings (Notes/Video)</summary>
+                                <div className="input-group" style={{ marginBottom: '1rem', marginTop: '1rem' }}>
+                                    <label style={{ fontSize: '0.8rem' }}>Video Link (YouTube, Drive, etc.)</label>
+                                    <input
+                                        type="url"
+                                        value={videoUrl}
+                                        onChange={e => setVideoUrl(e.target.value)}
+                                        placeholder="https://..."
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
 
-                            <div className="input-group">
-                                <label style={{ fontSize: '0.8rem' }}>Notes</label>
-                                <input
-                                    type="text"
-                                    value={notes}
-                                    onChange={e => setNotes(e.target.value)}
-                                    placeholder="Focus on tempo, felt strong..."
-                                    style={{ width: '100%' }}
-                                />
-                            </div>
+                                <div className="input-group">
+                                    <label style={{ fontSize: '0.8rem' }}>Notes</label>
+                                    <input
+                                        type="text"
+                                        value={notes}
+                                        onChange={e => setNotes(e.target.value)}
+                                        placeholder="Focus on tempo, felt strong..."
+                                        style={{ width: '100%' }}
+                                    />
+                                </div>
+                            </details>
 
-                            <button
-                                type="submit"
-                                className="btn btn-primary"
-                                style={{
-                                    width: '100%',
-                                    marginTop: '1.5rem',
-                                    padding: '1rem',
-                                    fontWeight: 'bold',
-                                    fontSize: '1rem',
-                                    boxShadow: '0 4px 6px rgba(33, 150, 243, 0.2)'
-                                }}
-                                disabled={saving}
-                            >
-                                {saving ? 'Saving...' : 'Log Set(s)'}
-                            </button>
+                            {/* Sticky submit button container */}
+                            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '1rem', background: 'rgba(36,36,36,0.9)', backdropFilter: 'blur(10px)', borderTop: '1px solid #444', zIndex: 1000, display: 'flex', justifyContent: 'center' }}>
+                                <button
+                                    id="log-set-btn"
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    style={{
+                                        maxWidth: '800px',
+                                        width: '100%',
+                                        padding: '1.2rem',
+                                        fontWeight: 'bold',
+                                        fontSize: '1.2rem',
+                                        boxShadow: '0 -4px 12px rgba(33, 150, 243, 0.3)',
+                                        minHeight: '60px' // Large tap target
+                                    }}
+                                    disabled={saving}
+                                >
+                                    {saving ? 'Saving...' : '+ Add Log'}
+                                </button>
+                            </div>
                         </form>
                     )}
                 </div>
@@ -567,24 +680,24 @@ const WorkoutLog = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 {loggedSets.length === 0 ? <p>No logs recorded for this day.</p> : loggedSets.map(entry => (
-                    <div key={entry.id} className="card" style={{ border: checkPR(entry) ? '1px solid gold' : 'none' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <strong>{entry.exerciseName}</strong>
-                            {checkPR(entry) && <span style={{ color: 'gold', fontSize: '0.8rem' }}>⭐ New PR!</span>}
+                    <div key={entry.id} className="card" style={{ border: checkPR(entry) ? '1px solid gold' : 'none', padding: '1rem', marginBottom: '0.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <strong style={{ fontSize: '1.2rem' }}>{entry.exerciseName}</strong>
+                            {checkPR(entry) && <span style={{ color: 'gold', fontSize: '0.8rem', fontWeight: 'bold' }}>⭐ New PR!</span>}
                         </div>
-                        <div>
+                        <div style={{ fontSize: '1.1rem', marginTop: '0.5rem' }}>
                             {entry.type === 'strength'
-                                ? `${entry.weight}${unit} x ${entry.reps} @ ${entry.actualRpe}`
+                                ? <span style={{ fontWeight: 'bold' }}>{entry.weight}{unit} <span style={{ color: '#aaa', fontWeight: 'normal' }}>x</span> {entry.reps} <span style={{ color: '#888', fontSize: '0.9rem' }}>@{entry.actualRpe}</span></span>
                                 : `${entry.duration}m ${entry.distance ? `| ${entry.distance}km` : ''}`}
                         </div>
                         {entry.video_url && (
                             <div style={{ marginTop: '0.5rem' }}>
-                                <a href={entry.video_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>
+                                <a href={entry.video_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.9rem', color: 'var(--primary)', padding: '0.5rem 0', display: 'inline-block' }}>
                                     View Video Link ↗
                                 </a>
                             </div>
                         )}
-                        {entry.notes && <div style={{ fontSize: '0.8rem', color: '#888', marginTop: '0.5rem' }}>{entry.notes}</div>}
+                        {entry.notes && <div style={{ fontSize: '0.9rem', color: '#888', marginTop: '0.5rem' }}>{entry.notes}</div>}
                     </div>
                 ))}
             </div>
