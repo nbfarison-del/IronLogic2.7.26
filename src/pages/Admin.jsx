@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAllRegisteredUsers, updateUserRole, assignAthleteToCoach } from '../services/firestoreService';
+import { getAllRegisteredUsers, updateUserRole, assignAthleteToCoach, updateUserRole as syncRole } from '../services/firestoreService';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
@@ -9,6 +9,7 @@ const Admin = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [updatingId, setUpdatingId] = useState(null);
+    const [syncDone, setSyncDone] = useState(false);
 
     const ADMIN_EMAIL = 'nbfarison@gmail.com';
 
@@ -17,6 +18,20 @@ const Admin = () => {
             fetchUsers();
         }
     }, [user]);
+
+    // One-time fix: write role:admin to Firestore so the admin appears in coach dropdowns
+    const handleSyncAdminRole = async () => {
+        if (!user?.id) return;
+        try {
+            await syncRole(user.id, 'admin');
+            setSyncDone(true);
+            await fetchUsers(); // Refresh list
+            alert('Done! Your account now has role:admin in Firestore. Coach dropdowns will now show you.');
+        } catch (err) {
+            console.error('Sync failed:', err);
+            alert('Sync failed: ' + err.message);
+        }
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -69,31 +84,41 @@ const Admin = () => {
         return <Navigate to="/" />;
     }
 
-    // Always include the admin account as an assignable coach, regardless of what Firestore stores.
-    // The admin role is set client-side in AuthContext so it may not be reflected in the 'users' array.
-    const adminUser = users.find(u => u.email === ADMIN_EMAIL);
+    // Build coaches list — always inject the admin account using the live user.id from auth
+    // so the dropdown works even before Firestore has role:admin stored.
     const coachesFromDB = users.filter(u => u.role === 'coach' || u.role === 'admin');
     const adminAlreadyInList = coachesFromDB.some(c => c.email === ADMIN_EMAIL);
     const coaches = adminAlreadyInList
         ? coachesFromDB
         : [
-            // Inject admin as guaranteed coach option
-            { id: adminUser?.id || user.id, email: ADMIN_EMAIL, role: 'admin' },
+            { id: user.id, email: ADMIN_EMAIL, role: 'admin' },
             ...coachesFromDB
           ];
+    console.log('[Admin] coaches list:', coaches.map(c => c.email));
 
     return (
         <div className="container" style={{ padding: '1rem' }}>
-            <div className="header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div className="header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
-                <button
-                    className="btn btn-secondary"
-                    onClick={fetchUsers}
-                    disabled={loading}
-                    style={{ fontSize: '0.8rem' }}
-                >
-                    {loading ? 'Refreshing...' : 'Refresh List'}
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {!syncDone && (
+                        <button
+                            className="btn btn-primary"
+                            onClick={handleSyncAdminRole}
+                            style={{ fontSize: '0.8rem', background: '#ff9800', border: 'none' }}
+                        >
+                            ⚡ Sync Admin Role to Firestore
+                        </button>
+                    )}
+                    <button
+                        className="btn btn-secondary"
+                        onClick={fetchUsers}
+                        disabled={loading}
+                        style={{ fontSize: '0.8rem' }}
+                    >
+                        {loading ? 'Refreshing...' : 'Refresh List'}
+                    </button>
+                </div>
             </div>
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
