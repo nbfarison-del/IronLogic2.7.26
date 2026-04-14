@@ -429,6 +429,7 @@ export const addPlannedWorkout = (uid, data) => saveAthleteProgram(uid, data.aut
 export const deletePlannedWorkout = deleteAthleteProgram;
 export const updatePlannedWorkout = updateAthleteProgram;
 export const subscribeToPlannedWorkouts = subscribeToAthletePrograms;
+export const assignProgramToAthlete = saveAthleteProgram;
 
 // ==================== CALENDAR NOTES ====================
 
