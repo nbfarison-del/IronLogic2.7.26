@@ -349,70 +349,61 @@ export const subscribeToRecovery = (userId, callback, errorCallback) => {
     }, errorCallback);
 };
 
-// ==================== PLANNED WORKOUTS ====================
+// ==================== SEPARATED PROGRAMMING PATHS ====================
 
-export const getPlannedWorkouts = async (userId) => {
-    const plannedRef = collection(db, 'users', userId, 'plannedWorkouts');
-    const querySnapshot = await getDocs(plannedRef);
-
-    return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-    }));
-};
-
-export const addPlannedWorkout = async (userId, plannedData) => {
-    const plannedRef = collection(db, 'users', userId, 'plannedWorkouts');
-    
-    // Deduplication check
-    const checkName = plannedData.planName || plannedData.name;
-    if (plannedData.date && checkName) {
-        const qStr = query(
-            plannedRef, 
-            where('date', '==', plannedData.date), 
-            where('planName', '==', checkName)
-        );
-        const dupSnap = await getDocs(qStr);
-        if (!dupSnap.empty) return dupSnap.docs[0].id;
-        
-        // Also check by name as fallback
-        const qName = query(
-            plannedRef, 
-            where('date', '==', plannedData.date), 
-            where('name', '==', checkName)
-        );
-        const nameSnap = await getDocs(qName);
-        if (!nameSnap.empty) return nameSnap.docs[0].id;
-    }
-
-    const docRef = await addDoc(plannedRef, plannedData);
+/**
+ * Saves a workout to the coach's PERSONAL library
+ */
+export const saveCoachPersonalWorkout = async (coachId, workoutData) => {
+    const ref = collection(db, 'users', coachId, 'coachPrograms');
+    const docRef = await addDoc(ref, {
+        ...workoutData,
+        updatedAt: new Date().toISOString()
+    });
     return docRef.id;
 };
 
-export const updatePlannedWorkout = async (userId, plannedId, plannedData) => {
-    const docRef = doc(db, 'users', userId, 'plannedWorkouts', plannedId);
-    await updateDoc(docRef, plannedData);
+/**
+ * Saves a workout to an ATHLETE'S schedule
+ */
+export const saveAthleteProgram = async (athleteId, coachId, programData) => {
+    const ref = collection(db, 'users', athleteId, 'athletePrograms');
+    // We explicitly track the author (coach) for permission auditing
+    const docRef = await addDoc(ref, {
+        ...programData,
+        authorId: coachId,
+        assignedAt: new Date().toISOString()
+    });
+    return docRef.id;
 };
 
-export const deletePlannedWorkout = async (userId, plannedId) => {
-    const docRef = doc(db, 'users', userId, 'plannedWorkouts', plannedId);
+export const getAthletePrograms = async (athleteId) => {
+    const ref = collection(db, 'users', athleteId, 'athletePrograms');
+    const qSnap = await getDocs(ref);
+    return qSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+export const subscribeToAthletePrograms = (athleteId, callback) => {
+    const ref = collection(db, 'users', athleteId, 'athletePrograms');
+    return onSnapshot(ref, (snapshot) => {
+        callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+};
+
+export const deleteAthleteProgram = async (athleteId, programId) => {
+    const docRef = doc(db, 'users', athleteId, 'athletePrograms', programId);
     await deleteDoc(docRef);
 };
 
-export const subscribeToPlannedWorkouts = (userId, callback, errorCallback) => {
-    const plannedRef = collection(db, 'users', userId, 'plannedWorkouts');
-    return onSnapshot(plannedRef, (snapshot) => {
-        const planned = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-        callback(planned);
-    }, errorCallback);
+export const updateAthleteProgram = async (athleteId, programId, updates) => {
+    const docRef = doc(db, 'users', athleteId, 'athletePrograms', programId);
+    await updateDoc(docRef, { ...updates, updatedAt: new Date().toISOString() });
 };
 
 // ==================== PROGRAM TEMPLATES ====================
 
-export const getProgramTemplates = async () => {
+export const getProgramTemplates = async (userId = null) => {
+    // If userId provided, we could filter for coach-specific templates or global ones
     const templatesRef = collection(db, 'program_templates');
     const querySnapshot = await getDocs(templatesRef);
     return querySnapshot.docs.map(doc => ({
@@ -431,38 +422,13 @@ export const addProgramTemplate = async (templateData) => {
     return docRef.id;
 };
 
-export const assignProgramToAthlete = async (athleteId, programData) => {
-    // This creates a copy of the program for the athlete
-    const plannedRef = collection(db, 'users', athleteId, 'plannedWorkouts');
-    
-    // Deduplication check
-    const checkName = programData.planName || programData.name;
-    if (programData.date && checkName) {
-        const qStr = query(
-            plannedRef, 
-            where('date', '==', programData.date), 
-            where('planName', '==', checkName)
-        );
-        const dupSnap = await getDocs(qStr);
-        if (!dupSnap.empty) return dupSnap.docs[0].id;
-        
-        // Check by name
-        const qName = query(
-            plannedRef, 
-            where('date', '==', programData.date), 
-            where('name', '==', checkName)
-        );
-        const nameSnap = await getDocs(qName);
-        if (!nameSnap.empty) return nameSnap.docs[0].id;
-    }
-
-    const docRef = await addDoc(plannedRef, {
-        ...programData,
-        assignedAt: new Date().toISOString(),
-        isInstance: true
-    });
-    return docRef.id;
-};
+// ==================== LEGACY COMPATIBILITY (Aliasing old names) ====================
+// We keep these so existing calendar code doesn't crash during the transition
+export const getPlannedWorkouts = getAthletePrograms;
+export const addPlannedWorkout = (uid, data) => saveAthleteProgram(uid, data.authorId || uid, data);
+export const deletePlannedWorkout = deleteAthleteProgram;
+export const updatePlannedWorkout = updateAthleteProgram;
+export const subscribeToPlannedWorkouts = subscribeToAthletePrograms;
 
 // ==================== CALENDAR NOTES ====================
 

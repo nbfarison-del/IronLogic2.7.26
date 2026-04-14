@@ -23,6 +23,13 @@ const CalendarView = () => {
     const location = useLocation();
     const targetUserId = paramAthleteId || user?.id;
     const isCoachViewing = paramAthleteId && paramAthleteId !== user?.id;
+    const isAdmin = user?.email === 'nbfarison@gmail.com';
+    
+    // Permission logic: 
+    // - Admin can manage anything.
+    // - Coach can manage if they are viewing an athlete.
+    // - Users can manage their OWN personal calendar (unless you want to restrict that too).
+    const canManagePrograms = isAdmin || (user?.role === 'coach' && isCoachViewing) || (!isCoachViewing);
 
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
@@ -280,7 +287,15 @@ const CalendarView = () => {
                             Log Workout
                         </button>
                     )}
-                    <button className="btn" onClick={() => setIsPlanning(true)}>{isCoachViewing ? '+ Assign Program' : '+ Plan Program'}</button>
+                    {canManagePrograms && (
+                        <button 
+                            className="btn btn-primary" 
+                            style={{ background: 'linear-gradient(135deg, #1565c0, #0288d1)', border: 'none' }}
+                            onClick={() => setIsPlanning(true)}
+                        >
+                            {isCoachViewing ? '✏️ Assign Athlete Program' : '+ Plan My Workout'}
+                        </button>
+                    )}
                 </div>
             </div>
 

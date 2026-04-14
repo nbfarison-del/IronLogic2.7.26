@@ -197,35 +197,44 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
 
         const programData = {
             name: programName,
-            planName: programName,
+            planName: programName, // Redundant for compatibility
             exercises: filteredExercises,
-            authorId: user.id
+            authorId: user.id, // The coach/admin who wrote it
+            date: todayStr
         };
 
         try {
+            // Context 1: Template Library
             if (isTemplate) {
-                await firestoreService.addProgramTemplate(programData);
-                alert('Template saved successfully!');
+                await firestoreService.addProgramTemplate({
+                    ...programData,
+                    authorEmail: user.email
+                });
+                alert('Saved to Template Library!');
             }
 
+            // Context 2: Actual Assignment
             if (targetAthleteId === user.id) {
-                // Let the parent component handle the actual save (update or add) for current user
+                // COACH PERSONAL PROGRAMMING
+                // We use the separated path
+                await firestoreService.saveCoachPersonalWorkout(user.id, programData);
+                
+                // For legacy UI compatibility, we also update the athletePrograms path (since it's their own schedule)
+                await firestoreService.saveAthleteProgram(user.id, user.id, programData);
+                
                 onSave({
                     id: initialData?.id || null,
-                    date: todayStr,
                     ...programData
                 });
             } else if (targetAthleteId) {
-                // Save directly to target athlete
-                await firestoreService.assignProgramToAthlete(targetAthleteId, {
-                    ...programData,
-                    date: todayStr
-                });
-                onSave(null); // Just close the planner
+                // ATHLETE PROGRAMMING
+                await firestoreService.saveAthleteProgram(targetAthleteId, user.id, programData);
+                alert(`Program assigned to athlete successfully!`);
+                onSave(null); // Close planner
             }
         } catch (error) {
             console.error('Error saving program:', error);
-            alert('Error saving program');
+            alert('Error saving program: ' + error.message);
         }
     };
 

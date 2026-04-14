@@ -12,8 +12,10 @@ const CoachDashboard = () => {
     const [metrics, setMetrics] = useState({});
     const [selectedAthleteForAI, setSelectedAthleteForAI] = useState(null);
 
+    const ADMIN_EMAIL = 'nbfarison@gmail.com';
+
     useEffect(() => {
-        if (user) {
+        if (user && (user.role === 'coach' || user.role === 'admin')) {
             fetchAthletes();
         }
     }, [user]);
