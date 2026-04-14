@@ -69,7 +69,18 @@ const Admin = () => {
         return <Navigate to="/" />;
     }
 
-    const coaches = users.filter(u => u.role === 'coach' || u.role === 'admin');
+    // Always include the admin account as an assignable coach, regardless of what Firestore stores.
+    // The admin role is set client-side in AuthContext so it may not be reflected in the 'users' array.
+    const adminUser = users.find(u => u.email === ADMIN_EMAIL);
+    const coachesFromDB = users.filter(u => u.role === 'coach' || u.role === 'admin');
+    const adminAlreadyInList = coachesFromDB.some(c => c.email === ADMIN_EMAIL);
+    const coaches = adminAlreadyInList
+        ? coachesFromDB
+        : [
+            // Inject admin as guaranteed coach option
+            { id: adminUser?.id || user.id, email: ADMIN_EMAIL, role: 'admin' },
+            ...coachesFromDB
+          ];
 
     return (
         <div className="container" style={{ padding: '1rem' }}>
@@ -123,7 +134,7 @@ const Admin = () => {
                                             </select>
                                         </td>
                                         <td style={{ padding: '1rem' }}>
-                                            {u.role === 'athlete' && (
+                                            {(u.role === 'athlete' || (!u.role)) && (
                                                 <select
                                                     value={u.coach_id || ''}
                                                     onChange={(e) => handleCoachAssign(u.id, e.target.value)}
@@ -137,6 +148,9 @@ const Admin = () => {
                                                 </select>
                                             )}
                                             {u.role === 'coach' && <span style={{ color: 'var(--primary)', fontSize: '0.8rem' }}>Is Coach</span>}
+                                            {(u.role === 'admin' || u.email === ADMIN_EMAIL) && (
+                                                <span style={{ color: '#ff9800', fontSize: '0.8rem', fontWeight: 'bold' }}>Is Coach (Admin)</span>
+                                            )}
                                         </td>
                                         <td style={{ padding: '1rem' }}>
                                             <span style={{
