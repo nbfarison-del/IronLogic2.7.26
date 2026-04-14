@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 import ExerciseTools from './ExerciseTools';
 
+const ADMIN_EMAIL = 'nbfarison@gmail.com';
+
 const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
     const { unit } = useSettings();
     const { user } = useAuth();
@@ -44,11 +46,18 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null }) => {
         const loadInitialData = async () => {
             if (!user) return;
             try {
+                // Admin sees ALL users; coaches only see their assigned athletes
+                const athleteLoader = user.email === ADMIN_EMAIL
+                    ? firestoreService.getAllRegisteredUsers().then(all =>
+                        all.filter(u => u.email !== ADMIN_EMAIL && (u.role === 'athlete' || !u.role))
+                      )
+                    : (user.role === 'coach' || user.role === 'admin')
+                        ? firestoreService.getAssignedAthletes(user.id)
+                        : Promise.resolve([]);
+
                 const [custom, athletes, fetchedTemplates] = await Promise.all([
                     firestoreService.getCustomExercises(user.id),
-                    (user.role === 'coach' || user.role === 'admin')
-                        ? firestoreService.getAssignedAthletes(user.id)
-                        : Promise.resolve([]),
+                    athleteLoader,
                     (user.role === 'coach' || user.role === 'admin')
                         ? firestoreService.getProgramTemplates()
                         : Promise.resolve([])

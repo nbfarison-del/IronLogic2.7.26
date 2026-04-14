@@ -99,17 +99,24 @@ const CoachDashboard = () => {
                             </div>
 
                             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
-                                <Link to={`/coach/athlete/${athlete.id}`} className="btn" style={{ flex: 1, fontSize: '0.75rem', textAlign: 'center', minWidth: '80px' }}>
-                                    History
+                                {/* Primary action: Write Program */}
+                                <Link
+                                    to={`/calendar/${athlete.id}`}
+                                    className="btn btn-primary"
+                                    style={{ flex: '1 1 100%', fontSize: '0.9rem', textAlign: 'center', background: 'linear-gradient(135deg, #1565c0, #0288d1)', border: 'none', padding: '0.75rem', fontWeight: 'bold' }}
+                                >
+                                    ✏️ Write / Edit Program
                                 </Link>
-                                <Link to={`/calendar/${athlete.id}`} className="btn" style={{ flex: 1, fontSize: '0.75rem', textAlign: 'center', minWidth: '80px' }}>
-                                    Edit
+
+                                {/* Secondary actions */}
+                                <Link to={`/coach/athlete/${athlete.id}`} className="btn" style={{ flex: 1, fontSize: '0.75rem', textAlign: 'center', minWidth: '80px' }}>
+                                    Workout History
+                                </Link>
+                                <Link to={`/coach/checkin/${athlete.id}`} className="btn" style={{ flex: 1, fontSize: '0.75rem', background: '#2e7d32', border: 'none', textAlign: 'center', color: 'white' }}>
+                                    Weekly Review
                                 </Link>
                                 <Link to={`/coach/adaptive/${athlete.id}`} className="btn" style={{ flex: 1, fontSize: '0.75rem', background: '#333', border: 'none', textAlign: 'center' }}>
                                     ILM Status
-                                </Link>
-                                <Link to={`/coach/checkin/${athlete.id}`} className="btn btn-primary" style={{ flex: 1, fontSize: '0.75rem', background: '#4caf50', border: 'none', textAlign: 'center' }}>
-                                    Weekly Review
                                 </Link>
                                 <button
                                     className="btn btn-primary"
