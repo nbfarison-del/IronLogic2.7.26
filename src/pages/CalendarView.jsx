@@ -51,6 +51,15 @@ const CalendarView = () => {
     const [weightInput, setWeightInput] = useState('');
     const [noteInput, setNoteInput] = useState('');
 
+    // Auto-open planner if coming from Home with startPlanning state
+    useEffect(() => {
+        if (location.state?.startPlanning) {
+            setIsPlanning(true);
+            // Clear state so it doesn't reopen if they cancel and come back
+            window.history.replaceState({}, document.title);
+        }
+    }, [location.state]);
+
     // Browser-robust YYYY-MM-DD helper
     const getDateStr = (date) => {
         return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;

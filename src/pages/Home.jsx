@@ -41,6 +41,15 @@ const Home = () => {
 
     const [activeTab, setActiveTab] = useState('dashboard');
 
+    const getDateStr = (date) => {
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+
+    const todayStr = useMemo(() => getDateStr(new Date()), []);
+    const todayPlan = useMemo(() => {
+        return plannedWorkouts.find(p => p.date === todayStr);
+    }, [plannedWorkouts, todayStr]);
+
     const recentPRs = useMemo(() => {
         const prList = [];
         const maxes = {};
@@ -182,10 +191,28 @@ const Home = () => {
                                     <span style={{ fontSize: '0.9rem' }}>Workout</span>
                                 </div>
                             </Link>
-                            <Link to="/program-planner" style={{ textDecoration: 'none' }}>
-                                <div style={{ background: '#333', color: 'white', padding: '0.5rem', borderRadius: '12px', textAlign: 'center', fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '90px', border: '1px solid #444' }}>
-                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>📅</span>
-                                    <span style={{ fontSize: '0.9rem' }}>Program</span>
+                            <Link 
+                                to={todayPlan ? "/log" : "/calendar"} 
+                                state={todayPlan ? { plannedWorkout: todayPlan } : { startPlanning: true }}
+                                style={{ textDecoration: 'none' }}
+                            >
+                                <div style={{ 
+                                    background: todayPlan ? 'var(--primary)' : '#333', 
+                                    color: 'white', 
+                                    padding: '0.5rem', 
+                                    borderRadius: '12px', 
+                                    textAlign: 'center', 
+                                    fontWeight: 'bold', 
+                                    display: 'flex', 
+                                    flexDirection: 'column', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'center', 
+                                    height: '90px', 
+                                    border: todayPlan ? '1px solid var(--primary)' : '1px solid #444',
+                                    boxShadow: todayPlan ? '0 4px 6px rgba(0,0,0,0.2)' : 'none'
+                                }}>
+                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>{todayPlan ? '🔥' : '📅'}</span>
+                                    <span style={{ fontSize: '0.9rem' }}>{todayPlan ? 'Start Program' : 'Program'}</span>
                                 </div>
                             </Link>
                             <Link to="/calendar" style={{ textDecoration: 'none' }}>
