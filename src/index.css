@@ -30,8 +30,7 @@
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  display: block;
   min-width: 320px;
   min-height: 100vh;
   background-image: radial-gradient(circle at 10% 20%, rgba(251, 191, 36, 0.05) 0%, transparent 40%),
@@ -44,13 +43,14 @@ body {
   max-width: 1280px;
   margin: 0 auto;
   padding: 1.5rem;
+  padding-top: 5rem;
   text-align: center;
 }
 
 @media (max-width: 600px) {
   #root {
     padding: 1rem;
-    padding-top: 4rem;
+    padding-top: 5rem;
   }
 }
 
@@ -89,7 +89,7 @@ body {
   background-color: rgba(255, 255, 255, 0.05);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  min-height: 48px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -105,7 +105,7 @@ body {
 
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), #d97706);
-  color: #000; /* Dark text for high contrast on gold */
+  color: #000 !important; /* Dark text for high contrast on gold */
   border: none;
   box-shadow: 0 4px 15px -1px var(--primary-glow);
 }
@@ -167,9 +167,9 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Typography */
-h1 { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.025em; margin-bottom: 1.5rem; }
-h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 1rem; }
-h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; }
+h1 { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.025em; margin-bottom: 1.5rem; text-align: left; }
+h2 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 1rem; text-align: left; }
+h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; text-align: left; }
 
 /* Navigation */
 nav {
@@ -177,7 +177,7 @@ nav {
   justify-content: space-between;
   align-items: center;
   padding: 0 1.5rem;
-  background: rgba(9, 9, 11, 0.8);
+  background: rgba(9, 9, 11, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-glass);
@@ -190,30 +190,88 @@ nav {
 }
 
 .nav-brand {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 800;
   background: linear-gradient(to right, var(--primary), #f59e0b);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.05em;
+  text-decoration: none;
 }
 
-.nav-links nav a {
-  padding: 0.5rem 1rem;
-  margin-left: 0.25rem;
-  border-radius: 10px;
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-links a {
+  text-decoration: none;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: color 0.2s;
+  font-size: 0.95rem;
+}
+
+.nav-links a:hover, .nav-links a.active {
+  color: var(--primary);
+}
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
 }
 
 /* Mobile Sidebar Menu */
 @media (max-width: 768px) {
+  .hamburger {
+    display: block;
+    cursor: pointer;
+  }
+
   .nav-links {
-    background: rgba(18, 18, 20, 0.95) !important;
-    backdrop-filter: blur(20px) !important;
+    position: fixed;
+    right: -110%; /* Fully off screen */
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    background: rgba(15, 15, 18, 0.98);
+    backdrop-filter: blur(25px);
+    flex-direction: column;
+    padding: 6rem 1.5rem;
+    gap: 1.5rem;
+    transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1001;
     border-left: 1px solid var(--border-glass);
-    top: 0 !important;
-    height: 100vh !important;
-    padding: 5rem 1.5rem 2rem !important;
+    align-items: flex-start;
+  }
+
+  .nav-links.open {
+    right: 0;
+    box-shadow: -15px 0 50px rgba(0, 0, 0, 0.8);
+  }
+
+  .nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  .nav-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
