@@ -111,12 +111,29 @@ const Home = () => {
         return data.slice(-30);
     }, [workouts, weightHistory]);
 
+    const weeklySummary = useMemo(() => {
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0,0,0,0);
+        
+        const thisWeekWorkouts = workouts.filter(w => {
+            const d = new Date(w.date);
+            return d >= startOfWeek;
+        });
+
+        const totalWeight = thisWeekWorkouts.reduce((sum, w) => sum + (parseFloat(w.weight || 0) * parseInt(w.reps || 0)), 0);
+        const sessions = new Set(thisWeekWorkouts.map(w => w.date.split('T')[0])).size;
+
+        return { totalWeight, sessions };
+    }, [workouts]);
+
     if (loading) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
                 <div style={{ textAlign: 'center' }}>
                     <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }}></div>
-                    <p>Loading Dashboard...</p>
+                    <p style={{ fontWeight: '600', letterSpacing: '0.05em' }}>SYNCING PERFORMANCE DATA...</p>
                     <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
                 </div>
             </div>
@@ -124,179 +141,112 @@ const Home = () => {
     }
 
     return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h1>Welcome back, {user?.name || 'User'}!</h1>
+        <div className="animate-in" style={{ paddingBottom: '2rem', textAlign: 'left' }}>
+            <div style={{ marginBottom: '2rem' }}>
+                <h1 style={{ marginBottom: '0.25rem' }}>Welcome, {user?.name || 'Athlete'}</h1>
+                <p style={{ opacity: 0.6, fontSize: '1.1rem' }}>Your performance journey continues today.</p>
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid #333', paddingBottom: '0.5rem' }}>
-                <button
-                    onClick={() => setActiveTab('dashboard')}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: activeTab === 'dashboard' ? 'var(--primary)' : '#888',
-                        borderBottom: activeTab === 'dashboard' ? '2px solid var(--primary)' : '2px solid transparent',
-                        padding: '0.5rem 1rem',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        fontSize: '1.1rem'
-                    }}
-                >
-                    Dashboard
-                </button>
-                <button
-                    onClick={() => setActiveTab('mobility')}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: activeTab === 'mobility' ? '#9c27b0' : '#888',
-                        borderBottom: activeTab === 'mobility' ? '2px solid #9c27b0' : '2px solid transparent',
-                        padding: '0.5rem 1rem',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        fontSize: '1.1rem'
-                    }}
-                >
-                    Mobility
-                </button>
-                <button
-                    onClick={() => setActiveTab('ironlogic-method')}
-                    style={{
-                        background: 'none',
-                        border: 'none',
-                        color: activeTab === 'ironlogic-method' ? 'var(--primary)' : '#888',
-                        borderBottom: activeTab === 'ironlogic-method' ? '2px solid var(--primary)' : '2px solid transparent',
-                        padding: '0.5rem 1rem',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        fontSize: '1.1rem'
-                    }}
-                >
-                    IronLogic Method
-                </button>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
+                {['dashboard', 'mobility', 'ironlogic-method'].map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        style={{
+                            flex: 1,
+                            background: activeTab === tab ? 'rgba(255,255,255,0.07)' : 'transparent',
+                            border: 'none',
+                            color: activeTab === tab ? 'var(--primary)' : '#888',
+                            padding: '0.75rem',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            fontWeight: '700',
+                            fontSize: '0.9rem',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            transition: 'all 0.2s ease'
+                        }}
+                    >
+                        {tab.replace('-', ' ')}
+                    </button>
+                ))}
             </div>
 
+            {activeTab === 'dashboard' ? (
+                <>
+                    <div className="action-grid" style={{ marginBottom: '2.5rem' }}>
+                        <Link to="/log" style={{ textDecoration: 'none' }}>
+                            <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', border: '1px solid var(--border-glass)' }}>
+                                <span style={{ fontSize: '2rem' }}>🏋️</span>
+                                <span style={{ fontWeight: '700' }}>Free Session</span>
+                            </div>
+                        </Link>
+                        <Link to={todayPlan ? `/log?planId=${todayPlan.id}` : "/calendar?plan=true"} style={{ textDecoration: 'none' }}>
+                            <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: todayPlan ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), transparent)' : 'rgba(255,255,255,0.03)', border: todayPlan ? '1px solid var(--primary)' : '1px solid var(--border-glass)' }}>
+                                <span style={{ fontSize: '2rem' }}>{todayPlan ? '🔥' : '📅'}</span>
+                                <span style={{ fontWeight: '700', color: todayPlan ? 'var(--primary)' : 'inherit' }}>{todayPlan ? 'Start Program' : 'Plan Program'}</span>
+                            </div>
+                        </Link>
+                        <Link to="/calendar" style={{ textDecoration: 'none' }}>
+                            <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '2rem' }}>⏪</span>
+                                <span style={{ fontWeight: '700' }}>History</span>
+                            </div>
+                        </Link>
+                    </div>
 
-            {
-                activeTab === 'dashboard' ? (
-                    <>
-                        <p style={{ fontSize: '1.2rem', color: 'var(--text-muted)', marginBottom: '1.5rem', fontStyle: 'italic' }}>
-                            Train like a Champion Today!
-                        </p>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginBottom: '2rem' }}>
-                            <Link to="/log" style={{ textDecoration: 'none' }}>
-                                <div style={{ background: 'var(--primary)', color: 'white', padding: '0.5rem', borderRadius: '12px', textAlign: 'center', fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '90px', boxShadow: '0 4px 6px rgba(0,0,0,0.2)' }}>
-                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>🏋️</span>
-                                    <span style={{ fontSize: '0.9rem' }}>Workout</span>
-                                </div>
-                            </Link>
-                            <Link 
-                                to={todayPlan ? `/log?planId=${todayPlan.id}` : "/calendar?plan=true"} 
-                                style={{ textDecoration: 'none' }}
-                            >
-                                <div style={{ 
-                                    background: todayPlan ? 'var(--primary)' : '#333', 
-                                    color: 'white', 
-                                    padding: '0.5rem', 
-                                    borderRadius: '12px', 
-                                    textAlign: 'center', 
-                                    fontWeight: 'bold', 
-                                    display: 'flex', 
-                                    flexDirection: 'column', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'center', 
-                                    height: '90px', 
-                                    border: todayPlan ? '1px solid var(--primary)' : '1px solid #444',
-                                    boxShadow: todayPlan ? '0 4px 6px rgba(0,0,0,0.2)' : 'none'
-                                }}>
-                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>{todayPlan ? '🔥' : '📅'}</span>
-                                    <span style={{ fontSize: '0.9rem' }}>{todayPlan ? 'Start Program' : 'Program'}</span>
-                                </div>
-                            </Link>
-                            <Link to="/calendar" style={{ textDecoration: 'none' }}>
-                                <div style={{ background: '#333', color: 'white', padding: '0.5rem', borderRadius: '12px', textAlign: 'center', fontWeight: 'bold', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '90px', border: '1px solid #444' }}>
-                                    <span style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>⏪</span>
-                                    <span style={{ fontSize: '0.9rem' }}>Past Logs</span>
-                                </div>
-                            </Link>
+                    <div className="stats-grid" style={{ marginBottom: '2.5rem' }}>
+                        <div className="glass-card" style={{ textAlign: 'left', borderTop: '4px solid var(--secondary)' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Weekly Volume</div>
+                            <div style={{ fontSize: '2rem', fontWeight: '800', margin: '0.5rem 0' }}>{Math.round(weeklySummary.totalWeight).toLocaleString()} {appUnit}</div>
+                            <div style={{ fontSize: '0.9rem', color: 'var(--accent-success)' }}>Across {weeklySummary.sessions} sessions this week</div>
                         </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
-                            <RecoveryTracker />
-                            <WeightTracker />
+                        <div className="glass-card" style={{ textAlign: 'left', borderTop: '4px solid var(--primary)' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peak Intensity</div>
+                            <div style={{ fontSize: '2rem', fontWeight: '800', margin: '0.5rem 0' }}>{recentPRs[0]?.estimated1RM || 0} {appUnit}</div>
+                            <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>Last set on {recentPRs[0]?.exerciseName || 'N/A'}</div>
                         </div>
+                    </div>
 
-                        <div className="card" style={{ marginBottom: '2rem' }}>
-                            <h2>🏆 Recent PRs</h2>
-                            {recentPRs.length > 0 ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                    {recentPRs.map((pr, i) => (
-                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.8rem', background: '#222', borderRadius: '6px', borderLeft: '4px solid gold' }}>
-                                            <div>
-                                                <div style={{ fontWeight: 'bold' }}>{pr.exerciseName}</div>
-                                                <div style={{ fontSize: '0.8rem', color: '#aaa' }}>
-                                                    {pr.date.includes('T') ? pr.date.split('T')[0] : pr.date}
-                                                </div>
-                                            </div>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'gold' }}>{pr.estimated1RM} <span style={{ fontSize: '0.8rem' }}>e1RM</span></div>
-                                                {!pr.isFirst && (
-                                                    <div style={{ fontSize: '0.8rem', color: '#4caf50' }}>+{pr.increase.toFixed(1)}</div>
-                                                )}
-                                            </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2.5rem' }}>
+                        <RecoveryTracker />
+                        <WeightTracker />
+                    </div>
+
+                    <div className="glass-card" style={{ marginBottom: '2.5rem', textAlign: 'left' }}>
+                        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}><span style={{ fontSize: '1.2rem' }}>🏆</span> Recent Milestones</h2>
+                        {recentPRs.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
+                                {recentPRs.slice(0, 5).map((pr, i) => (
+                                    <div key={i} className="glass" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem' }}>
+                                        <div>
+                                            <div style={{ fontWeight: '700', fontSize: '1.05rem' }}>{pr.exerciseName}</div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{pr.date}</div>
                                         </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p style={{ fontStyle: 'italic', color: '#666' }}>No PRs set yet.</p>
-                            )}
-                        </div>
-
-                        <GoalTracker />
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '2rem' }}>
-                            <div className="card">
-                                <h2>Start Workout</h2>
-                                <p>Log your daily exercise and keep track of your sets.</p>
-                                <Link to="/log">
-                                    <button className="btn btn-primary" style={{ marginTop: '1rem' }}>Log Now</button>
-                                </Link>
-                            </div>
-                            <div className="card">
-                                <h2>View Progress</h2>
-                                <p>See your stats and improvements over time.</p>
-                                <Link to="/progress">
-                                    <button className="btn" style={{ marginTop: '1rem' }}>View Dashboard</button>
-                                </Link>
-                            </div>
-                            <div className="card">
-                                <h2>Recent Activity</h2>
-                                {workouts.length > 0 ? (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                                        {workouts.slice(0, 5).map((w, i) => (
-                                            <div key={i} style={{ fontSize: '0.9rem', padding: '0.5rem', background: '#222', borderRadius: '4px', borderLeft: '3px solid #666' }}>
-                                                <div style={{ fontWeight: 'bold' }}>{w.exerciseName}</div>
-                                                <div style={{ color: '#aaa', fontSize: '0.8rem' }}>
-                                                    {w.date.includes('T') ? w.date.split('T')[0] : w.date} • {w.weight ? `${w.weight}${appUnit} x ` : ''}{w.reps ? `${w.reps} reps` : (w.duration ? `${w.duration}m` : '')}
-                                                </div>
-                                            </div>
-                                        ))}
+                                        <div style={{ textAlign: 'right' }}>
+                                            <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--primary)' }}>{pr.estimated1RM} <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{appUnit} e1RM</span></div>
+                                            {!pr.isFirst && <div style={{ fontSize: '0.8rem', color: 'var(--accent-success)', fontWeight: '700' }}>↑ {pr.increase.toFixed(1)}</div>}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <p style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No recent activity to show.</p>
-                                )}
+                                ))}
                             </div>
-                        </div>
-                    </>
-                ) : activeTab === 'mobility' ? (
-                    <MobilityTab />
-                ) : (
-                    <IronLogicTab />
-                )
-            }
-        </div >
+                        ) : (
+                            <p style={{ opacity: 0.5, fontStyle: 'italic', marginTop: '1rem' }}>Your records will appear here as you log sessions.</p>
+                        )}
+                    </div>
+
+                    <GoalTracker />
+
+                    <div style={{ marginTop: '3rem', textAlign: 'center', opacity: 0.4, fontSize: '0.9rem' }}>
+                        IronLogic v2.7.26 • Built for Performance
+                    </div>
+                </>
+            ) : activeTab === 'mobility' ? (
+                <MobilityTab />
+            ) : (
+                <IronLogicTab />
+            )}
+        </div>
     );
 };
 

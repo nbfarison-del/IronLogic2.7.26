@@ -46,14 +46,12 @@ const getDateStr = (date) => {
 const WorkoutLog = () => {
     const { user } = useAuth();
     const { athleteId: paramAthleteId } = useParams();
-    const targetUserId = paramAthleteId || user?.id; // Allow viewing another user's log if param provided
+    const targetUserId = paramAthleteId || user?.id;
     const isViewingOther = !!paramAthleteId && paramAthleteId !== user?.id;
 
     const { unit } = useSettings();
     const location = useLocation();
 
-    // We need to fetch data manually if viewing someone else, 
-    // because DataContext only holds the CURRENT user's data.
     const [extWorkouts, setExtWorkouts] = useState([]);
     const [extCustom, setExtCustom] = useState([]);
     const [extPlanned, setExtPlanned] = useState([]);
@@ -66,8 +64,6 @@ const WorkoutLog = () => {
         maxes
     } = useData();
 
-
-    // Load external data if viewing another user
     useEffect(() => {
         if (!isViewingOther) return;
         const loadExtData = async () => {
@@ -101,7 +97,6 @@ const WorkoutLog = () => {
 
     const isCoachViewing = paramAthleteId && paramAthleteId !== user?.id;
 
-    // Detect Planned Workout (either from navigation state, query param, or today's schedule)
     const activePlannedWorkout = useMemo(() => {
         if (location.state?.plannedWorkout) return location.state.plannedWorkout;
         if (planIdParam) {
@@ -112,15 +107,13 @@ const WorkoutLog = () => {
         return planned.find(p => p.date === todayStr);
     }, [location.state, planIdParam, planned]);
 
-    // Combined Exercise List (Default + Custom)
     const allExercisesList = useMemo(() => [
         ...defaultExercises,
         ...(customExercises || [])
     ], [customExercises]);
 
-    // Use date from params or today
     const [selectedDate, setSelectedDate] = useState(() => {
-        if (dateParam) return new Date(dateParam + 'T12:00:00'); // Midday to avoids timezone flip
+        if (dateParam) return new Date(dateParam + 'T12:00:00');
         if (location.state?.plannedWorkout?.date) return new Date(location.state.plannedWorkout.date + 'T12:00:00');
         return new Date();
     });
@@ -143,12 +136,11 @@ const WorkoutLog = () => {
         isDeadliftSuit: false, isDeadliftSuitStrapsUp: false, isFeetUp: false
     });
     const [isSessionComplete, setIsSessionComplete] = useState(false);
+    const [isFocusMode, setIsFocusMode] = useState(false);
     
-    // Auto-focus refs
     const weightInputRef = useRef([]);
     const repsInputRef = useRef([]);
 
-    // Wake Lock
     const { isWakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock();
     const [keepAwake, setKeepAwake] = useState(false);
 
@@ -173,10 +165,7 @@ const WorkoutLog = () => {
     const handleFinalizeWorkout = async () => {
         try {
             await firestoreService.markSessionComplete(targetUserId, getDateStr(selectedDate), true);
-            
-            // If coach/admin is reviewing, trigger the DMAIC cycle for that athlete
             if (isCoachViewing) {
-                console.log("Triggering DMAIC Analysis for athlete:", targetUserId);
                 await runDMAICCycle(targetUserId);
             }
         } catch (error) {
@@ -192,23 +181,16 @@ const WorkoutLog = () => {
         }
     };
 
-    // Handle Auto-loading of Planned Exercise
     const loadPlannedExercise = (plannedEx) => {
         if (!plannedEx) return;
-
         setSelectedPlannedExId(plannedEx.id);
-
-        // Find existing id in allExercises for lookup
         const exMatch = allExercisesList.find(e => e.id === plannedEx.exerciseId || e.name === plannedEx.exerciseName);
         if (exMatch) {
             setSelectedExerciseId(exMatch.id);
             setWorkoutType(exMatch.category === EXERCISE_CATEGORIES.CARDIO ? 'cardio' : 'strength');
         } else {
-            // Fallback for exercises not in library
             setSelectedExerciseId(plannedEx.exerciseId);
         }
-
-        // Initialize sets
         if (plannedEx.sets && Array.isArray(plannedEx.sets)) {
             setSetRows(plannedEx.sets.map(s => ({
                 id: Date.now() + Math.random(),
@@ -221,14 +203,12 @@ const WorkoutLog = () => {
         setNotes(plannedEx.notes || '');
     };
 
-    // Initial load if planned workout exists
     useEffect(() => {
         if (activePlannedWorkout && activePlannedWorkout.exercises?.length > 0 && !selectedExerciseId) {
             loadPlannedExercise(activePlannedWorkout.exercises[0]);
         }
     }, [activePlannedWorkout, allExercisesList]);
 
-    // Filter today's sets
     const loggedSets = useMemo(() => {
         if (!workouts) return [];
         const today = getDateStr(selectedDate);
@@ -258,7 +238,6 @@ const WorkoutLog = () => {
             targetRpe: lastRow?.targetRpe || '',
             actualRpe: ''
         }]);
-        // Focus the newest weight input after adding
         setTimeout(() => {
             if (weightInputRef.current[setRows.length]) {
                 weightInputRef.current[setRows.length].focus();
@@ -288,6 +267,17 @@ const WorkoutLog = () => {
         }
     };
 
+    const adjustWeight = (id, amount) => {
+        setSetRows(setRows.map(row => {
+            if (row.id === id) {
+                const current = parseFloat(row.weight) || 0;
+                const next = Math.max(0, current + amount);
+                return { ...row, weight: next.toString() };
+            }
+            return row;
+        }));
+    };
+
     const handleCreateExercise = async () => {
         if (!newExerciseName.trim()) return;
         const newEx = {
@@ -309,11 +299,9 @@ const WorkoutLog = () => {
     const handleAddSet = async (e) => {
         e.preventDefault();
         if (!selectedExerciseId || !user) return;
-        const exercise = allExercisesList.find(ex => ex.id === selectedExerciseId);
-
         setSaving(true);
         const d = selectedDate;
-        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const todayStr = getDateStr(d);
         try {
             const exercise = allExercisesList.find(ex => ex.id === selectedExerciseId) || {
                 id: selectedExerciseId,
@@ -351,8 +339,6 @@ const WorkoutLog = () => {
                 }];
 
             await Promise.all(newEntries.map(entry => firestoreService.addWorkout(targetUserId, entry)));
-
-            // Reset inputs
             setVideoUrl('');
             if (workoutType === 'strength') {
                 const lastRow = setRows[setRows.length - 1];
@@ -364,7 +350,6 @@ const WorkoutLog = () => {
             setNotes('');
         } catch (error) {
             console.error('Error logging workout:', error);
-            alert('Failed to log workout.');
         } finally {
             setSaving(false);
         }
@@ -379,9 +364,6 @@ const WorkoutLog = () => {
         setSelectedExerciseId(id);
         const exercise = allExercisesList.find(ex => ex.id === id);
         setWorkoutType(exercise?.category === EXERCISE_CATEGORIES.CARDIO ? 'cardio' : 'strength');
-        
-        // Auto-fill last session data logic (naive approach for this example)
-        // Find last time this exercise was performed by user
         const lastEntry = workouts.find(w => w.exerciseId === id);
         if (lastEntry && workoutType === 'strength' && lastEntry.weight) {
              setSetRows([{ 
@@ -405,325 +387,290 @@ const WorkoutLog = () => {
 
     if (dataLoading || extLoading) return <div className="card">Syncing logs...</div>;
 
-    const CommentSectionToRender = <CommentSection userId={targetUserId} selectedDate={selectedDate} />;
+    const CommentSectionToRender = <CommentSection userId={targetUserId} sessionId={`session_${getDateStr(selectedDate)}`} />;
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left', paddingBottom: '100px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <Link to="/calendar" className="btn">&larr; Calendar</Link>
-                <h1>{isCoachViewing ? `Review: ${selectedDate.toLocaleDateString()}` : 'Log Workout'}</h1>
-                <Link to="/profile" className="btn">Maxes</Link>
-            </div>
-            
-            {/* Screen Awake Toggle */}
-            {!isCoachViewing && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem', padding: '0.5rem', backgroundColor: '#333', borderRadius: '8px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', width: '100%' }}>
-                        <input 
-                            type="checkbox" 
-                            checked={keepAwake} 
-                            onChange={(e) => setKeepAwake(e.target.checked)} 
-                            style={{ width: '24px', height: '24px', margin: 0 }}
-                        />
-                        <span style={{ fontWeight: 'bold' }}>Workout Mode - Keep Screen Awake</span>
-                    </label>
+        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left', paddingBottom: '3rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <Link to="/calendar" className="btn" style={{ background: 'transparent', padding: '0.5rem' }}>&larr; Calendar</Link>
+                <h1 style={{ margin: 0, fontSize: '1.75rem' }}>{isCoachViewing ? `Review Log` : 'Workout Log'}</h1>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button 
+                        className={`btn ${isFocusMode ? 'btn-primary' : ''}`} 
+                        onClick={() => setIsFocusMode(!isFocusMode)}
+                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                    >
+                        {isFocusMode ? '🎯 Focus: ON' : '🎯 Focus Mode'}
+                    </button>
+                    {!isCoachViewing && (
+                        <button
+                            onClick={() => setKeepAwake(!keepAwake)}
+                            className={`btn ${keepAwake ? 'btn-secondary' : ''}`}
+                            style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+                        >
+                            {keepAwake ? '💡 Awake' : '😴 Sleep'}
+                        </button>
+                    )}
                 </div>
-            )}
+            </div>
 
-            {/* Today's Plan Section (Athlete Only) */}
-            {!isCoachViewing && activePlannedWorkout && !isSessionComplete && (
-                <div className="card" style={{ marginBottom: '1rem', border: '1px solid #2196f3', background: 'rgba(33, 150, 243, 0.05)' }}>
-                    <h3 style={{ margin: '0 0 1rem 0', color: '#2196f3' }}>
-                        Today's Plan: {activePlannedWorkout.planName || activePlannedWorkout.name}
-                    </h3>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        {activePlannedWorkout.exercises.map((ex, idx) => {
-                            const isSelected = selectedPlannedExId === ex.id;
-                            const isLogged = loggedSets.some(s => s.exerciseId === ex.exerciseId || s.exerciseName === ex.exerciseName);
-
-                            return (
-                                <button
-                                    key={ex.id || idx}
-                                    onClick={() => loadPlannedExercise(ex)}
-                                    className={`btn ${isSelected ? 'btn-primary' : ''}`}
-                                    style={{
-                                        fontSize: '0.8rem',
-                                        padding: '0.4rem 0.8rem',
-                                        opacity: isLogged && !isSelected ? 0.6 : 1,
-                                        border: isLogged ? '1px solid #4caf50' : isSelected ? '1px solid var(--primary)' : '1px solid #444'
-                                    }}
-                                >
-                                    {isLogged && '✓ '}
-                                    {ex.exerciseName || ex.exerciseId}
-                                </button>
-                            );
-                        })}
+            {isSessionComplete && (
+                <div className="glass-card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--accent-success)', background: 'rgba(16, 185, 129, 0.1)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h2 style={{ color: 'var(--accent-success)', margin: 0, fontSize: '1.25rem' }}>✓ Session Finalized</h2>
+                            <p style={{ margin: '0.25rem 0 0', opacity: 0.8, fontSize: '0.9rem' }}>This workout has been completed.</p>
+                        </div>
+                        {!isViewingOther && (
+                            <button className="btn" style={{ padding: '0.4rem 1rem' }} onClick={handleReopenWorkout}>Reopen</button>
+                        )}
                     </div>
                 </div>
             )}
 
-            {/* Log Workout Form (Athlete Only) */}
-            {!isCoachViewing && !isSessionComplete && (
-                <div className="card" style={{ marginBottom: '2rem' }}>
-                    {!isCreatingExercise ? (
-                        <div className="input-group">
-                            <label>Exercise</label>
-                            <select value={selectedExerciseId} onChange={handleExerciseChange}>
-                                <option value="">-- Choose --</option>
-                                <option value="CREATE_NEW">+ Create New</option>
-                                {Object.values(EXERCISE_CATEGORIES).map(cat => (
-                                    <optgroup label={cat} key={cat}>
-                                        {allExercisesList.filter(ex => ex.category === cat).map(ex => (
-                                            <option key={ex.id} value={ex.id}>{ex.name}</option>
-                                        ))}
-                                    </optgroup>
-                                ))}
-                            </select>
-                        </div>
-                    ) : (
-                        <div className="card" style={{ border: '1px solid var(--primary)' }}>
-                            <input type="text" value={newExerciseName} onChange={e => setNewExerciseName(e.target.value)} placeholder="Exercise Name" autoFocus />
-                            <button onClick={handleCreateExercise} className="btn btn-primary">Create</button>
-                            <button onClick={() => setIsCreatingExercise(false)} className="btn">Cancel</button>
+            {!isCoachViewing && activePlannedWorkout && !isSessionComplete && (
+                <div className="glass-card" style={{ marginBottom: '2.5rem', borderLeft: '4px solid var(--primary)' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--primary)', letterSpacing: '0.02em' }}>
+                        ⚡ {activePlannedWorkout.name || 'Today\'s Program'}
+                    </h3>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                        {activePlannedWorkout.exercises.map((pe, idx) => (
+                            <button
+                                key={idx}
+                                className={`btn ${selectedPlannedExId === pe.id ? 'btn-primary' : ''}`}
+                                onClick={() => loadPlannedExercise(pe)}
+                                style={{ whiteSpace: 'nowrap', fontSize: '0.85rem', padding: '0.5rem 1rem' }}
+                            >
+                                {pe.exerciseName}
+                                {loggedSets.some(s => s.exerciseId === pe.exerciseId) && ' ✓'}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {!isSessionComplete && (
+                <div className="glass-card" style={{ marginBottom: '2.5rem' }}>
+                    {!isFocusMode && (
+                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div className="input-group" style={{ flex: 1 }}>
+                                <label style={{ fontSize: '0.85rem' }}>Date</label>
+                                <input
+                                    type="date"
+                                    value={getDateStr(selectedDate)}
+                                    onChange={(e) => setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
+                                    disabled={isViewingOther}
+                                />
+                            </div>
+                            <div className="input-group" style={{ flex: 2 }}>
+                                <label style={{ fontSize: '0.85rem' }}>Movement</label>
+                                <select value={selectedExerciseId} onChange={handleExerciseChange} disabled={isViewingOther}>
+                                    <option value="">-- Choose --</option>
+                                    <option value="CREATE_NEW">+ Custom</option>
+                                    {Object.values(EXERCISE_CATEGORIES).map(cat => (
+                                        <optgroup label={cat} key={cat}>
+                                            {allExercisesList.filter(ex => ex.category === cat).map(ex => (
+                                                <option key={ex.id} value={ex.id}>{ex.name}</option>
+                                            ))}
+                                        </optgroup>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     )}
 
-                    {selectedExerciseId && <ExerciseTools exerciseId={selectedExerciseId} exerciseName={allExercisesList.find(ex => ex.id === selectedExerciseId)?.name} />}
+                    {isFocusMode && selectedExerciseId && (
+                        <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>Current Session</div>
+                            <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--primary)' }}>
+                                {allExercisesList.find(e => e.id === selectedExerciseId)?.name}
+                            </div>
+                            <button className="btn" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', opacity: 0.6, marginTop: '0.5rem' }} onClick={() => setIsFocusMode(false)}>Change Movement</button>
+                        </div>
+                    )}
+
+                    {isCreatingExercise && (
+                        <div className="glass-card" style={{ marginBottom: '1.5rem', border: '2px solid var(--primary)' }}>
+                            <h3>Create Custom Exercise</h3>
+                            <input type="text" value={newExerciseName} onChange={e => setNewExerciseName(e.target.value)} placeholder="Exercise Name" autoFocus style={{ width: '100%', marginBottom: '1rem' }} />
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button onClick={handleCreateExercise} className="btn btn-primary">Save Movement</button>
+                                <button onClick={() => setIsCreatingExercise(false)} className="btn">Cancel</button>
+                            </div>
+                        </div>
+                    )}
 
                     {selectedExerciseId && !isCreatingExercise && (
                         <form onSubmit={handleAddSet}>
                             {workoutType === 'strength' ? (
-                                <div style={{ background: '#222', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-                                    {/* Modifiers UI - Simple version for now */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '1rem' }}>
-                                        {activeConfig.hasBarValues && (
-                                            <div className="input-group" style={{ marginBottom: 0 }}>
-                                                <label style={{ fontSize: '0.7rem' }}>Bar</label>
-                                                <select value={modifiers.bar} onChange={e => setModifiers({ ...modifiers, bar: e.target.value })} style={{ padding: '0.3rem', fontSize: '0.8rem' }}>
-                                                    <option value="">Std</option>
-                                                    {activeConfig.hasBarValues.map(v => <option key={v} value={v}>{v}</option>)}
-                                                </select>
-                                            </div>
-                                        )}
-                                        {activeConfig.hasGripValues && (
-                                            <div className="input-group" style={{ marginBottom: 0 }}>
-                                                <label style={{ fontSize: '0.7rem' }}>Grip</label>
-                                                <select value={modifiers.grip} onChange={e => setModifiers({ ...modifiers, grip: e.target.value })} style={{ padding: '0.3rem', fontSize: '0.8rem' }}>
-                                                    <option value="">Std</option>
-                                                    {activeConfig.hasGripValues.map(v => <option key={v} value={v}>{v}</option>)}
-                                                </select>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                        {/* Header Row */}
-                                        <div style={{
-                                            display: 'grid',
-                                            gridTemplateColumns: '85px 70px 70px 70px 45px',
-                                            gap: '0.6rem',
-                                            marginBottom: '0.8rem',
-                                            padding: '0.3rem 0',
-                                            borderBottom: '1px solid #333',
-                                            fontSize: '0.75rem',
-                                            textTransform: 'uppercase',
-                                            color: '#888',
-                                            textAlign: 'center',
-                                            width: 'fit-content'
+                                <div>
+                                    {setRows.map((row, index) => (
+                                        <div key={row.id} className={isFocusMode ? 'glass' : ''} style={{ 
+                                            display: 'grid', 
+                                            gridTemplateColumns: isFocusMode ? '1fr' : '1.2fr 0.8fr 0.8fr 0.8fr auto', 
+                                            gap: '0.75rem', 
+                                            alignItems: 'end',
+                                            marginBottom: isFocusMode ? '1.5rem' : '0.75rem',
+                                            padding: isFocusMode ? '1.25rem' : '0',
+                                            borderRadius: '16px'
                                         }}>
-                                            <div>Weight</div>
-                                            <div>Reps</div>
-                                            <div>Target</div>
-                                            <div>Actual</div>
-                                            <div></div>
-                                        </div>
-
-                                        {setRows.map((row, idx) => (
-                                            <div key={row.id} style={{
-                                                display: 'grid',
-                                                gridTemplateColumns: '85px 70px 70px 70px 45px',
-                                                gap: '0.6rem',
-                                                marginBottom: '0.6rem',
-                                                alignItems: 'center',
-                                                width: 'fit-content'
-                                            }}>
+                                            <div className="input-group" style={{ marginBottom: 0 }}>
+                                                {!isFocusMode && index === 0 && <label style={{ fontSize: '0.75rem', opacity: 0.7 }}>Weight</label>}
+                                                {isFocusMode && <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Weight ({unit})</label>}
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                    <input
+                                                        ref={el => weightInputRef.current[index] = el}
+                                                        type="number"
+                                                        value={row.weight}
+                                                        onChange={(e) => handleRowChange(row.id, 'weight', e.target.value)}
+                                                        style={{ width: '100%', fontSize: isFocusMode ? '1.5rem' : '1.1rem', fontWeight: '700', textAlign: isFocusMode ? 'center' : 'left' }}
+                                                    />
+                                                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                                                        <button type="button" className="btn" style={{ flex: 1, padding: '0.2rem', minHeight: '36px', fontSize: '0.75rem' }} onClick={() => adjustWeight(row.id, 2.5)}>+2.5</button>
+                                                        <button type="button" className="btn" style={{ flex: 1, padding: '0.2rem', minHeight: '36px', fontSize: '0.75rem' }} onClick={() => adjustWeight(row.id, -2.5)}>-2.5</button>
+                                                        <button type="button" className="btn" style={{ flex: 1, padding: '0.2rem', minHeight: '36px', fontSize: '0.75rem' }} onClick={() => adjustWeight(row.id, 5)}>+5</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="input-group" style={{ marginBottom: 0 }}>
+                                                {!isFocusMode && index === 0 && <label style={{ fontSize: '0.75rem', opacity: 0.7 }}>Reps</label>}
+                                                {isFocusMode && <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Reps</label>}
                                                 <input
-                                                    type="number"
-                                                    value={row.weight}
-                                                    ref={el => weightInputRef.current[idx] = el}
-                                                    onChange={e => handleRowChange(row.id, 'weight', e.target.value)}
-                                                    onKeyDown={e => {
-                                                        if (e.key === 'Enter') repsInputRef.current[idx]?.focus();
-                                                    }}
-                                                    placeholder={`${unit}`}
-                                                    required
-                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1.2rem', fontWeight: 'bold' }}
-                                                />
-                                                <input
+                                                    ref={el => repsInputRef.current[index] = el}
                                                     type="number"
                                                     value={row.reps}
-                                                    ref={el => repsInputRef.current[idx] = el}
-                                                    onChange={e => handleRowChange(row.id, 'reps', e.target.value)}
-                                                    onKeyDown={e => {
-                                                        if (e.key === 'Enter') document.getElementById('log-set-btn')?.focus();
-                                                    }}
-                                                    placeholder="R"
-                                                    required
-                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1.2rem', fontWeight: 'bold' }}
+                                                    onChange={(e) => handleRowChange(row.id, 'reps', e.target.value)}
+                                                    style={{ width: '100%', fontSize: isFocusMode ? '1.5rem' : '1.1rem', fontWeight: '600', textAlign: isFocusMode ? 'center' : 'left' }}
                                                 />
+                                            </div>
+                                            <div className="input-group" style={{ marginBottom: 0 }}>
+                                                {!isFocusMode && index === 0 && <label style={{ fontSize: '0.75rem', opacity: 0.7 }}>Target RPE</label>}
+                                                {isFocusMode && <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Target RPE</label>}
                                                 <input
                                                     type="number"
                                                     step="0.5"
                                                     value={row.targetRpe}
-                                                    onChange={e => handleRowChange(row.id, 'targetRpe', e.target.value)}
-                                                    placeholder="T"
-                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1.1rem', background: 'transparent', border: '1px solid #444' }}
+                                                    onChange={(e) => handleRowChange(row.id, 'targetRpe', e.target.value)}
+                                                    style={{ width: '100%', fontSize: isFocusMode ? '1.1rem' : '1rem', textAlign: isFocusMode ? 'center' : 'left' }}
                                                 />
+                                            </div>
+                                            <div className="input-group" style={{ marginBottom: 0 }}>
+                                                {!isFocusMode && index === 0 && <label style={{ fontSize: '0.75rem', opacity: 0.7 }}>Actual RPE</label>}
+                                                {isFocusMode && <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Actual RPE</label>}
                                                 <input
                                                     type="number"
                                                     step="0.5"
                                                     value={row.actualRpe}
-                                                    onChange={e => handleRowChange(row.id, 'actualRpe', e.target.value)}
-                                                    placeholder="A"
+                                                    onChange={(e) => handleRowChange(row.id, 'actualRpe', e.target.value)}
+                                                    style={{ width: '100%', fontSize: isFocusMode ? '1.1rem' : '1rem', textAlign: isFocusMode ? 'center' : 'left', border: '2px solid var(--primary)' }}
                                                     required
-                                                    style={{ textAlign: 'center', padding: '0.6rem 0.4rem', fontSize: '1.1rem', borderColor: '#2196f3', backgroundColor: 'rgba(33, 150, 243, 0.05)', borderWidth: '2px' }}
                                                 />
-                                                {idx > 0 ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveRow(row.id)}
-                                                        style={{ color: '#ff5252', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.4rem', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, minHeight: '44px', minWidth: '44px' }}
-                                                    >
-                                                        &times;
-                                                    </button>
-                                                ) : <div />}
                                             </div>
-                                        ))}
-                                        <div style={{ display: 'flex', gap: '0.5rem', width: '100%', maxWidth: '360px', marginTop: '0.8rem' }}>
-                                            <button type="button" onClick={handleAddRow} className="btn" style={{ flex: 1, border: '1px dashed #444', padding: '0.8rem', fontSize: '1rem' }}>+ Empty Set</button>
-                                            <button type="button" onClick={() => handleDuplicateRow()} className="btn btn-primary" style={{ flex: 1, padding: '0.8rem', fontSize: '1rem' }}>↻ Repeat Last Set</button>
+                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: isFocusMode ? 'center' : 'flex-end', marginTop: isFocusMode ? '1rem' : '0' }}>
+                                                <button type="button" className="btn" onClick={() => handleDuplicateRow(row.id)} title="Repeat last set">
+                                                    {isFocusMode ? '📋 Duplicate Set' : '📋'}
+                                                </button>
+                                                {setRows.length > 1 && (
+                                                    <button type="button" className="btn" onClick={() => handleRemoveRow(row.id)} style={{ color: 'var(--accent-error)' }}>
+                                                        {isFocusMode ? '🗑️ Remove' : '✕'}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
+                                    ))}
+
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                                        <button type="button" onClick={handleAddRow} className="btn" style={{ flex: 1 }}>+ Add Row</button>
+                                        <button type="submit" disabled={saving} className="btn btn-primary" style={{ flex: 2 }}>
+                                            {saving ? 'Saving...' : '🔥 Log Record'}
+                                        </button>
                                     </div>
                                 </div>
                             ) : (
-                                <div style={{ marginBottom: '1rem' }}>
-                                    <input type="number" value={duration} onChange={e => setDuration(e.target.value)} placeholder="Duration (min)" required />
-                                    <input type="number" step="0.1" value={distance} onChange={e => setDistance(e.target.value)} placeholder="Distance" />
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
+                                    <div className="input-group" style={{ flex: 1 }}>
+                                        <label>Duration (min)</label>
+                                        <input type="number" value={duration} onChange={e => setDuration(e.target.value)} required />
+                                    </div>
+                                    <div className="input-group" style={{ flex: 1 }}>
+                                        <label>Distance</label>
+                                        <input type="number" step="0.1" value={distance} onChange={e => setDistance(e.target.value)} />
+                                    </div>
+                                    <button type="submit" disabled={saving} className="btn btn-primary" style={{ marginBottom: '1.25rem' }}>Log Event</button>
                                 </div>
                             )}
 
-                            {/* Hide metadata from view initially, keep it simple */}
-                            <details style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#888' }}>
-                                <summary style={{ cursor: 'pointer', padding: '0.5rem' }}>Advanced Settings (Notes/Video)</summary>
-                                <div className="input-group" style={{ marginBottom: '1rem', marginTop: '1rem' }}>
-                                    <label style={{ fontSize: '0.8rem' }}>Video Link (YouTube, Drive, etc.)</label>
-                                    <input
-                                        type="url"
-                                        value={videoUrl}
-                                        onChange={e => setVideoUrl(e.target.value)}
-                                        placeholder="https://..."
-                                        style={{ width: '100%' }}
-                                    />
-                                </div>
-
-                                <div className="input-group">
-                                    <label style={{ fontSize: '0.8rem' }}>Notes</label>
-                                    <input
-                                        type="text"
-                                        value={notes}
-                                        onChange={e => setNotes(e.target.value)}
-                                        placeholder="Focus on tempo, felt strong..."
-                                        style={{ width: '100%' }}
-                                    />
+                            <details style={{ marginTop: '1.5rem', fontSize: '0.9rem' }}>
+                                <summary style={{ cursor: 'pointer', opacity: 0.6 }}>Technical Notes / Video Link</summary>
+                                <div style={{ paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div className="input-group">
+                                        <label>Session Notes</label>
+                                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Technique cues, subjective feel..." style={{ height: '80px' }} />
+                                    </div>
+                                    <div className="input-group">
+                                        <label>Form Check Video (URL)</label>
+                                        <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://..." />
+                                    </div>
                                 </div>
                             </details>
-
-                            {/* Sticky submit button container */}
-                            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '1rem', background: 'rgba(36,36,36,0.9)', backdropFilter: 'blur(10px)', borderTop: '1px solid #444', zIndex: 1000, display: 'flex', justifyContent: 'center' }}>
-                                <button
-                                    id="log-set-btn"
-                                    type="submit"
-                                    className="btn btn-primary"
-                                    style={{
-                                        maxWidth: '800px',
-                                        width: '100%',
-                                        padding: '1.2rem',
-                                        fontWeight: 'bold',
-                                        fontSize: '1.2rem',
-                                        boxShadow: '0 -4px 12px rgba(33, 150, 243, 0.3)',
-                                        minHeight: '60px' // Large tap target
-                                    }}
-                                    disabled={saving}
-                                >
-                                    {saving ? 'Saving...' : '+ Add Log'}
-                                </button>
-                            </div>
                         </form>
                     )}
                 </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem', marginBottom: '1rem' }}>
-                <h2 style={{ margin: 0 }}>{isCoachViewing ? 'Session Results' : "Today's Session"}</h2>
-                {!isCoachViewing && loggedSets.length > 0 && (
-                    isSessionComplete ? (
-                        <button onClick={handleReopenWorkout} className="btn" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', border: '1px solid #444', color: '#aaa' }}>
-                            Edit Session
-                        </button>
-                    ) : (
-                        <button onClick={handleFinalizeWorkout} className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', background: '#4caf50', border: 'none' }}>
-                            ✔️ Complete Workout
-                        </button>
-                    )
+            <div className="glass-card" style={{ marginTop: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <h2 style={{ margin: 0 }}>📊 Performance History</h2>
+                    {!isSessionComplete && !isViewingOther && loggedSets.length > 0 && (
+                        <button className="btn btn-primary" onClick={handleFinalizeWorkout} style={{ background: 'var(--accent-success)', color: '#fff' }}>Finalize Session</button>
+                    )}
+                </div>
+                {loggedSets.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        {loggedSets.map((entry, idx) => (
+                            <div key={idx} className={`glass ${checkPR(entry) ? 'pr-card' : ''}`} style={{ padding: '1.25rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div>
+                                        <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>{entry.exerciseName}</div>
+                                        {checkPR(entry) && <div style={{ color: 'var(--primary)', fontSize: '0.75rem', fontWeight: '800', marginTop: '0.25rem' }}>🔥 NEW PERSONAL RECORD</div>}
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '1.1rem' }}>
+                                            {entry.weight}{unit} x {entry.reps}
+                                        </div>
+                                        <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>RPE {entry.actualRpe || entry.targetRpe}</div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.8rem', opacity: 0.7, borderTop: '1px solid var(--border-glass)', paddingTop: '0.5rem' }}>
+                                    <span>e1RM: {entry.estimated1RM}{unit}</span>
+                                    <span>{entry.modifiers?.bar && `[${entry.modifiers.bar}]`} {entry.modifiers?.grip}</span>
+                                </div>
+                                {entry.notes && <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', fontStyle: 'italic', opacity: 0.8 }}>"{entry.notes}"</div>}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.5, fontStyle: 'italic' }}>
+                        No records found for this movement session.
+                    </div>
                 )}
             </div>
 
-            {isSessionComplete && (
-                <div style={{ padding: '1rem', background: 'rgba(76, 175, 80, 0.1)', border: '1px solid #4caf50', borderRadius: '8px', color: '#4caf50', textAlign: 'center', marginBottom: '1rem' }}>
-                    <strong>🎉 Workout Completed!</strong> Great job crushing this session.
+            <div style={{ marginTop: '3rem' }}>
+                <h2 style={{ marginBottom: '1.5rem' }}>Communication Log</h2>
+                <div className="glass-card">
+                    {CommentSectionToRender}
                 </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {loggedSets.length === 0 ? <p>No logs recorded for this day.</p> : loggedSets.map(entry => (
-                    <div key={entry.id} className="card" style={{ border: checkPR(entry) ? '1px solid gold' : 'none', padding: '1rem', marginBottom: '0.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '1.2rem' }}>{entry.exerciseName}</strong>
-                            {checkPR(entry) && <span style={{ color: 'gold', fontSize: '0.8rem', fontWeight: 'bold' }}>⭐ New PR!</span>}
-                        </div>
-                        <div style={{ fontSize: '1.1rem', marginTop: '0.5rem' }}>
-                            {entry.type === 'strength'
-                                ? <span style={{ fontWeight: 'bold' }}>{entry.weight}{unit} <span style={{ color: '#aaa', fontWeight: 'normal' }}>x</span> {entry.reps} <span style={{ color: '#888', fontSize: '0.9rem' }}>@{entry.actualRpe}</span></span>
-                                : `${entry.duration}m ${entry.distance ? `| ${entry.distance}km` : ''}`}
-                        </div>
-                        {entry.video_url && (
-                            <div style={{ marginTop: '0.5rem' }}>
-                                <a href={entry.video_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.9rem', color: 'var(--primary)', padding: '0.5rem 0', display: 'inline-block' }}>
-                                    View Video Link ↗
-                                </a>
-                            </div>
-                        )}
-                        {entry.notes && <div style={{ fontSize: '0.9rem', color: '#888', marginTop: '0.5rem' }}>{entry.notes}</div>}
-                    </div>
-                ))}
-            </div>
-            <h2 style={{ marginTop: '2rem' }}>Athlete-Coach Comments</h2>
-            <div className="card">
-                {CommentSectionToRender}
             </div>
         </div>
     );
 };
 
-const CommentSection = ({ userId, selectedDate }) => {
+const CommentSection = ({ userId, sessionId }) => {
     const { user } = useAuth();
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(true);
-
-    // Using selected date as the "session ID" for comments
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const sessionId = `session_${dateStr}`;
 
     useEffect(() => {
         const unsubscribe = firestoreService.subscribeToWorkoutComments(userId, sessionId, (data) => {
@@ -752,39 +699,39 @@ const CommentSection = ({ userId, selectedDate }) => {
 
     return (
         <div>
-            <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '0.5rem' }}>
                 {loading ? (
-                    <div style={{ color: '#888', fontSize: '0.8rem' }}>Loading comments...</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Loading threads...</div>
                 ) : comments.length === 0 ? (
-                    <div style={{ color: '#888', fontSize: '0.8rem', textAlign: 'center', padding: '1rem' }}>No comments yet.</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', padding: '1rem' }}>No communication in this session.</div>
                 ) : (
                     comments.map(c => (
                         <div key={c.id} style={{
                             alignSelf: c.authorId === user.id ? 'flex-end' : 'flex-start',
-                            background: c.authorId === user.id ? 'var(--primary)' : '#333',
+                            background: c.authorId === user.id ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
                             color: c.authorId === user.id ? '#000' : '#fff',
-                            padding: '0.5rem 0.8rem',
-                            borderRadius: '8px',
-                            maxWidth: '80%',
-                            position: 'relative'
+                            padding: '0.75rem 1rem',
+                            borderRadius: '12px',
+                            maxWidth: '85%',
+                            border: c.authorId === user.id ? 'none' : '1px solid var(--border-glass)'
                         }}>
-                            <div style={{ fontSize: '0.6rem', opacity: 0.7, marginBottom: '0.2rem' }}>
+                            <div style={{ fontSize: '0.7rem', opacity: 0.6, marginBottom: '0.3rem', fontWeight: '600' }}>
                                 {c.authorEmail.split('@')[0]} ({c.authorRole}) • {new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
-                            <div style={{ fontSize: '0.9rem' }}>{c.text}</div>
+                            <div style={{ fontSize: '0.95rem', lineHeight: '1.4' }}>{c.text}</div>
                         </div>
                     ))
                 )}
             </div>
-            <form onSubmit={handleSendComment} style={{ display: 'flex', gap: '0.5rem' }}>
+            <form onSubmit={handleSendComment} style={{ display: 'flex', gap: '0.75rem' }}>
                 <input
                     type="text"
                     value={newComment}
                     onChange={e => setNewComment(e.target.value)}
-                    placeholder="Type a message..."
-                    style={{ flex: 1, padding: '0.5rem' }}
+                    placeholder="Add a comment or technical feedback..."
+                    style={{ flex: 1, padding: '0.8rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}
                 />
-                <button type="submit" className="btn btn-primary" style={{ padding: '0.5rem 1rem' }}>Send</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: '0 1.5rem' }}>Send</button>
             </form>
         </div>
     );

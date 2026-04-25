@@ -80,68 +80,67 @@ const Progress = () => {
     }, [workouts, weights]);
 
     return (
-        <div>
-            <h1>Your Training Progress</h1>
+        <div className="animate-in" style={{ textAlign: 'left', paddingBottom: '3rem' }}>
+            <h1 style={{ marginBottom: '2rem' }}>Training Analytics</h1>
 
-            {/* DOTS Progress Chart */}
-            <div className="card" style={{ marginBottom: '2rem', marginTop: '2rem' }}>
-                <h2>🏋️ Powerlifting DOTS Progress</h2>
+            <div className="glass-card" style={{ marginBottom: '2.5rem', borderTop: '4px solid var(--secondary)' }}>
+                <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.25rem' }}>🏋️</span> Powerlifting DOTS Progress
+                </h2>
                 {dotsData.length > 1 ? (
-                    <div style={{ height: '300px', width: '100%' }}>
+                    <div style={{ height: '350px', width: '100%', marginTop: '1rem' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={dotsData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                                <XAxis dataKey="date" stroke="#888" fontSize={12} />
-                                <YAxis stroke="#888" domain={['auto', 'auto']} fontSize={12} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickMargin={10} />
+                                <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={11} tickMargin={10} />
                                 <Tooltip
-                                    contentStyle={{ backgroundColor: '#222', border: '1px solid #444' }}
+                                    contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}
                                     formatter={(value, name) => [value, name === 'dots' ? 'DOTS Score' : name]}
                                 />
-                                <Line type="monotone" dataKey="dots" stroke="#2196f3" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+                                <Line type="monotone" dataKey="dots" stroke="var(--secondary)" strokeWidth={4} dot={{ r: 4, fill: 'var(--secondary)', strokeWidth: 2 }} activeDot={{ r: 8, strokeWidth: 0 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 ) : (
-                    <p style={{ fontStyle: 'italic', color: '#666' }}>
-                        Need more data (Body Weight logs + SBD maxes) to generate DOTS graph.
-                    </p>
+                    <div style={{ padding: '3rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border-glass)' }}>
+                        <p style={{ fontStyle: 'italic', color: 'var(--text-muted)', margin: 0 }}>
+                            Insufficient data (Weight + SBD maxes) to generate DOTS trend.
+                        </p>
+                    </div>
                 )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
-
-                {/* Weight History Chart */}
-                <div className="card">
-                    <h2>Body Weight Trend ({unit})</h2>
-                    <div style={{ height: '300px', width: '100%' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
+                <div className="glass-card">
+                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>Body Weight Trend ({unit})</h2>
+                    <div style={{ height: '280px', width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart data={weights}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                                <XAxis dataKey="date" stroke="#888" fontSize={12} />
-                                <YAxis stroke="#888" domain={['auto', 'auto']} fontSize={12} />
-                                <Tooltip contentStyle={{ backgroundColor: '#222', border: '1px solid #444' }} />
-                                <Line type="monotone" dataKey="weight" stroke="#9c27b0" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 8 }} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} />
+                                <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={11} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '12px' }} />
+                                <Line type="monotone" dataKey="weight" stroke="#ec4899" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 6 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Workout Consistency */}
-                <div className="card">
-                    <h2>Workout Consistency (Last 8 Weeks)</h2>
-                    <div style={{ height: '300px', width: '100%' }}>
+                <div className="glass-card">
+                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>Session Consistency</h2>
+                    <div style={{ height: '280px', width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={getConsistencyData()}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                                <XAxis dataKey="name" stroke="#888" fontSize={12} />
-                                <YAxis stroke="#888" fontSize={12} />
-                                <Tooltip contentStyle={{ backgroundColor: '#222', border: '1px solid #444' }} />
-                                <Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
+                                <YAxis stroke="var(--text-muted)" fontSize={11} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '12px' }} />
+                                <Bar dataKey="count" fill="var(--primary)" radius={[6, 6, 0, 0]} barSize={30} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
-
             </div>
         </div>
     );
