@@ -38,6 +38,11 @@ const useWakeLock = () => {
     return { isWakeLockActive, requestWakeLock, releaseWakeLock };
 };
 
+// Browser-robust YYYY-MM-DD helper
+const getDateStr = (date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 const WorkoutLog = () => {
     const { user } = useAuth();
     const { athleteId: paramAthleteId } = useParams();
@@ -61,10 +66,6 @@ const WorkoutLog = () => {
         maxes
     } = useData();
 
-    // Browser-robust YYYY-MM-DD helper
-    const getDateStr = (date) => {
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    };
 
     // Load external data if viewing another user
     useEffect(() => {
@@ -93,24 +94,29 @@ const WorkoutLog = () => {
     const customExercises = isViewingOther ? extCustom : syncedCustom;
     const planned = isViewingOther ? extPlanned : plannedWorkouts;
 
-    // Detect Planned Workout (either from navigation state or today's schedule)
+    const [selectedExerciseId, setSelectedExerciseId] = useState('');
+    const queryParams = new URLSearchParams(location.search);
+    const dateParam = queryParams.get('date');
+    const planIdParam = queryParams.get('planId');
+
+    const isCoachViewing = paramAthleteId && paramAthleteId !== user?.id;
+
+    // Detect Planned Workout (either from navigation state, query param, or today's schedule)
     const activePlannedWorkout = useMemo(() => {
         if (location.state?.plannedWorkout) return location.state.plannedWorkout;
+        if (planIdParam) {
+            const found = planned.find(p => p.id === planIdParam);
+            if (found) return found;
+        }
         const todayStr = getDateStr(new Date());
         return planned.find(p => p.date === todayStr);
-    }, [location.state, planned]);
+    }, [location.state, planIdParam, planned]);
 
     // Combined Exercise List (Default + Custom)
     const allExercisesList = useMemo(() => [
         ...defaultExercises,
         ...(customExercises || [])
     ], [customExercises]);
-
-    const [selectedExerciseId, setSelectedExerciseId] = useState('');
-    const queryParams = new URLSearchParams(location.search);
-    const dateParam = queryParams.get('date');
-
-    const isCoachViewing = paramAthleteId && paramAthleteId !== user?.id;
 
     // Use date from params or today
     const [selectedDate, setSelectedDate] = useState(() => {

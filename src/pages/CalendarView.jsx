@@ -6,6 +6,11 @@ import { useData } from '../context/DataContext';
 import ProgramPlanner from '../components/ProgramPlanner';
 import * as firestoreService from '../services/firestoreService';
 
+// Browser-robust YYYY-MM-DD helper
+const getDateStr = (date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 const CalendarView = () => {
     const { unit } = useSettings();
     const { user } = useAuth();
@@ -51,19 +56,18 @@ const CalendarView = () => {
     const [weightInput, setWeightInput] = useState('');
     const [noteInput, setNoteInput] = useState('');
 
-    // Auto-open planner if coming from Home with startPlanning state
-    useEffect(() => {
-        if (location.state?.startPlanning) {
-            setIsPlanning(true);
-            // Clear state so it doesn't reopen if they cancel and come back
-            window.history.replaceState({}, document.title);
-        }
-    }, [location.state]);
+    const queryParams = new URLSearchParams(location.search);
+    const planParam = queryParams.get('plan');
 
-    // Browser-robust YYYY-MM-DD helper
-    const getDateStr = (date) => {
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    };
+    // Auto-open planner if coming from Home with ?plan=true
+    useEffect(() => {
+        if (planParam === 'true') {
+            setIsPlanning(true);
+            // Optional: clean up URL
+            navigate(location.pathname, { replace: true });
+        }
+    }, [planParam, location.pathname, navigate]);
+
 
     // Fetch Athlete Data if Coach is viewing
     useEffect(() => {

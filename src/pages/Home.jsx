@@ -26,6 +26,11 @@ const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
     return (liftWeight * 500) / denom;
 };
 
+// Browser-robust YYYY-MM-DD helper
+const getDateStr = (date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 const Home = () => {
     const { user } = useAuth();
     const { unit: appUnit } = useSettings();
@@ -40,10 +45,6 @@ const Home = () => {
     } = useData();
 
     const [activeTab, setActiveTab] = useState('dashboard');
-
-    const getDateStr = (date) => {
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    };
 
     const todayStr = useMemo(() => getDateStr(new Date()), []);
     const todayPlan = useMemo(() => {
@@ -192,8 +193,7 @@ const Home = () => {
                                 </div>
                             </Link>
                             <Link 
-                                to={todayPlan ? "/log" : "/calendar"} 
-                                state={todayPlan ? { plannedWorkout: todayPlan } : { startPlanning: true }}
+                                to={todayPlan ? `/log?planId=${todayPlan.id}` : "/calendar?plan=true"} 
                                 style={{ textDecoration: 'none' }}
                             >
                                 <div style={{ 
