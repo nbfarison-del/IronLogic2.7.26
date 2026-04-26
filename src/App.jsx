@@ -21,6 +21,7 @@ const Admin = lazy(() => import('./pages/Admin'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Programs = lazy(() => import('./pages/Programs'));
+const ProPlanner = lazy(() => import('./pages/ProPlanner'));
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -136,6 +137,13 @@ function App() {
                   <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
                     <SubscriptionGuard>
                       <CoachDashboard />
+                    </SubscriptionGuard>
+                  </RoleProtectedRoute>
+                } />
+                <Route path="/coach/plan/:athleteId" element={
+                  <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                    <SubscriptionGuard>
+                      <ProPlanner />
                     </SubscriptionGuard>
                   </RoleProtectedRoute>
                 } />

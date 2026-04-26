@@ -103,11 +103,11 @@ const CoachDashboard = () => {
                             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
                                 {/* Primary action: Write Program */}
                                 <Link
-                                    to={`/calendar/${athlete.id}`}
+                                    to={`/coach/plan/${athlete.id}`}
                                     className="btn btn-primary"
-                                    style={{ flex: '1 1 100%', fontSize: '0.9rem', textAlign: 'center', background: 'linear-gradient(135deg, #1565c0, #0288d1)', border: 'none', padding: '0.75rem', fontWeight: 'bold' }}
+                                    style={{ flex: '1 1 100%', fontSize: '0.9rem', textAlign: 'center', background: 'linear-gradient(135deg, var(--primary), #d97706)', border: 'none', padding: '0.75rem', fontWeight: 'bold' }}
                                 >
-                                    ✏️ Write / Edit Program
+                                    ⚡ Pro Planner (Sprint Mode)
                                 </Link>
 
                                 {/* Secondary actions */}
