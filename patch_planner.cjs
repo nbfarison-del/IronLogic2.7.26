@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+const fs = require('fs');
+
+const content = `import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
@@ -261,7 +263,7 @@ const ProPlanner = () => {
                 }));
             }
         });
-        alert(`Applied week structure ${numWeeks} weeks forward.`);
+        alert(\`Applied week structure \${numWeeks} weeks forward.\`);
     };
 
     const applyTemplate = (template) => {
@@ -403,7 +405,7 @@ const ProPlanner = () => {
                         {weeks.map((_, i) => (
                             <button 
                                 key={i} 
-                                className={`btn ${activeWeekIndex === i ? 'btn-primary' : ''}`}
+                                className={\`btn \${activeWeekIndex === i ? 'btn-primary' : ''}\`}
                                 style={{ minHeight: '30px', padding: '4px 12px', fontSize: '0.75rem', borderRadius: '6px' }}
                                 onClick={() => setActiveWeekIndex(i)}
                             >
@@ -479,7 +481,7 @@ const ProPlanner = () => {
                             return (
                             <div 
                                 key={session.id} 
-                                className={`pro-session-card animate-in ${isDragOverSession ? 'drop-zone' : ''}`}
+                                className={\`pro-session-card animate-in \${isDragOverSession ? 'drop-zone' : ''}\`}
                                 onDragOver={(e) => onDragOver(e, dayIdx, sIdx)}
                                 onDragLeave={onDragLeave}
                                 onDrop={(e) => onDrop(e, dayIdx, sIdx)}
@@ -505,7 +507,7 @@ const ProPlanner = () => {
                                 {session.exercises.map((ex, exIdx) => (
                                     <div 
                                         key={ex.id} 
-                                        className={`pro-exercise-row ${selectedExIds.has(ex.id) ? 'selected-ex' : ''}`} 
+                                        className={\`pro-exercise-row \${selectedExIds.has(ex.id) ? 'selected-ex' : ''}\`} 
                                         draggable
                                         onDragStart={(e) => onExerciseDragStart(e, sIdx, dayIdx, exIdx, ex)}
                                         onClick={(e) => toggleExerciseSelection(e, ex.id)}
@@ -590,15 +592,19 @@ const ProPlanner = () => {
                     </div>
                 ))}
             </div>
-            <style>{`
+            <style>{\`
                 @keyframes pulse {
                     0% { opacity: 0.6; }
                     50% { opacity: 1; }
                     100% { opacity: 0.6; }
                 }
-            `}</style>
+            \`}</style>
         </div>
     );
 };
 
 export default ProPlanner;
+`;
+
+fs.writeFileSync('src/pages/ProPlanner.jsx', content, 'utf8');
+console.log('Successfully patched src/pages/ProPlanner.jsx');
