@@ -451,6 +451,7 @@ export const addPlannedWorkout = (uid, data) => saveAthleteProgram(uid, data.aut
 export const deletePlannedWorkout = deleteAthleteProgram;
 export const updatePlannedWorkout = updateAthleteProgram;
 export const subscribeToPlannedWorkouts = subscribeToAthletePrograms;
+export const assignProgramToAthlete = saveAthleteProgram;
 
 // ==================== CALENDAR NOTES ====================
 
@@ -467,6 +468,16 @@ export const addCalendarNote = async (userId, noteData) => {
     const notesRef = collection(db, 'users', userId, 'calendarNotes');
     const docRef = await addDoc(notesRef, noteData);
     return docRef.id;
+};
+
+export const updateCalendarNote = async (userId, noteId, updates) => {
+    const docRef = doc(db, 'users', userId, 'calendarNotes', noteId);
+    await updateDoc(docRef, { ...updates, updatedAt: new Date().toISOString() });
+};
+
+export const deleteCalendarNote = async (userId, noteId) => {
+    const docRef = doc(db, 'users', userId, 'calendarNotes', noteId);
+    await deleteDoc(docRef);
 };
 
 export const subscribeToCalendarNotes = (userId, callback, errorCallback) => {
