@@ -40,11 +40,10 @@ export const recordUserSignup = async (userId, email) => {
     await setDoc(docRef, {
         email,
         signupDate: new Date().toISOString(),
-        role: 'athlete', // Changed default from 'user' to 'athlete'
+        role: 'athlete',
         subscription_status: 'beta'
     }, { merge: true });
 
-    // Also initialize user profile document
     const profileRef = doc(db, 'users', userId, 'profile', 'data');
     await setDoc(profileRef, {
         email,
@@ -65,10 +64,8 @@ export const getAllRegisteredUsers = async () => {
 };
 
 export const updateUserRole = async (userId, role) => {
-    // Update both registered_users and profile data for consistency
     const regDocRef = doc(db, 'registered_users', userId);
     const profileDocRef = doc(db, 'users', userId, 'profile', 'data');
-
     const updates = { role };
     await Promise.all([
         updateDoc(regDocRef, updates),
@@ -79,7 +76,6 @@ export const updateUserRole = async (userId, role) => {
 export const updateSubscriptionStatus = async (userId, status) => {
     const regDocRef = doc(db, 'registered_users', userId);
     const profileDocRef = doc(db, 'users', userId, 'profile', 'data');
-
     const updates = { subscription_status: status };
     await Promise.all([
         updateDoc(regDocRef, updates),
@@ -88,10 +84,8 @@ export const updateSubscriptionStatus = async (userId, status) => {
 };
 
 export const assignAthleteToCoach = async (athleteId, coachId) => {
-    // Update both registered_users and profile data for consistency
     const regDocRef = doc(db, 'registered_users', athleteId);
     const profileDocRef = doc(db, 'users', athleteId, 'profile', 'data');
-
     const updates = { coach_id: coachId };
     await Promise.all([
         updateDoc(regDocRef, updates),
@@ -100,9 +94,6 @@ export const assignAthleteToCoach = async (athleteId, coachId) => {
 };
 
 export const getAssignedAthletes = async (coachId) => {
-    // Note: This requires a composite index on role and coach_id if we query 'registered_users'
-    // but for now we can query the 'users' collection sub-documents or 'registered_users' if we sync coach_id there.
-    // Let's assume we sync coach_id to 'registered_users' for easier global querying.
     const usersRef = collection(db, 'registered_users');
     const q = query(usersRef, where('coach_id', '==', coachId));
     const querySnapshot = await getDocs(q);
@@ -137,8 +128,6 @@ export const subscribeToWorkoutComments = (userId, workoutId, callback) => {
 
 // ==================== USER PROFILE ====================
 
-// ==================== USER PROFILE ====================
-
 export const getUserProfile = async (userId) => {
     const docRef = doc(db, 'users', userId, 'profile', 'data');
     const docSnap = await getDoc(docRef);
@@ -162,13 +151,10 @@ export const subscribeToProfile = (userId, callback) => {
 export const getWorkouts = async (userId, limitCount = null) => {
     const workoutsRef = collection(db, 'users', userId, 'workouts');
     let q = query(workoutsRef, orderBy('date', 'desc'));
-
     if (limitCount) {
         q = query(workoutsRef, orderBy('date', 'desc'), limit(limitCount));
     }
-
     const querySnapshot = await getDocs(q);
-
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -189,11 +175,9 @@ export const deleteWorkout = async (userId, workoutId) => {
     await deleteDoc(docRef);
 };
 
-// Listen for real-time workout updates
 export const subscribeToWorkouts = (userId, callback, errorCallback, limitCount = 50) => {
     const workoutsRef = collection(db, 'users', userId, 'workouts');
     const q = query(workoutsRef, orderBy('date', 'desc'), limit(limitCount));
-
     return onSnapshot(q, (snapshot) => {
         const workouts = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -226,7 +210,6 @@ export const subscribeToSessionStatus = (userId, dateStr, callback) => {
 export const getGoals = async (userId) => {
     const goalsRef = collection(db, 'users', userId, 'goals');
     const querySnapshot = await getDocs(goalsRef);
-
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -269,13 +252,11 @@ export const getBodyWeightHistory = async (userId, limitCount = null) => {
         q = query(weightRef, orderBy('date', 'desc'), limit(limitCount));
     }
     const querySnapshot = await getDocs(q);
-
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-    })).sort((a, b) => new Date(a.date) - new Date(b.date)); // Keep internal return sorted ascending for graphs
+    })).sort((a, b) => new Date(a.date) - new Date(b.date));
 };
-// Alias for consistency
 export const getBodyWeight = getBodyWeightHistory;
 
 export const addBodyWeight = async (userId, weightData) => {
@@ -315,13 +296,11 @@ export const getRecoveryHistory = async (userId, limitCount = null) => {
         q = query(recoveryRef, orderBy('date', 'desc'), limit(limitCount));
     }
     const querySnapshot = await getDocs(q);
-
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
     }));
 };
-// Alias for consistency
 export const getRecovery = getRecoveryHistory;
 
 export const addRecoveryEntry = async (userId, recoveryData) => {
@@ -329,7 +308,6 @@ export const addRecoveryEntry = async (userId, recoveryData) => {
     const docRef = await addDoc(recoveryRef, recoveryData);
     return docRef.id;
 };
-// Alias for consistency
 export const addRecovery = addRecoveryEntry;
 
 export const updateRecovery = async (userId, recoveryId, recoveryData) => {
@@ -351,9 +329,6 @@ export const subscribeToRecovery = (userId, callback, errorCallback) => {
 
 // ==================== SEPARATED PROGRAMMING PATHS ====================
 
-/**
- * Saves a workout to the coach's PERSONAL library
- */
 export const saveCoachPersonalWorkout = async (coachId, workoutData) => {
     const ref = collection(db, 'users', coachId, 'coachPrograms');
     const docRef = await addDoc(ref, {
@@ -363,12 +338,8 @@ export const saveCoachPersonalWorkout = async (coachId, workoutData) => {
     return docRef.id;
 };
 
-/**
- * Saves a workout to an ATHLETE'S schedule
- */
 export const saveAthleteProgram = async (athleteId, coachId, programData) => {
     const ref = collection(db, 'users', athleteId, 'athletePrograms');
-    // We explicitly track the author (coach) for permission auditing
     const docRef = await addDoc(ref, {
         ...programData,
         authorId: coachId,
@@ -402,41 +373,90 @@ export const updateAthleteProgram = async (athleteId, programId, updates) => {
 
 // ==================== PROGRAM TEMPLATES ====================
 
-export const getProgramTemplates = async (userId = null) => {
-    // If userId provided, we could filter for coach-specific templates or global ones
+export const getProgramTemplates = async (includePrivate = false) => {
     const templatesRef = collection(db, 'program_templates');
-    const querySnapshot = await getDocs(templatesRef);
+    let q;
+    if (includePrivate) {
+        q = query(templatesRef, orderBy('createdAt', 'desc'));
+    } else {
+        q = query(templatesRef, where('visibility', '==', 'public'), orderBy('createdAt', 'desc'));
+    }
+    const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
     }));
 };
 
-export const addProgramTemplate = async (templateData) => {
+export const addProgramTemplate = async (templateData, authorId) => {
     const templatesRef = collection(db, 'program_templates');
     const docRef = await addDoc(templatesRef, {
         ...templateData,
+        authorId,
         isTemplate: true,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
     });
     return docRef.id;
 };
 
-// ==================== LEGACY COMPATIBILITY (Aliasing old names) ====================
-// We keep these so existing calendar code doesn't crash during the transition
+export const updateProgramTemplate = async (templateId, updates) => {
+    const docRef = doc(db, 'program_templates', templateId);
+    await updateDoc(docRef, { ...updates, updatedAt: new Date().toISOString() });
+};
+
+export const deleteProgramTemplate = async (templateId) => {
+    const docRef = doc(db, 'program_templates', templateId);
+    await deleteDoc(docRef);
+};
+
+export const importProgramToCalendar = async (userId, templateId, startDateStr) => {
+    const templateRef = doc(db, 'program_templates', templateId);
+    const templateSnap = await getDoc(templateRef);
+    if (!templateSnap.exists()) throw new Error("Template not found");
+    const template = templateSnap.data();
+    
+    const startDate = new Date(startDateStr + 'T12:00:00');
+    const promises = [];
+    
+    if (template.weeks && Array.isArray(template.weeks)) {
+        template.weeks.forEach((week, weekIdx) => {
+            if (week.days && Array.isArray(week.days)) {
+                week.days.forEach((day) => {
+                    const daysToAdd = (weekIdx * 7) + (day.dayOfWeek - 1);
+                    const workoutDate = new Date(startDate);
+                    workoutDate.setDate(startDate.getDate() + daysToAdd);
+                    const dateStr = workoutDate.toISOString().split('T')[0];
+                    
+                    promises.push(saveAthleteProgram(userId, 'system', {
+                        name: day.name || `Week ${weekIdx + 1} Day ${day.dayOfWeek}`,
+                        date: dateStr,
+                        exercises: day.exercises || [],
+                        notes: day.notes || '',
+                        isFromTemplate: true,
+                        templateId: templateId
+                    }));
+                });
+            }
+        });
+    }
+    
+    await Promise.all(promises);
+};
+
+// ==================== LEGACY COMPATIBILITY ====================
+
 export const getPlannedWorkouts = getAthletePrograms;
 export const addPlannedWorkout = (uid, data) => saveAthleteProgram(uid, data.authorId || uid, data);
 export const deletePlannedWorkout = deleteAthleteProgram;
 export const updatePlannedWorkout = updateAthleteProgram;
 export const subscribeToPlannedWorkouts = subscribeToAthletePrograms;
-export const assignProgramToAthlete = saveAthleteProgram;
 
 // ==================== CALENDAR NOTES ====================
 
 export const getCalendarNotes = async (userId) => {
     const notesRef = collection(db, 'users', userId, 'calendarNotes');
     const querySnapshot = await getDocs(notesRef);
-
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -540,13 +560,11 @@ export const clearChatHistory = async (userId) => {
     await Promise.all(deletePromises);
 };
 
-
 // ==================== CUSTOM EXERCISES ====================
 
 export const getCustomExercises = async (userId) => {
     const exercisesRef = collection(db, 'users', userId, 'customExercises');
     const querySnapshot = await getDocs(exercisesRef);
-
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -576,13 +594,10 @@ export const addCustomExercise = async (userId, exerciseData, customId = null) =
     }
 };
 
-
 export const ensureCustomExercisesExist = async (userId, program) => {
     if (!program || !program.weeks) return;
-
     const existingCustom = await getCustomExercises(userId);
     const existingIds = new Set(existingCustom.map(e => e.id));
-
     const newExercises = [];
     program.weeks.forEach(week => {
         week.days.forEach(day => {
@@ -596,12 +611,11 @@ export const ensureCustomExercisesExist = async (userId, program) => {
                             createdAt: new Date().toISOString()
                         }
                     });
-                    existingIds.add(ex.exerciseId); // Avoid duplicates in same batch
+                    existingIds.add(ex.exerciseId);
                 }
             });
         });
     });
-
     if (newExercises.length > 0) {
         const promises = newExercises.map(ex => addCustomExercise(userId, ex.data, ex.id));
         await Promise.all(promises);
@@ -617,7 +631,6 @@ export const getMobilityLogs = async (userId, limitCount = null) => {
         q = query(mobilityRef, orderBy('date', 'desc'), limit(limitCount));
     }
     const querySnapshot = await getDocs(q);
-
     return querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -683,9 +696,7 @@ export const getBootstrapData = async (userId) => {
         getGoals(userId),
         getMobilityLogs(userId, 100)
     ]);
-
     const profileData = profileSnap.exists() ? profileSnap.data() : {};
-
     const data = {
         profile: profileData,
         settings: profileData.settings || { unit: 'kg' },
@@ -697,14 +708,11 @@ export const getBootstrapData = async (userId) => {
         goals,
         mobilityLogs
     };
-
-    // Save to cache for next instant load
     try {
         localStorage.setItem(BOOTSTRAP_CACHE_KEY, JSON.stringify(data));
     } catch (e) {
         console.warn('Could not save bootstrap cache:', e);
     }
-
     return data;
 };
 

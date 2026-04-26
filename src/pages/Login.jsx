@@ -50,14 +50,17 @@ const Login = () => {
                         placeholder="••••••"
                     />
                 </div>
-                {error && <p style={{ color: 'var(--danger)', marginTop: '0.5rem' }}>{error}</p>}
+                {error && <p style={{ color: 'var(--accent-error)', marginTop: '0.5rem' }}>{error}</p>}
                 <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={loading}>
                     {loading ? 'Logging in...' : 'Login'}
                 </button>
             </form>
-            <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>
-                Don't have an account? <Link to="/register" style={{ color: 'var(--primary)' }}>Register</Link>
-            </p>
+            <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem' }}>
+                <Link to="/forgot-password" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Forgot Password?</Link>
+                <p style={{ margin: 0, color: 'var(--text-muted)' }}>
+                    Don't have an account? <Link to="/register" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Register</Link>
+                </p>
+            </div>
         </div>
     );
 };

@@ -3,7 +3,9 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    sendPasswordResetEmail,
+    confirmPasswordReset
 } from 'firebase/auth';
 import { auth } from '../config/firebaseConfig';
 
@@ -16,24 +18,18 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // SAFETY CHECK: If firebaseConfig failed to init, auth will be undefined.
         if (!auth) {
             console.error("AUTH OBJECT MISSING: Check Firebase Config / Environment Variables");
             setLoading(false);
-            // We set loading false so the app renders (and potentially hits ErrorBoundary or just shows empty state)
-            // rather than hanging on white screen
             return;
         }
 
-        // Listen for auth state changes (handles session persistence)
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
                 try {
-                    // Import firestoreService dynamically to avoid circular dependency if any
                     const { getUserProfile } = await import('../services/firestoreService');
                     const profile = await getUserProfile(firebaseUser.uid);
 
-                    // User is signed in
                     const isAdmin = firebaseUser.email === 'nbfarison@gmail.com';
                     setUser({
                         id: firebaseUser.uid,
@@ -45,7 +41,6 @@ export const AuthProvider = ({ children }) => {
                     });
                 } catch (error) {
                     console.error("Error fetching user profile:", error);
-                    // Fallback to basic user info if profile fetch fails
                     const isAdmin = firebaseUser.email === 'nbfarison@gmail.com';
                     setUser({
                         id: firebaseUser.uid,
@@ -55,20 +50,18 @@ export const AuthProvider = ({ children }) => {
                     });
                 }
             } else {
-                // User is signed out
                 setUser(null);
             }
             setLoading(false);
         });
 
-        // Cleanup subscription
         return unsubscribe;
     }, []);
 
     const login = async (email, password) => {
         if (!auth) throw new Error("Firebase Auth not initialized");
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            await signInWithEmailAndPassword(auth, email, password);
             return true;
         } catch (error) {
             console.error('Login error:', error.message);
@@ -83,6 +76,26 @@ export const AuthProvider = ({ children }) => {
             return userCredential;
         } catch (error) {
             console.error('Registration error:', error.message);
+            throw error;
+        }
+    };
+
+    const resetPassword = async (email) => {
+        if (!auth) throw new Error("Firebase Auth not initialized");
+        try {
+            await sendPasswordResetEmail(auth, email);
+        } catch (error) {
+            console.error('Password reset email error:', error.message);
+            throw error;
+        }
+    };
+
+    const confirmReset = async (code, newPassword) => {
+        if (!auth) throw new Error("Firebase Auth not initialized");
+        try {
+            await confirmPasswordReset(auth, code, newPassword);
+        } catch (error) {
+            console.error('Confirm reset error:', error.message);
             throw error;
         }
     };
@@ -102,6 +115,8 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         register,
+        resetPassword,
+        confirmReset,
         logout
     }), [user, loading]);
 
@@ -111,4 +126,3 @@ export const AuthProvider = ({ children }) => {
         </AuthContext.Provider>
     );
 };
-
