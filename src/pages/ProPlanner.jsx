@@ -173,23 +173,58 @@ const ProPlanner = () => {
         setDragOverInfo(null);
     };
 
+    const onTemplateDragStart = (e, template) => {
+        setDragItem({ type: 'template', item: template });
+        e.dataTransfer.effectAllowed = "copy";
+        e.stopPropagation();
+    };
+
     const onDrop = (e, targetDayIdx, targetSessionIdx) => {
         e.preventDefault();
         setDragOverInfo(null);
-        if (!dragItem || dragItem.type !== 'exercise') return;
+        if (!dragItem) return;
 
-        // Don't drop on itself
-        if (dragItem.dayIdx === targetDayIdx && dragItem.sessionIdx === targetSessionIdx) {
-            // we could reorder within the same session here if exIdx was passed
+        if (dragItem.type === 'exercise') {
+            // Don't drop on itself
+            if (dragItem.dayIdx === targetDayIdx && dragItem.sessionIdx === targetSessionIdx) return;
+
+            modifyWeeks(newWeeks => {
+                const currentWeek = newWeeks[activeWeekIndex];
+                // Remove
+                currentWeek[dragItem.dayIdx].sessions[dragItem.sessionIdx].exercises.splice(dragItem.exIdx, 1);
+                // Add
+                currentWeek[targetDayIdx].sessions[targetSessionIdx].exercises.push(dragItem.item);
+            });
+        } else if (dragItem.type === 'template') {
+            const template = dragItem.item;
+            const templateWeek = buildStructureFromPlanned(template.exercises.map(ex => ({
+                ...ex,
+                date: new Date().toISOString() 
+            })))[0];
+
+            modifyWeeks(newWeeks => {
+                const currentWeek = newWeeks[activeWeekIndex];
+                // If dropping on a session, merge exercises
+                if (targetSessionIdx !== undefined && currentWeek[targetDayIdx].sessions[targetSessionIdx]) {
+                    const newExs = templateWeek.flatMap(day => day.sessions.flatMap(s => s.exercises)).map(ex => ({
+                        ...ex,
+                        id: Math.random().toString()
+                    }));
+                    currentWeek[targetDayIdx].sessions[targetSessionIdx].exercises.push(...newExs);
+                } else {
+                    // If dropping on a day, add as new session(s)
+                    templateWeek.forEach(day => {
+                        day.sessions.forEach(s => {
+                            currentWeek[targetDayIdx].sessions.push({
+                                ...s,
+                                id: Math.random().toString(),
+                                exercises: s.exercises.map(ex => ({ ...ex, id: Math.random().toString() }))
+                            });
+                        });
+                    });
+                }
+            });
         }
-
-        modifyWeeks(newWeeks => {
-            const currentWeek = newWeeks[activeWeekIndex];
-            // Remove
-            currentWeek[dragItem.dayIdx].sessions[dragItem.sessionIdx].exercises.splice(dragItem.exIdx, 1);
-            // Add
-            currentWeek[targetDayIdx].sessions[targetSessionIdx].exercises.push(dragItem.item);
-        });
         setDragItem(null);
     };
 
@@ -441,7 +476,9 @@ const ProPlanner = () => {
                                     <button 
                                         key={t.id} 
                                         className="btn" 
-                                        style={{ width: '100%', justifyContent: 'flex-start', fontSize: '0.75rem', padding: '0.5rem', marginBottom: '4px' }}
+                                        style={{ width: '100%', justifyContent: 'flex-start', fontSize: '0.75rem', padding: '0.5rem', marginBottom: '4px', cursor: 'grab' }}
+                                        draggable
+                                        onDragStart={(e) => onTemplateDragStart(e, t)}
                                         onClick={() => applyTemplate(t)}
                                     >
                                         {t.name}
@@ -463,6 +500,8 @@ const ProPlanner = () => {
                     <div 
                         key={dayName} 
                         className="pro-day-col"
+                        onDragOver={(e) => onDragOver(e, dayIdx)}
+                        onDrop={(e) => onDrop(e, dayIdx)}
                     >
                         <div className="pro-day-header">
                             {dayName}
@@ -480,9 +519,9 @@ const ProPlanner = () => {
                             <div 
                                 key={session.id} 
                                 className={`pro-session-card animate-in ${isDragOverSession ? 'drop-zone' : ''}`}
-                                onDragOver={(e) => onDragOver(e, dayIdx, sIdx)}
+                                onDragOver={(e) => { e.stopPropagation(); onDragOver(e, dayIdx, sIdx); }}
                                 onDragLeave={onDragLeave}
-                                onDrop={(e) => onDrop(e, dayIdx, sIdx)}
+                                onDrop={(e) => { e.stopPropagation(); onDrop(e, dayIdx, sIdx); }}
                                 style={{
                                     border: isDragOverSession ? '2px dashed var(--primary)' : '1px solid var(--border-glass)',
                                     background: isDragOverSession ? 'rgba(251, 191, 36, 0.1)' : 'rgba(24, 24, 27, 0.95)'
