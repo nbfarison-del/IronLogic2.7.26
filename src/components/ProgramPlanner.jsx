@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } from '../data/exercises';
-import { useSettings } from '../context/SettingsProvider';
+import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 import ExerciseTools from './ExerciseTools';
