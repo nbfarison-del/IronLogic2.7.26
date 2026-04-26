@@ -504,74 +504,113 @@ const WorkoutLog = () => {
                         <form onSubmit={handleAddSet}>
                             {workoutType === 'strength' ? (
                                 <div>
+                                    {/* GRID HEADER - Rendered once outside the loop */}
+                                    {!isFocusMode && (
+                                        <div style={{ 
+                                            display: 'grid', 
+                                            gridTemplateColumns: '1.2fr 0.8fr 0.8fr 0.8fr 100px', 
+                                            gap: '0.75rem', 
+                                            padding: '0 0.5rem',
+                                            marginBottom: '0.5rem',
+                                            opacity: 0.6,
+                                            fontSize: '0.75rem',
+                                            fontWeight: '600',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.05em'
+                                        }}>
+                                            <span>Weight ({unit})</span>
+                                            <span style={{ textAlign: 'center' }}>Reps</span>
+                                            <span style={{ textAlign: 'center' }}>Target</span>
+                                            <span style={{ textAlign: 'center' }}>Actual</span>
+                                            <span style={{ textAlign: 'right' }}>Actions</span>
+                                        </div>
+                                    )}
+
                                     {setRows.map((row, index) => (
                                         <div key={row.id} className={isFocusMode ? 'glass' : ''} style={{ 
                                             display: 'grid', 
-                                            gridTemplateColumns: isFocusMode ? '1fr' : '1.2fr 0.8fr 0.8fr 0.8fr auto', 
+                                            gridTemplateColumns: isFocusMode ? '1fr' : '1.2fr 0.8fr 0.8fr 0.8fr 100px', 
                                             gap: '0.75rem', 
-                                            alignItems: 'end',
-                                            marginBottom: isFocusMode ? '1.5rem' : '0.75rem',
-                                            padding: isFocusMode ? '1.25rem' : '0',
-                                            borderRadius: '16px'
+                                            alignItems: 'center',
+                                            marginBottom: isFocusMode ? '1.5rem' : '1rem',
+                                            padding: isFocusMode ? '1.25rem' : '0.5rem',
+                                            borderRadius: isFocusMode ? '16px' : '8px',
+                                            background: !isFocusMode ? 'rgba(255,255,255,0.03)' : 'inherit',
+                                            border: !isFocusMode ? '1px solid var(--border-glass)' : 'none'
                                         }}>
+                                            {/* WEIGHT COLUMN */}
                                             <div className="input-group" style={{ marginBottom: 0 }}>
-                                                {!isFocusMode && index === 0 && <label style={{ fontSize: '0.75rem', opacity: 0.7 }}>Weight</label>}
                                                 {isFocusMode && <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Weight ({unit})</label>}
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                                     <input
                                                         ref={el => weightInputRef.current[index] = el}
                                                         type="number"
                                                         value={row.weight}
                                                         onChange={(e) => handleRowChange(row.id, 'weight', e.target.value)}
                                                         style={{ width: '100%', fontSize: isFocusMode ? '1.5rem' : '1.1rem', fontWeight: '700', textAlign: isFocusMode ? 'center' : 'left' }}
+                                                        placeholder="Load"
                                                     />
-                                                    <div style={{ display: 'flex', gap: '0.3rem' }}>
-                                                        <button type="button" className="btn" style={{ flex: 1, padding: '0.2rem', minHeight: '36px', fontSize: '0.75rem' }} onClick={() => adjustWeight(row.id, 2.5)}>+2.5</button>
-                                                        <button type="button" className="btn" style={{ flex: 1, padding: '0.2rem', minHeight: '36px', fontSize: '0.75rem' }} onClick={() => adjustWeight(row.id, -2.5)}>-2.5</button>
-                                                        <button type="button" className="btn" style={{ flex: 1, padding: '0.2rem', minHeight: '36px', fontSize: '0.75rem' }} onClick={() => adjustWeight(row.id, 5)}>+5</button>
+                                                    <div style={{ display: 'flex', gap: '0.2rem' }}>
+                                                        <button type="button" className="btn" style={{ flex: 1, padding: '2px', minHeight: '30px', fontSize: '0.7rem' }} onClick={() => adjustWeight(row.id, 2.5)}>+2.5</button>
+                                                        <button type="button" className="btn" style={{ flex: 1, padding: '2px', minHeight: '30px', fontSize: '0.7rem' }} onClick={() => adjustWeight(row.id, -2.5)}>-2.5</button>
+                                                        <button type="button" className="btn" style={{ flex: 1, padding: '2px', minHeight: '30px', fontSize: '0.7rem' }} onClick={() => adjustWeight(row.id, 5)}>+5</button>
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            {/* REPS COLUMN */}
                                             <div className="input-group" style={{ marginBottom: 0 }}>
-                                                {!isFocusMode && index === 0 && <label style={{ fontSize: '0.75rem', opacity: 0.7 }}>Reps</label>}
                                                 {isFocusMode && <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Reps</label>}
                                                 <input
                                                     ref={el => repsInputRef.current[index] = el}
                                                     type="number"
                                                     value={row.reps}
                                                     onChange={(e) => handleRowChange(row.id, 'reps', e.target.value)}
-                                                    style={{ width: '100%', fontSize: isFocusMode ? '1.5rem' : '1.1rem', fontWeight: '600', textAlign: isFocusMode ? 'center' : 'left' }}
+                                                    style={{ width: '100%', fontSize: isFocusMode ? '1.5rem' : '1.1rem', fontWeight: '600', textAlign: 'center' }}
+                                                    placeholder="Reps"
                                                 />
                                             </div>
+
+                                            {/* TARGET RPE COLUMN */}
                                             <div className="input-group" style={{ marginBottom: 0 }}>
-                                                {!isFocusMode && index === 0 && <label style={{ fontSize: '0.75rem', opacity: 0.7 }}>Target RPE</label>}
                                                 {isFocusMode && <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Target RPE</label>}
                                                 <input
                                                     type="number"
                                                     step="0.5"
                                                     value={row.targetRpe}
                                                     onChange={(e) => handleRowChange(row.id, 'targetRpe', e.target.value)}
-                                                    style={{ width: '100%', fontSize: isFocusMode ? '1.1rem' : '1rem', textAlign: isFocusMode ? 'center' : 'left' }}
+                                                    style={{ width: '100%', fontSize: isFocusMode ? '1.1rem' : '1rem', textAlign: 'center', opacity: 0.8 }}
+                                                    placeholder="Target"
                                                 />
                                             </div>
+
+                                            {/* ACTUAL RPE COLUMN */}
                                             <div className="input-group" style={{ marginBottom: 0 }}>
-                                                {!isFocusMode && index === 0 && <label style={{ fontSize: '0.75rem', opacity: 0.7 }}>Actual RPE</label>}
                                                 {isFocusMode && <label style={{ fontSize: '0.85rem', fontWeight: '600' }}>Actual RPE</label>}
                                                 <input
                                                     type="number"
                                                     step="0.5"
                                                     value={row.actualRpe}
                                                     onChange={(e) => handleRowChange(row.id, 'actualRpe', e.target.value)}
-                                                    style={{ width: '100%', fontSize: isFocusMode ? '1.1rem' : '1rem', textAlign: isFocusMode ? 'center' : 'left', border: '2px solid var(--primary)' }}
+                                                    style={{ 
+                                                        width: '100%', 
+                                                        fontSize: isFocusMode ? '1.1rem' : '1.05rem', 
+                                                        textAlign: 'center', 
+                                                        border: '2px solid var(--primary)',
+                                                        boxShadow: '0 0 10px var(--primary-glow)'
+                                                    }}
+                                                    placeholder="RPE"
                                                     required
                                                 />
                                             </div>
-                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: isFocusMode ? 'center' : 'flex-end', marginTop: isFocusMode ? '1rem' : '0' }}>
-                                                <button type="button" className="btn" onClick={() => handleDuplicateRow(row.id)} title="Repeat last set">
+
+                                            {/* ACTIONS COLUMN */}
+                                            <div style={{ display: 'flex', gap: '0.4rem', justifyContent: isFocusMode ? 'center' : 'flex-end', marginTop: isFocusMode ? '1rem' : '0' }}>
+                                                <button type="button" className="btn" style={{ padding: '0.5rem', minWidth: '40px' }} onClick={() => handleDuplicateRow(row.id)} title="Repeat last set">
                                                     {isFocusMode ? '📋 Duplicate Set' : '📋'}
                                                 </button>
                                                 {setRows.length > 1 && (
-                                                    <button type="button" className="btn" onClick={() => handleRemoveRow(row.id)} style={{ color: 'var(--accent-error)' }}>
+                                                    <button type="button" className="btn" onClick={() => handleRemoveRow(row.id)} style={{ color: 'var(--accent-error)', padding: '0.5rem', minWidth: '40px' }}>
                                                         {isFocusMode ? '🗑️ Remove' : '✕'}
                                                     </button>
                                                 )}
@@ -579,13 +618,14 @@ const WorkoutLog = () => {
                                         </div>
                                     ))}
 
-                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                                        <button type="button" onClick={handleAddRow} className="btn" style={{ flex: 1 }}>+ Add Row</button>
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+                                        <button type="button" onClick={handleAddRow} className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.05)' }}>+ Add Row</button>
                                         <button type="submit" disabled={saving} className="btn btn-primary" style={{ flex: 2 }}>
                                             {saving ? 'Saving...' : '🔥 Log Record'}
                                         </button>
                                     </div>
                                 </div>
+
                             ) : (
                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
                                     <div className="input-group" style={{ flex: 1 }}>
