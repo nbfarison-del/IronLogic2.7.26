@@ -1,0 +1,4 @@
+If you can see this file in GitHub Desktop, then we are in the right folder!
+If you cannot see this file in the 'Changes' list of GitHub Desktop, then GitHub Desktop is looking at a DIFFERENT folder on your computer.
+
+Timestamp: 2026-04-28 09:37 AM
