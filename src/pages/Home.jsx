@@ -249,8 +249,9 @@ const Home = () => {
                         <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}><span style={{ fontSize: '1.2rem' }}>🏆</span> Recent Milestones</h2>
                         {recentPRs.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
-                                {recentPRs.slice(0, 5).map((pr, i) => (
-                                    <div key={i} className="glass" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem' }}>
+                                {recentPRs.slice(0, 5).map(pr => (
+                                    <div key={`${pr.date}-${pr.exerciseId}`} className="glass" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem' }}>
+
                                         <div>
                                             <div style={{ fontWeight: '700', fontSize: '1.05rem' }}>{pr.exerciseName}</div>
                                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{pr.date}</div>

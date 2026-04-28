@@ -6,9 +6,10 @@ const TimerWidget = () => {
         isOpen, toggleTimer, type, setType,
         duration, setDuration, focusTime, setFocusTime,
         restTime, setRestTime, rounds, setRounds, emomInterval, setEmomInterval,
-        isActive, start, pause, reset, timePassed, phaseTimePassed,
+        isActive, start, pause, reset, timePassed, phaseTimePassed, setPhaseTimePassed,
         currentRound, setCurrentRound, phase, setPhase, formatTime
     } = useTimer();
+
 
     // Timer Logic for different modes
     useEffect(() => {
@@ -26,11 +27,9 @@ const TimerWidget = () => {
                     setPhase('complete');
                 } else {
                     setPhase('rest');
-                    // We must use a context setter ideally, but direct state manipulation in Context is happening via reference in React 
-                    // To do it correctly, we rely on the context's state. But since we lack a "setPhaseTime" setter, 
-                    // Wait, context has `reset` which sets to 0. But we might miss seconds. 
-                    // Actually, a simple hack here is fine for demonstration: we reset when phase changes.
+                    setPhaseTimePassed(0);
                 }
+
             } else if (phase === 'rest' && phaseTimePassed >= (focusTime + restTime)) {
                 if (currentRound >= rounds) {
                     pause();
@@ -38,7 +37,9 @@ const TimerWidget = () => {
                 } else {
                     setCurrentRound(r => r + 1);
                     setPhase('focus');
+                    setPhaseTimePassed(0);
                 }
+
             }
         } else if (type === 'emom') {
             if (phaseTimePassed >= emomInterval) {
@@ -47,8 +48,9 @@ const TimerWidget = () => {
                     setPhase('complete');
                 } else {
                     setCurrentRound(r => r + 1);
-                    // The trick for EMOM is it just resets phase time or relies on overall time
+                    setPhaseTimePassed(0);
                 }
+
             }
         }
     }, [isActive, timePassed, phaseTimePassed, type, duration, focusTime, restTime, rounds, emomInterval, phase, currentRound, pause, setPhase, setCurrentRound]);

@@ -18,19 +18,35 @@ const IronLogicTab = () => {
         if (!user) return;
 
         const loadDMAICData = async () => {
+            const cacheKey = `dmaic_cache_${user.id}`;
+            const cached = sessionStorage.getItem(cacheKey);
+            
+            if (cached) {
+                try {
+                    setDmaicData(JSON.parse(cached));
+                    setLoading(false);
+                    return;
+                } catch (e) {
+                    sessionStorage.removeItem(cacheKey);
+                }
+            }
+
             setLoading(true);
             try {
                 // Fetch the last outcome for the current user
                 const outcomeRef = doc(db, 'users', user.id, 'performanceOutcome', new Date().toISOString().split('T')[0]);
                 const docSnap = await getDoc(outcomeRef);
 
+                let data;
                 if (docSnap.exists()) {
-                    setDmaicData(docSnap.data());
+                    data = docSnap.data();
                 } else {
                     // Start fresh analysis if none today
-                    const result = await runDMAICCycle(user.id);
-                    setDmaicData(result);
+                    data = await runDMAICCycle(user.id);
                 }
+                
+                setDmaicData(data);
+                sessionStorage.setItem(cacheKey, JSON.stringify(data));
             } catch (err) {
                 console.error("Error loading IronLogic Method:", err);
                 setError("Failed to analyze performance data.");
@@ -38,6 +54,7 @@ const IronLogicTab = () => {
                 setLoading(false);
             }
         };
+
 
         loadDMAICData();
     }, [user]);
@@ -47,12 +64,14 @@ const IronLogicTab = () => {
         try {
             const result = await runDMAICCycle(user.id);
             setDmaicData(result);
+            sessionStorage.setItem(`dmaic_cache_${user.id}`, JSON.stringify(result));
         } catch (err) {
             setError("Analysis failed.");
         } finally {
             setLoading(false);
         }
     };
+
 
     if (loading) return (
         <div style={{ padding: '3rem', textAlign: 'center' }}>

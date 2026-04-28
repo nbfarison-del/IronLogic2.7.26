@@ -24,6 +24,8 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Programs = lazy(() => import('./pages/Programs'));
 const ProPlanner = lazy(() => import('./pages/ProPlanner'));
+const PartnerWorkout = lazy(() => import('./pages/PartnerWorkout'));
+
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -41,9 +43,10 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   // Double-security for Admin specifically
-  if (allowedRoles.includes('admin') && user.email !== 'nbfarison@gmail.com') {
+  if (allowedRoles.includes('admin') && (user.role !== 'admin' || user.email !== 'nbfarison@gmail.com')) {
     return <Navigate to="/" replace />;
   }
+
 
   return children;
 };
@@ -53,10 +56,17 @@ const SubscriptionGuard = ({ children }) => {
 
   if (loading) return null;
 
-  // For now, allow 'beta', 'active', and all Admins
-  const isSubscriber = user?.subscriptionStatus === 'beta' || user?.subscriptionStatus === 'active' || user?.role === 'admin';
+  // New athletes get a 14-day trial
+  const now = Date.now();
+  const trialStillActive = user?.trialExpiresAt ? (user.trialExpiresAt.toMillis ? user.trialExpiresAt.toMillis() : user.trialExpiresAt) > now : false;
+  
+  const isSubscriber = user?.subscriptionStatus === 'beta' || 
+                       user?.subscriptionStatus === 'active' || 
+                       user?.role === 'admin' || 
+                       trialStillActive;
 
   if (!isSubscriber) {
+
 
     return (
       <div className="container" style={{ textAlign: 'center', marginTop: '5rem' }}>
@@ -75,6 +85,117 @@ const CoachDashboard = lazy(() => import('./pages/CoachDashboard'));
 const AdaptiveCoach = lazy(() => import('./pages/AdaptiveCoach'));
 const WeeklyCheckIn = lazy(() => import('./pages/WeeklyCheckIn'));
 
+function AppContent() {
+  const { user } = useAuth();
+  return (
+    <>
+      {user && <TimerWidget />}
+      <Routes>
+        <Route element={<Layout />}>
+          {/* Public Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
+          {/* Protected Routes */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
+          <Route path="/log" element={
+            <ProtectedRoute>
+              <WorkoutLog />
+            </ProtectedRoute>
+          } />
+          <Route path="/progress" element={
+            <ProtectedRoute>
+              <Progress />
+            </ProtectedRoute>
+          } />
+          <Route path="/programs" element={
+            <ProtectedRoute>
+              <Programs />
+            </ProtectedRoute>
+          } />
+          <Route path="/partner" element={
+            <ProtectedRoute>
+              <PartnerWorkout />
+            </ProtectedRoute>
+          } />
+          <Route path="/checkin" element={
+            <ProtectedRoute>
+              <SubscriptionGuard>
+                <WeeklyCheckIn />
+              </SubscriptionGuard>
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/calendar" element={
+            <ProtectedRoute>
+              <CalendarView />
+            </ProtectedRoute>
+          } />
+
+          {/* Role-Specific Routes */}
+          <Route path="/coach" element={
+            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+              <SubscriptionGuard>
+                <CoachDashboard />
+              </SubscriptionGuard>
+            </RoleProtectedRoute>
+          } />
+          <Route path="/coach/plan/:athleteId" element={
+            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+              <SubscriptionGuard>
+                <ProPlanner />
+              </SubscriptionGuard>
+            </RoleProtectedRoute>
+          } />
+          <Route path="/coach/adaptive/:athleteId" element={
+            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+              <SubscriptionGuard>
+                <AdaptiveCoach />
+              </SubscriptionGuard>
+            </RoleProtectedRoute>
+          } />
+          <Route path="/coach/athlete/:athleteId" element={
+            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+              <SubscriptionGuard>
+                <WorkoutLog />
+              </SubscriptionGuard>
+            </RoleProtectedRoute>
+          } />
+          <Route path="/calendar/:athleteId" element={
+            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+              <SubscriptionGuard>
+                <CalendarView />
+              </SubscriptionGuard>
+            </RoleProtectedRoute>
+          } />
+          <Route path="/coach/checkin/:athleteId" element={
+            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+              <SubscriptionGuard>
+                <WeeklyCheckIn />
+              </SubscriptionGuard>
+            </RoleProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <RoleProtectedRoute allowedRoles={['admin']}>
+              <Admin />
+            </RoleProtectedRoute>
+          } />
+        </Route>
+      </Routes>
+    </>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
@@ -88,104 +209,7 @@ function App() {
                   <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
                 </div>
               }>
-                <TimerWidget />
-                <Routes>
-                  <Route element={<Layout />}>
-                    {/* Public Routes */}
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-
-                    {/* Protected Routes */}
-                    <Route path="/" element={
-                      <ProtectedRoute>
-                        <Home />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/log" element={
-                      <ProtectedRoute>
-                        <WorkoutLog />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/progress" element={
-                      <ProtectedRoute>
-                        <Progress />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/programs" element={
-                      <ProtectedRoute>
-                        <Programs />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/checkin" element={
-                      <ProtectedRoute>
-                        <SubscriptionGuard>
-                          <WeeklyCheckIn />
-                        </SubscriptionGuard>
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/profile" element={
-                      <ProtectedRoute>
-                        <Profile />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/calendar" element={
-                      <ProtectedRoute>
-                        <CalendarView />
-                      </ProtectedRoute>
-                    } />
-
-                    {/* Role-Specific Routes */}
-                    <Route path="/coach" element={
-                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                        <SubscriptionGuard>
-                          <CoachDashboard />
-                        </SubscriptionGuard>
-                      </RoleProtectedRoute>
-                    } />
-                    <Route path="/coach/plan/:athleteId" element={
-                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                        <SubscriptionGuard>
-                          <ProPlanner />
-                        </SubscriptionGuard>
-                      </RoleProtectedRoute>
-                    } />
-                    <Route path="/coach/adaptive/:athleteId" element={
-                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                        <SubscriptionGuard>
-                          <AdaptiveCoach />
-                        </SubscriptionGuard>
-                      </RoleProtectedRoute>
-                    } />
-                    <Route path="/coach/athlete/:athleteId" element={
-                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                        <SubscriptionGuard>
-                          <WorkoutLog />
-                        </SubscriptionGuard>
-                      </RoleProtectedRoute>
-                    } />
-                    <Route path="/calendar/:athleteId" element={
-                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                        <SubscriptionGuard>
-                          <CalendarView />
-                        </SubscriptionGuard>
-                      </RoleProtectedRoute>
-                    } />
-                    <Route path="/coach/checkin/:athleteId" element={
-                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                        <SubscriptionGuard>
-                          <WeeklyCheckIn />
-                        </SubscriptionGuard>
-                      </RoleProtectedRoute>
-                    } />
-                    <Route path="/admin" element={
-                      <RoleProtectedRoute allowedRoles={['admin']}>
-                        <Admin />
-                      </RoleProtectedRoute>
-                    } />
-                  </Route>
-                </Routes>
+                <AppContent />
               </Suspense>
             </ToastProvider>
           </TimerProvider>
@@ -194,5 +218,6 @@ function App() {
     </AuthProvider>
   );
 }
+
 
 export default App;

@@ -82,10 +82,11 @@ export const TimerProvider = ({ children }) => {
             isOpen, toggleTimer, type, setType,
             duration, setDuration, focusTime, setFocusTime,
             restTime, setRestTime, rounds, setRounds, emomInterval, setEmomInterval,
-            isActive, start, pause, reset, timePassed, phaseTimePassed,
+            isActive, start, pause, reset, timePassed, phaseTimePassed, setPhaseTimePassed,
             currentRound, setCurrentRound, phase, setPhase, formatTime
         }}>
             {children}
         </TimerContext.Provider>
+
     );
 };

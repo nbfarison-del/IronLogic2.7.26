@@ -3,6 +3,10 @@ import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useSettings } from '../context/SettingsContext';
+import { useTimer } from '../context/TimerContext';
+import { useToast } from '../context/ToastContext';
+
+
 import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } from '../data/exercises';
 import ExerciseTools from '../components/ExerciseTools';
 import * as firestoreService from '../services/firestoreService';
@@ -50,7 +54,11 @@ const WorkoutLog = () => {
     const isViewingOther = !!paramAthleteId && paramAthleteId !== user?.id;
 
     const { unit } = useSettings();
+    const { start: startTimer, setType, setDuration: setTimerDuration, reset: resetTimer, isOpen: isTimerOpen, toggleTimer } = useTimer();
+    const { showToast } = useToast();
     const location = useLocation();
+
+
 
     const [extWorkouts, setExtWorkouts] = useState([]);
     const [extCustom, setExtCustom] = useState([]);
@@ -138,6 +146,11 @@ const WorkoutLog = () => {
     });
     const [isSessionComplete, setIsSessionComplete] = useState(false);
     const [isFocusMode, setIsFocusMode] = useState(false);
+    const [autoRest, setAutoRest] = useState(true);
+    const [showRpeModal, setShowRpeModal] = useState(false);
+    const [sessionRpe, setSessionRpe] = useState(7);
+
+
     
     const weightInputRef = useRef([]);
     const repsInputRef = useRef([]);
@@ -163,16 +176,26 @@ const WorkoutLog = () => {
         return () => unsubscribe();
     }, [targetUserId, selectedDate]);
 
-    const handleFinalizeWorkout = async () => {
+    const handleFinalizeWorkout = () => {
+        setShowRpeModal(true);
+    };
+
+    const confirmFinalize = async () => {
         try {
-            await firestoreService.markSessionComplete(targetUserId, getDateStr(selectedDate), true);
+            const dateStr = getDateStr(selectedDate);
+            await firestoreService.markSessionComplete(targetUserId, dateStr, true);
             if (isCoachViewing) {
                 await runDMAICCycle(targetUserId);
             }
+            setIsSessionComplete(true);
+            setShowRpeModal(false);
+            showToast("Session complete. Great work!", "success");
         } catch (error) {
-            console.error('Error finalizing workout:', error);
+            console.error('Error finalizing session:', error);
+            showToast("Failed to finalize session.", "error");
         }
     };
+
 
     const handleReopenWorkout = async () => {
         try {
@@ -340,7 +363,18 @@ const WorkoutLog = () => {
                 }];
 
             await Promise.all(newEntries.map(entry => firestoreService.addWorkout(targetUserId, entry)));
+            
+            if (autoRest && workoutType === 'strength' && !isViewingOther) {
+                resetTimer();
+                setType('countdown');
+                setTimerDuration(180); // Default 3 mins
+                startTimer();
+                if (!isTimerOpen) toggleTimer();
+                showToast("Set logged. Rest timer started!", "success");
+            }
+
             setVideoUrl('');
+
             if (workoutType === 'strength') {
                 const lastRow = setRows[setRows.length - 1];
                 setSetRows([{ id: Date.now(), weight: lastRow?.weight || '', reps: lastRow?.reps || '', targetRpe: '', actualRpe: '' }]);
@@ -394,9 +428,20 @@ const WorkoutLog = () => {
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left', paddingBottom: '3rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <Link to="/calendar" className="btn" style={{ background: 'transparent', padding: '0.5rem' }}>&larr; Calendar</Link>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <Link to="/calendar" className="btn" style={{ background: 'transparent', padding: '0.5rem' }}>&larr; Calendar</Link>
+                    {!isCoachViewing && (
+                        <Link to="/partner" className="btn" style={{ fontSize: '0.8rem', background: 'rgba(var(--primary-rgb), 0.1)', border: '1px solid var(--primary)', color: 'var(--primary)' }}>🤝 Partner Mode</Link>
+                    )}
+                </div>
                 <h1 style={{ margin: 0, fontSize: '1.75rem' }}>{isCoachViewing ? `Review Log` : 'Workout Log'}</h1>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    {!isCoachViewing && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.8rem', borderRadius: '8px', fontSize: '0.8rem', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={autoRest} onChange={e => setAutoRest(e.target.checked)} />
+                            Auto-Rest
+                        </label>
+                    )}
                     <button 
                         className={`btn ${isFocusMode ? 'btn-primary' : ''}`} 
                         onClick={() => setIsFocusMode(!isFocusMode)}
@@ -703,9 +748,44 @@ const WorkoutLog = () => {
                     {CommentSectionToRender}
                 </div>
             </div>
+
+            {/* Session RPE Modal */}
+            {showRpeModal && (
+                <div className="nav-overlay open" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000 }}>
+                    <div className="glass-card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+                        <h2 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>Session Feedback</h2>
+                        <p style={{ opacity: 0.8, marginBottom: '2rem' }}>How difficult was today's overall workout?</p>
+                        
+                        <div style={{ fontSize: '3rem', fontWeight: '900', color: 'var(--primary)', marginBottom: '1rem' }}>
+                            {sessionRpe}
+                        </div>
+                        
+                        <input 
+                            type="range" 
+                            min="1" 
+                            max="10" 
+                            step="0.5" 
+                            value={sessionRpe} 
+                            onChange={e => setSessionRpe(parseFloat(e.target.value))}
+                            style={{ width: '100%', marginBottom: '2rem', cursor: 'pointer' }}
+                        />
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', fontSize: '0.8rem', opacity: 0.6, marginBottom: '2rem' }}>
+                            <div style={{ textAlign: 'left' }}>1 (Very Easy)</div>
+                            <div style={{ textAlign: 'right' }}>10 (Max Effort)</div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button className="btn" style={{ flex: 1 }} onClick={() => setShowRpeModal(false)}>Cancel</button>
+                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirmFinalize}>Finish</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
+
 
 const CommentSection = ({ userId, sessionId }) => {
     const { user } = useAuth();

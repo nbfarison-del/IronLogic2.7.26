@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
 import { getFirestore, clearIndexedDbPersistence } from 'firebase/firestore';
+import { useToast } from '../context/ToastContext';
+
 
 const Profile = () => {
     const { user } = useAuth();
@@ -31,13 +33,15 @@ const Profile = () => {
         notes: notesHistory?.length || 0
     };
 
+    const { showToast } = useToast();
     const [maxes, setMaxes] = useState({
         squat: '',
         bench: '',
         deadlift: '',
         ohp: ''
     });
-    const [notifications, setNotifications] = useState('');
+    const [confirmRefresh, setConfirmRefresh] = useState(false);
+
 
     useEffect(() => {
         if (syncedMaxes) {
@@ -52,19 +56,24 @@ const Profile = () => {
     };
 
     const handleForceRefresh = async () => {
-        if (window.confirm('This will wipe all local caches (including Firebase persistence) and force a full reload. Continue?')) {
-            try {
-                localStorage.clear();
-                const db = getFirestore();
-                await clearIndexedDbPersistence(db);
-                // Redirect to root to avoid 404 on re-load
-                window.location.href = '/';
-            } catch (err) {
-                console.error('Refresh error:', err);
-                window.location.reload();
-            }
+        if (!confirmRefresh) {
+            setConfirmRefresh(true);
+            setTimeout(() => setConfirmRefresh(false), 3000);
+            return;
+        }
+
+        try {
+            showToast("Wiping local cache...", "info");
+            localStorage.clear();
+            const db = getFirestore();
+            await clearIndexedDbPersistence(db);
+            window.location.href = '/';
+        } catch (err) {
+            console.error('Refresh error:', err);
+            window.location.reload();
         }
     };
+
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -77,14 +86,13 @@ const Profile = () => {
 
         try {
             await firestoreService.updateUserProfile(user.id, { trainingMaxes: maxes, maxes });
-            setNotifications('Maxes saved successfully!');
-            setTimeout(() => setNotifications(''), 3000);
+            showToast('Profile maxes saved successfully!', 'success');
         } catch (error) {
             console.error('Error saving profile:', error);
-            setNotifications('Failed to save. Please try again.');
-            setTimeout(() => setNotifications(''), 3000);
+            showToast('Failed to save. Please try again.', 'error');
         }
     };
+
 
     if (isLoading) {
         return <div className="card">Syncing profiles...</div>;
@@ -97,11 +105,7 @@ const Profile = () => {
                 Enter your current tested 1 Rep Maxes. These will be used to track your progress against your daily sets.
             </p>
 
-            {notifications && (
-                <div style={{ padding: '1rem', background: '#2e7d32', color: 'white', borderRadius: '8px', marginBottom: '1rem', textAlign: 'center' }}>
-                    {notifications}
-                </div>
-            )}
+
 
             <div className="card" style={{ marginBottom: '2rem' }}>
                 <h2>App Settings</h2>
@@ -215,13 +219,16 @@ const Profile = () => {
                         style={{
                             marginTop: '1.5rem',
                             width: '100%',
-                            background: '#333',
+                            background: confirmRefresh ? 'var(--accent-error)' : '#333',
+                            color: confirmRefresh ? '#fff' : 'inherit',
                             fontSize: '0.8rem',
-                            padding: '0.5rem'
+                            padding: '0.5rem',
+                            transition: 'all 0.2s ease'
                         }}
                     >
-                        Hard Refresh Sync
+                        {confirmRefresh ? '⚠️ Confirm Wipe & Reload?' : 'Hard Refresh Sync'}
                     </button>
+
                     <p style={{ fontSize: '0.7rem', color: '#666', textAlign: 'center', margin: '0.5rem 0 0 0' }}>
                         Clears local cache and reloads from server
                     </p>
