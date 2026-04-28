@@ -84,6 +84,23 @@ const Programs = () => {
         }
     };
 
+    const [activeFilter, setActiveFilter] = useState('All');
+
+    // Extract all unique tags from available templates
+    const allUniqueTags = useMemo(() => {
+        const tags = new Set(['All']);
+        templates.forEach(t => {
+            if (t.tags) t.tags.forEach(tag => tags.add(tag));
+        });
+        return Array.from(tags);
+    }, [templates]);
+
+    const filteredTemplates = useMemo(() => {
+        if (activeFilter === 'All') return templates;
+        return templates.filter(t => t.tags && t.tags.includes(activeFilter));
+    }, [templates, activeFilter]);
+
+
     if (loading) return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
             <div className="spinner"></div>
@@ -168,9 +185,34 @@ const Programs = () => {
                         )}
                     </div>
 
-                    {templates.length > 0 ? (
+                    {/* Tag Filter UI */}
+                    {allUniqueTags.length > 1 && (
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+                            {allUniqueTags.map(tag => (
+                                <button
+                                    key={tag}
+                                    onClick={() => setActiveFilter(tag)}
+                                    style={{
+                                        padding: '6px 16px',
+                                        borderRadius: '20px',
+                                        border: activeFilter === tag ? '1px solid var(--primary)' : '1px solid var(--border-glass)',
+                                        background: activeFilter === tag ? 'rgba(251, 191, 36, 0.1)' : 'rgba(255,255,255,0.03)',
+                                        color: activeFilter === tag ? 'var(--primary)' : 'var(--text-muted)',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '700',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {tag === 'All' ? '🎯 All Programs' : `#${tag}`}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {filteredTemplates.length > 0 ? (
                         <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-                            {templates.map(template => (
+                            {filteredTemplates.map(template => (
                                 <div key={template.id} className="glass-card" style={{ textAlign: 'left', display: 'flex', flexDirection: 'column' }}>
                                     <div style={{ marginBottom: '1.25rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -249,23 +291,17 @@ const Programs = () => {
                     ) : (
                         <div className="glass-card" style={{ textAlign: 'center', padding: '5rem 2rem' }}>
                             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📚</div>
-                            <h2>Your Program Library is empty</h2>
+                            <h2>No matching programs found</h2>
                             <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0.5rem auto 2rem' }}>
-                                Professional templates haven't been loaded into the system yet.
+                                Try adjusting your filters or check back later for new templates.
                             </p>
-                            {user?.role === 'admin' ? (
-                                <button className="btn btn-primary" onClick={() => navigate('/admin')}>
-                                    Go to Admin Dashboard to Seed Templates
-                                </button>
-                            ) : (
-                                <p style={{ fontStyle: 'italic' }}>Please check back later or contact your coach.</p>
-                            )}
+                            <button className="btn btn-secondary" onClick={() => setActiveFilter('All')}>Clear Filters</button>
                         </div>
                     )}
                 </div>
             )}
 
-            {/* Global Modal Backdrop */}
+            {/* Enhanced Preview Modal */}
             {showPreview && (
                 <div 
                     className="nav-overlay open" 
@@ -280,8 +316,8 @@ const Programs = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: 'rgba(0,0,0,0.85)',
-                        backdropFilter: 'blur(10px)',
+                        background: 'rgba(0,0,0,0.9)',
+                        backdropFilter: 'blur(15px)',
                         zIndex: 9999 
                     }}
                 >
@@ -289,54 +325,92 @@ const Programs = () => {
                         className="glass-card animate-in" 
                         onClick={(e) => e.stopPropagation()}
                         style={{ 
-                            maxWidth: '600px', 
+                            maxWidth: '900px', 
                             width: '100%', 
                             maxHeight: '90vh', 
                             overflowY: 'auto',
-                            padding: '2rem',
-                            border: '1px solid rgba(255,255,255,0.1)'
+                            padding: '2.5rem',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '24px'
                         }}
                     >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
-                            <h2 style={{ margin: 0 }}>{showPreview.name}</h2>
-                            <button className="btn" onClick={() => setShowPreview(null)} style={{ padding: '0.2rem 0.6rem', minHeight: 'auto' }}>✕</button>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+                            <div>
+                                <h1 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.8rem' }}>{showPreview.name}</h1>
+                                <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0' }}>{showPreview.goal}</p>
+                            </div>
+                            <button className="btn" onClick={() => setShowPreview(null)} style={{ padding: '0.4rem 0.8rem', minHeight: 'auto', borderRadius: '50%', width: '40px', height: '40px' }}>✕</button>
                         </div>
                         
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '2rem' }}>
-                            <div className="card" style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.02)' }}>
-                                <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Duration</small>
-                                <div style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>{showPreview.duration}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
+                            <div className="card" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-glass)' }}>
+                                <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Duration</small>
+                                <div style={{ fontWeight: 'bold', marginTop: '0.4rem', fontSize: '1.1rem' }}>{showPreview.duration}</div>
                             </div>
-                            <div className="card" style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.02)' }}>
-                                <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Frequency</small>
-                                <div style={{ fontWeight: 'bold', marginTop: '0.25rem' }}>{showPreview.frequency}</div>
+                            <div className="card" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-glass)' }}>
+                                <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Frequency</small>
+                                <div style={{ fontWeight: 'bold', marginTop: '0.4rem', fontSize: '1.1rem' }}>{showPreview.frequency}</div>
                             </div>
-                            <div className="card" style={{ padding: '0.75rem', background: 'rgba(255,255,255,0.02)' }}>
-                                <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase' }}>Goal</small>
-                                <div style={{ fontWeight: 'bold', marginTop: '0.25rem', fontSize: '0.85rem' }}>{showPreview.goal}</div>
+                            <div className="card" style={{ padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-glass)' }}>
+                                <small style={{ color: 'var(--text-muted)', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tags</small>
+                                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.4rem' }}>
+                                    {showPreview.tags?.map(t => <span key={t} style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 'bold' }}>#{t}</span>)}
+                                </div>
                             </div>
                         </div>
 
-                        <div className="input-group">
-                            <label style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Select Start Date (Week 1)</label>
-                            <input 
-                                type="date" 
-                                value={startDate} 
-                                onChange={(e) => setStartDate(e.target.value)} 
-                                style={{ width: '100%', marginTop: '0.5rem' }}
-                            />
+                        {/* Program Content Preview */}
+                        <div style={{ marginBottom: '2.5rem' }}>
+                            <h3 style={{ borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.5rem', marginBottom: '1.5rem' }}>Program Overview</h3>
+                            <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '1rem' }}>
+                                {showPreview.weeks?.slice(0, 4).map((week, wIdx) => (
+                                    <div key={wIdx} style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.01)', padding: '1rem', borderRadius: '12px' }}>
+                                        <h4 style={{ margin: '0 0 1rem 0', color: 'var(--primary)' }}>Week {week.weekNumber || wIdx + 1}</h4>
+                                        <div style={{ display: 'grid', gap: '1rem' }}>
+                                            {week.days?.map((day, dIdx) => (
+                                                <div key={dIdx} style={{ borderLeft: '2px solid var(--primary)', paddingLeft: '1rem' }}>
+                                                    <div style={{ fontWeight: 'bold', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Day {day.dayOfWeek}: {day.name}</div>
+                                                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                        {day.exercises?.map((ex, eIdx) => (
+                                                            <span key={eIdx} style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', color: '#ccc' }}>
+                                                                {ex.name} ({ex.sets}x{ex.reps})
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                                {showPreview.weeks?.length > 4 && (
+                                    <div style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                                        + {showPreview.weeks.length - 4} more weeks of specialized training
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div style={{ marginTop: '2.5rem', display: 'flex', gap: '1rem' }}>
-                            <button className="btn" style={{ flex: 1 }} onClick={() => setShowPreview(null)}>Discard</button>
-                            <button 
-                                className="btn btn-primary" 
-                                style={{ flex: 2 }} 
-                                disabled={importing === showPreview.id}
-                                onClick={() => handleImport(showPreview.id)}
-                            >
-                                {importing === showPreview.id ? 'Processing...' : 'Confirm Import'}
-                            </button>
+                        <div style={{ padding: '2rem', background: 'rgba(251, 191, 36, 0.03)', borderRadius: '16px', border: '1px solid rgba(251, 191, 36, 0.1)' }}>
+                            <label style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '0.9rem', display: 'block', marginBottom: '1rem' }}>Configure Start Date</label>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <input 
+                                    type="date" 
+                                    value={startDate} 
+                                    onChange={(e) => setStartDate(e.target.value)} 
+                                    style={{ flex: 1, padding: '0.8rem', borderRadius: '8px' }}
+                                />
+                                <button 
+                                    className="btn btn-primary" 
+                                    style={{ flex: 1.5, padding: '0.8rem' }} 
+                                    disabled={importing === showPreview.id}
+                                    onClick={() => handleImport(showPreview.id)}
+                                >
+                                    {importing === showPreview.id ? 'Importing...' : 'Add to My Training'}
+                                </button>
+                            </div>
+                            <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.75rem', textAlign: 'center' }}>
+                                This will schedule all {showPreview.weeks.length} weeks onto your calendar starting from the selected date.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -345,5 +419,5 @@ const Programs = () => {
     );
 };
 
-
 export default Programs;
+
