@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+
 
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -11,9 +12,11 @@ import PartnerWorkout from './PartnerWorkout';
 
 const Programs = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const location = useLocation();
     const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const [subTab, setSubTab] = useState(queryParams.get('tab') === 'partner' ? 'partner' : 'library');
+
 
 
     const { showToast } = useToast();
