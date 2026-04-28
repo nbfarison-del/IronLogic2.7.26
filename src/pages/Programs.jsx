@@ -48,7 +48,8 @@ const Programs = () => {
             setTemplates([...uniqueSystem, ...data]);
         } catch (err) {
             console.error('Error loading templates:', err);
-            showToast('Failed to load program library.', 'error');
+            showToast('Failed to load user templates. Showing defaults.', 'error');
+            setTemplates([...systemTemplates]);
         } finally {
             setLoading(false);
         }
@@ -336,15 +337,20 @@ const Programs = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
                             <div className="card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
                                 <small style={{ color: 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Duration</small>
-                                <div style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '0.5rem' }}>{showPreview.duration}</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '0.5rem' }}>{showPreview.duration || 'N/A'}</div>
                             </div>
                             <div className="card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
                                 <small style={{ color: 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Frequency</small>
-                                <div style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '0.5rem' }}>{showPreview.frequency}</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '0.5rem' }}>{showPreview.frequency || 'N/A'}</div>
                             </div>
                             <div className="card" style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.02)' }}>
                                 <small style={{ color: 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>Structure</small>
-                                <div style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '0.5rem' }}>{showPreview.weeks?.length || 0} Weeks</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: '800', marginTop: '0.5rem' }}>
+                                    {(() => {
+                                        const weeksList = Array.isArray(showPreview.weeks) ? showPreview.weeks : Object.values(showPreview.weeks || {});
+                                        return weeksList.length;
+                                    })()} Weeks
+                                </div>
                             </div>
                         </div>
 
@@ -352,26 +358,39 @@ const Programs = () => {
                         <div style={{ marginBottom: '3rem' }}>
                             <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.75rem' }}>Programming Breakdown</h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                                {showPreview.weeks?.slice(0, 3).map((week, idx) => (
-                                    <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '1.5rem' }}>
-                                        <h4 style={{ margin: '0 0 1rem 0', color: 'var(--primary)' }}>Week {week.weekNumber || idx + 1}</h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
-                                            {week.days?.map((day, dIdx) => (
-                                                <div key={dIdx} style={{ fontSize: '0.9rem', color: '#eee' }}>
-                                                    <strong style={{ display: 'block', marginBottom: '0.4rem' }}>Day {day.dayOfWeek}: {day.name}</strong>
-                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                        {day.exercises?.slice(0, 3).map(e => e.name).join(', ')}...
+                                {(() => {
+                                    const weeksList = Array.isArray(showPreview.weeks) ? showPreview.weeks : Object.values(showPreview.weeks || {});
+                                    return (
+                                        <>
+                                            {weeksList.slice(0, 3).map((week, idx) => {
+                                                const daysList = Array.isArray(week?.days) ? week.days : Object.values(week?.days || {});
+                                                return (
+                                                    <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: '16px', padding: '1.5rem' }}>
+                                                        <h4 style={{ margin: '0 0 1rem 0', color: 'var(--primary)' }}>Week {week?.weekNumber || idx + 1}</h4>
+                                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+                                                            {daysList.map((day, dIdx) => {
+                                                                const exercisesList = Array.isArray(day?.exercises) ? day.exercises : Object.values(day?.exercises || {});
+                                                                return (
+                                                                    <div key={dIdx} style={{ fontSize: '0.9rem', color: '#eee' }}>
+                                                                        <strong style={{ display: 'block', marginBottom: '0.4rem' }}>Day {day?.dayOfWeek || dIdx + 1}: {day?.name || 'Workout'}</strong>
+                                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                                            {exercisesList.length > 0 ? exercisesList.slice(0, 3).map(e => e?.name || 'Exercise').join(', ') : 'No exercises listed'}...
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
+                                                );
+                                            })}
+                                            {weeksList.length > 3 && (
+                                                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
+                                                    ... and {weeksList.length - 3} more weeks of progression
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                                {showPreview.weeks?.length > 3 && (
-                                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>
-                                        ... and {showPreview.weeks.length - 3} more weeks of progression
-                                    </div>
-                                )}
+                                            )}
+                                        </>
+                                    );
+                                })()}
                             </div>
                         </div>
 
