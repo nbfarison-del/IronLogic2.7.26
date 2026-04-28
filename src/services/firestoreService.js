@@ -428,11 +428,18 @@ export const deleteProgramTemplate = async (templateId) => {
     await deleteDoc(docRef);
 };
 
-export const importProgramToCalendar = async (userId, templateId, startDateStr) => {
-    const templateRef = doc(db, 'program_templates', templateId);
-    const templateSnap = await getDoc(templateRef);
-    if (!templateSnap.exists()) throw new Error("Template not found");
-    const template = templateSnap.data();
+export const importProgramToCalendar = async (userId, templateId, startDateStr, providedTemplateData = null) => {
+    let template;
+    
+    if (providedTemplateData) {
+        template = providedTemplateData;
+    } else {
+        const templateRef = doc(db, 'program_templates', templateId);
+        const templateSnap = await getDoc(templateRef);
+        if (!templateSnap.exists()) throw new Error("Template not found");
+        template = templateSnap.data();
+    }
+
     
     const startDate = new Date(startDateStr + 'T12:00:00');
     const promises = [];

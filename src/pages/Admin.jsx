@@ -16,7 +16,8 @@ const Admin = () => {
     const [error, setError] = useState(null);
     const [updatingId, setUpdatingId] = useState(null);
     const [syncDone, setSyncDone] = useState(false);
-    const [seedingLoading, setSeedingLoading] = useState(false);
+
+
 
 
     const ADMIN_EMAIL = 'nbfarison@gmail.com';
@@ -92,32 +93,8 @@ const Admin = () => {
         }
     };
 
-    const handleSeedTemplates = async () => {
-        if (user.email !== ADMIN_EMAIL) return;
-        
-        setSeedingLoading(true);
-        try {
-            const promises = advancedTemplates.map(template => 
-                addProgramTemplate({
-                    ...template,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                }, user.id)
-            );
-            await Promise.all(promises);
-            showToast('Advanced Templates successfully added to Global Library!', 'success');
-        } catch (err) {
-            console.error('Library seeding failed:', err);
-            showToast('Error seeding library: ' + err.message, 'error');
-        } finally {
-            setSeedingLoading(false);
-        }
-    };
-
-
-
-    if (!user || user.email !== ADMIN_EMAIL) {
-        return <Navigate to="/" />;
+    if (!user || user.role !== 'admin' || user.email !== ADMIN_EMAIL) {
+        return <Navigate to="/" replace />;
     }
 
     // Build coaches list — always inject the admin account using the live user.id from auth
@@ -133,8 +110,9 @@ const Admin = () => {
     console.log('[Admin] coaches list:', coaches.map(c => c.email));
 
     return (
-        <div className="container" style={{ padding: '1rem' }}>
+        <div className="container" style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
             <div className="header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+
                 <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
                 <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     {!syncDone && (
@@ -154,14 +132,7 @@ const Admin = () => {
                     >
                         {loading ? 'Refreshing...' : 'Refresh List'}
                     </button>
-                    <button
-                        className="btn btn-primary"
-                        onClick={handleSeedTemplates}
-                        disabled={seedingLoading}
-                        style={{ fontSize: '0.8rem', background: 'var(--accent-success)', border: 'none' }}
-                    >
-                        {seedingLoading ? 'Seeding...' : '📂 Seed Advanced Templates'}
-                    </button>
+
                 </div>
             </div>
 
