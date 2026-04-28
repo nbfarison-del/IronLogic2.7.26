@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useToast } from '../context/ToastContext';
+
 import * as firestoreService from '../services/firestoreService';
 import { exercises as defaultExercises, EXERCISE_CATEGORIES } from '../data/exercises';
 
@@ -11,7 +13,9 @@ const ProPlanner = () => {
     const { athleteId: paramAthleteId } = useParams();
     const { user } = useAuth();
     const { unit } = useSettings();
+    const { showToast } = useToast();
     const navigate = useNavigate();
+
 
     // Data State
     const [athlete, setAthlete] = useState(null);
@@ -126,19 +130,36 @@ const ProPlanner = () => {
                     setDeletedDocIds(new Set());
                 }
 
-                const promises = [];
+                const syncPromises = [];
                 currentWeeks[currentWeekIdx].forEach((day, dayIdx) => {
                     const dateStr = getDayDate(currentWeekIdx, dayIdx);
-                    day.sessions.forEach(session => {
+                    day.sessions.forEach((session, sIdx) => {
                         if (session.exercises.length > 0 || session.name) {
-                            promises.push(firestoreService.saveAthleteProgram(targetAthleteId, user.id, {
-                                ...session,
-                                date: dateStr,
-                            }));
+                            syncPromises.push((async () => {
+                                const newId = await firestoreService.upsertAthleteProgram(targetAthleteId, user.id, {
+                                    ...session,
+                                    date: dateStr,
+                                });
+                                // If the session got a new Firestore ID, we update it in the state
+                                // but we use a direct update function to avoid stale state issues
+                                if (newId && newId !== session.id) {
+                                    setWeeks(prev => {
+                                        const newWeeks = [...prev];
+                                        const weekCopy = [...newWeeks[currentWeekIdx]];
+                                        const dayCopy = { ...weekCopy[dayIdx] };
+                                        const sessionsCopy = [...dayCopy.sessions];
+                                        sessionsCopy[sIdx] = { ...sessionsCopy[sIdx], id: newId };
+                                        dayCopy.sessions = sessionsCopy;
+                                        weekCopy[dayIdx] = dayCopy;
+                                        newWeeks[currentWeekIdx] = weekCopy;
+                                        return newWeeks;
+                                    });
+                                }
+                            })());
                         }
                     });
                 });
-                await Promise.all(promises);
+                await Promise.all(syncPromises);
             } catch (err) {
                 console.error('Sync error:', err);
             } finally {
@@ -301,7 +322,9 @@ const ProPlanner = () => {
         modifyWeeks(newWeeks => {
             newWeeks[activeWeekIndex][dayIdx].sessions.splice(sIdx, 1);
         });
+        showToast('Workout deleted successfully.', 'info');
     };
+
 
     const addSession = (dayIdx) => {
         modifyWeeks(newWeeks => {
@@ -630,37 +653,49 @@ const ProPlanner = () => {
                         {weeks[activeWeekIndex] && weeks[activeWeekIndex][dayIdx].sessions.map((session, sIdx) => {
                             const isDragOverSession = dragOverInfo && dragOverInfo.dayIdx === dayIdx && dragOverInfo.sessionIdx === sIdx;
                             return (
-                            <div 
-                                key={session.id} 
-                                className={`pro-session-card animate-in ${isDragOverSession ? 'drop-zone' : ''}`}
-                                onDragOver={(e) => { e.stopPropagation(); onDragOver(e, dayIdx, sIdx); }}
-                                onDragLeave={onDragLeave}
-                                onDrop={(e) => { e.stopPropagation(); onDrop(e, dayIdx, sIdx); }}
-                                style={{
-                                    border: isDragOverSession ? '2px dashed var(--primary)' : '1px solid var(--border-glass)',
-                                    background: isDragOverSession ? 'rgba(251, 191, 36, 0.1)' : 'rgba(24, 24, 27, 0.95)'
-                                }}
-                            >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <input 
-                                        className="pro-input" 
-                                        style={{ fontWeight: 800, textAlign: 'left', border: 'none', background: 'transparent', fontSize: '0.8rem', color: 'var(--primary)', flex: 1 }} 
-                                        value={session.name} 
-                                        onClick={(e) => e.stopPropagation()}
-                                        onChange={(e) => {
-                                            modifyWeeks(newWeeks => {
-                                                newWeeks[activeWeekIndex][dayIdx].sessions[sIdx].name = e.target.value;
-                                            });
-                                        }}
-                                    />
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); deleteSession(dayIdx, sIdx); }}
-                                        style={{ background: 'none', border: 'none', color: 'var(--accent-error)', cursor: 'pointer', fontSize: '0.9rem', opacity: 0.6, padding: '4px' }}
-                                        title="Delete Workout"
-                                    >
-                                        🗑
-                                    </button>
-                                </div>
+                                <div 
+                                    key={session.id} 
+                                    className={`pro-session-card animate-in ${isDragOverSession ? 'drop-zone' : ''}`}
+                                    onDragOver={(e) => { e.stopPropagation(); onDragOver(e, dayIdx, sIdx); }}
+                                    onDragLeave={onDragLeave}
+                                    onDrop={(e) => { e.stopPropagation(); onDrop(e, dayIdx, sIdx); }}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        if (window.confirm('Delete this entire session?')) {
+                                            deleteSession(dayIdx, sIdx);
+                                        }
+                                    }}
+                                    style={{
+                                        border: isDragOverSession ? '2px dashed var(--primary)' : '1px solid var(--border-glass)',
+                                        background: isDragOverSession ? 'rgba(251, 191, 36, 0.1)' : 'rgba(24, 24, 27, 0.95)',
+                                        position: 'relative'
+                                    }}
+                                >
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
+                                            <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>#</span>
+                                            <input 
+                                                className="pro-input" 
+                                                style={{ fontWeight: 800, textAlign: 'left', border: 'none', background: 'transparent', fontSize: '0.8rem', color: 'var(--primary)', flex: 1 }} 
+                                                value={session.name} 
+                                                onClick={(e) => e.stopPropagation()}
+                                                onChange={(e) => {
+                                                    modifyWeeks(newWeeks => {
+                                                        newWeeks[activeWeekIndex][dayIdx].sessions[sIdx].name = e.target.value;
+                                                    });
+                                                }}
+                                            />
+                                        </div>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); deleteSession(dayIdx, sIdx); }}
+                                            className="btn-icon"
+                                            style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', color: 'var(--accent-error)', cursor: 'pointer', borderRadius: '4px', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem' }}
+                                            title="Delete Workout"
+                                        >
+                                            🗑
+                                        </button>
+                                    </div>
+
 
                                 {session.exercises.map((ex, exIdx) => (
                                     <div 

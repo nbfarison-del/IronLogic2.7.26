@@ -2,10 +2,14 @@ import { useState, useEffect } from 'react';
 import { getAllRegisteredUsers, updateUserRole, assignAthleteToCoach, updateUserRole as syncRole } from '../services/firestoreService';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
+
 
 const Admin = () => {
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [users, setUsers] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [updatingId, setUpdatingId] = useState(null);
@@ -24,14 +28,14 @@ const Admin = () => {
         if (!user?.id) return;
         try {
             await syncRole(user.id, 'admin');
-            setSyncDone(true);
             await fetchUsers(); // Refresh list
-            alert('Done! Your account now has role:admin in Firestore. Coach dropdowns will now show you.');
+            showToast('Done! Account synchronized successfully.', 'success');
         } catch (err) {
             console.error('Sync failed:', err);
-            alert('Sync failed: ' + err.message);
+            showToast('Sync failed: ' + err.message, 'error');
         }
     };
+
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -48,37 +52,42 @@ const Admin = () => {
 
     const handleRoleChange = async (userId, newRole) => {
         if (user.email !== ADMIN_EMAIL) {
-            alert('Only the super admin can manage roles.');
+            showToast('Permission denied.', 'error');
             return;
         }
+
         setUpdatingId(userId);
         try {
             await updateUserRole(userId, newRole);
             setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+            showToast('Role updated successfully.', 'success');
         } catch (err) {
             console.error('Error updating role:', err);
-            alert('Failed to update role');
+            showToast('Failed to update role', 'error');
         } finally {
             setUpdatingId(null);
         }
     };
 
+
     const handleCoachAssign = async (athleteId, coachId) => {
         if (user.email !== ADMIN_EMAIL) {
-            alert('Only the super admin can assign coaches.');
+            showToast('Permission denied.', 'error');
             return;
         }
+
         setUpdatingId(athleteId);
         try {
             await assignAthleteToCoach(athleteId, coachId);
             setUsers(users.map(u => u.id === athleteId ? { ...u, coach_id: coachId } : u));
         } catch (err) {
             console.error('Error assigning coach:', err);
-            alert('Failed to assign coach');
+            showToast('Failed to assign coach', 'error');
         } finally {
             setUpdatingId(null);
         }
     };
+
 
     if (!user || user.email !== ADMIN_EMAIL) {
         return <Navigate to="/" />;

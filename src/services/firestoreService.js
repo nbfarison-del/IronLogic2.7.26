@@ -348,6 +348,23 @@ export const saveAthleteProgram = async (athleteId, coachId, programData) => {
     return docRef.id;
 };
 
+export const upsertAthleteProgram = async (athleteId, coachId, programData) => {
+    const { id, ...dataToSave } = programData;
+    // Check if ID is a valid Firestore ID (no dots, sufficient length)
+    if (id && !id.includes('.') && id.length > 10) {
+        const docRef = doc(db, 'users', athleteId, 'athletePrograms', id);
+        await setDoc(docRef, {
+            ...dataToSave,
+            authorId: coachId,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+        return id;
+    } else {
+        return await saveAthleteProgram(athleteId, coachId, dataToSave);
+    }
+};
+
+
 export const getAthletePrograms = async (athleteId) => {
     const ref = collection(db, 'users', athleteId, 'athletePrograms');
     const qSnap = await getDocs(ref);

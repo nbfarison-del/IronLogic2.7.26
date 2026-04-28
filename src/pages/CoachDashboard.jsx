@@ -35,34 +35,56 @@ const CoachDashboard = () => {
 
             setAthletes(data);
 
-            // Fetch quick metrics for each athlete
+            // Fetch quick metrics for each athlete in parallel to avoid N+1 slow loading
+            const results = await Promise.all(data.map(async (athlete) => {
+                try {
+                    const [workouts, planned, profile] = await Promise.all([
+                        firestoreService.getWorkouts(athlete.id, 5),
+                        firestoreService.getPlannedWorkouts(athlete.id),
+                        firestoreService.getUserProfile(athlete.id)
+                    ]);
+
+                    const lastWorkout = workouts.length > 0 ? workouts[0].date : 'None yet';
+                    const activePlan = planned.length > 0
+                        ? planned.sort((a, b) => new Date(b.date) - new Date(a.date))[0].name || 'General'
+                        : 'No Plan';
+
+                    // Simplified Compliance: Logged vs Planned in last 7 days
+                    const last7Days = workouts.filter(w => (new Date() - new Date(w.date)) < 7 * 86400000).length;
+                    const planned7Days = planned.filter(w => (new Date() - new Date(w.date)) < 7 * 86400000).length;
+                    const compliance = planned7Days > 0 ? Math.round((last7Days / planned7Days) * 100) : (last7Days > 0 ? 100 : 0);
+
+                    return {
+                        id: athlete.id,
+                        name: profile?.name || athlete.email.split('@')[0],
+                        metrics: {
+                            lastWorkout,
+                            currentBlock: activePlan,
+                            compliance
+                        }
+                    };
+                } catch (err) {
+                    console.error(`Error fetching data for ${athlete.id}:`, err);
+                    return { id: athlete.id, name: athlete.email, metrics: { lastWorkout: 'Error', currentBlock: '-', compliance: 0 } };
+                }
+            }));
+
             const metricsData = {};
-            for (const athlete of data) {
-                const [workouts, planned] = await Promise.all([
-                    firestoreService.getWorkouts(athlete.id, 1),
-                    firestoreService.getPlannedWorkouts(athlete.id)
-                ]);
-
-                const lastWorkout = workouts.length > 0 ? workouts[0].date : 'None yet';
-
-                // Find nearest upcoming or recent planned workout name as "Block/Phase"
-                const activePlan = planned.length > 0
-                    ? planned.sort((a, b) => new Date(b.date) - new Date(a.date))[0].planName || 'General'
-                    : 'No Plan';
-
-                metricsData[athlete.id] = {
-                    lastWorkout,
-                    currentBlock: activePlan,
-                    compliance: workouts.length > 0 ? 90 : 0 // Still placeholder
-                };
-            }
+            const namesData = {};
+            results.forEach(res => {
+                metricsData[res.id] = res.metrics;
+                namesData[res.id] = res.name;
+            });
+            
             setMetrics(metricsData);
+            setAthletes(data.map(a => ({ ...a, displayName: namesData[a.id] })));
         } catch (error) {
             console.error('Error fetching athletes:', error);
         } finally {
             setLoading(false);
         }
     };
+
 
     return (
         <div className="container" style={{ padding: '1rem' }}>
@@ -81,9 +103,11 @@ const CoachDashboard = () => {
                     athletes.map(athlete => (
                         <div key={athlete.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div style={{ borderBottom: '1px solid #333', paddingBottom: '0.5rem' }}>
-                                <h2 style={{ margin: 0, fontSize: '1.2rem' }}>{athlete.email}</h2>
-                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>ID: {athlete.id}</span>
+                                <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)', textTransform: 'capitalize' }}>{athlete.displayName}</h2>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{athlete.email}</div>
+                                <span style={{ fontSize: '0.6rem', color: '#555' }}>ID: {athlete.id}</span>
                             </div>
+
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
@@ -131,12 +155,18 @@ const CoachDashboard = () => {
                         </div>
                     ))
                 ) : (
-                    <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
-                        <h3>No Athletes Assigned</h3>
-                        <p style={{ color: 'var(--text-muted)' }}>Contact an administrator to assign athletes to your profile.</p>
+                    <div className="card" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem 2rem', background: 'rgba(255,255,255,0.02)', border: '2px dashed #333' }}>
+                        <div style={{ fontSize: '4rem', marginBottom: '1.5rem', filter: 'grayscale(1) opacity(0.5)' }}>👥</div>
+                        <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Your Roster is Empty</h3>
+                        <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto 2rem' }}>
+                            You haven't been assigned any athletes yet. Once assigned, you'll be able to program, review logs, and use the AI coach.
+                        </p>
+                        <div style={{ padding: '1rem', background: 'rgba(251, 191, 36, 0.1)', borderRadius: '8px', display: 'inline-block', border: '1px solid var(--primary)' }}>
+                            <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Action Required:</span> Contact <strong>admin@ironlogic.app</strong> to assign athletes.
+                        </div>
                     </div>
                 )}
+
             </div>
 
             {selectedAthleteForAI && (

@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useToast } from '../context/ToastContext';
 import { getProgramTemplates, importProgramToCalendar, deleteProgramTemplate } from '../services/firestoreService';
+
 import ProgramPlanner from '../components/ProgramPlanner';
 
 const Programs = () => {
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [templates, setTemplates] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const [importing, setImporting] = useState(null);
     const [showPreview, setShowPreview] = useState(null);
@@ -40,17 +44,20 @@ const Programs = () => {
     };
 
     const handleImport = async (templateId) => {
-        if (!startDate) return alert("Please select a start date");
+        if (!startDate) return showToast("Please select a start date", "info");
+
         
         try {
             setImporting(templateId);
             await importProgramToCalendar(user.id, templateId, startDate);
-            alert("Program successfully imported to your calendar!");
+            showToast("Program successfully imported!", "success");
             setShowPreview(null);
+
         } catch (error) {
             console.error("Error importing program:", error);
-            alert("Failed to import program.");
+            showToast("Failed to import program.", "error");
         } finally {
+
             setImporting(null);
         }
     };

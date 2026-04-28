@@ -167,9 +167,11 @@ const Profile = () => {
                 </form>
             </div>
 
-            {/* SYNC DIAGNOSTICS - Super Safe Version */}
-            <div className="card" style={{ border: '1px solid #444', background: '#1a1a1a' }}>
-                <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: 'var(--primary)' }}>Sync Diagnostics</h3>
+            {/* SYNC DIAGNOSTICS - Only for Coaches/Admins or specialized debugging */}
+            {(user?.role === 'coach' || user?.role === 'admin') && (
+                <div className="card" style={{ border: '1px solid #444', background: '#1a1a1a' }}>
+                    <h3 style={{ margin: '0 0 1rem 0', fontSize: '1rem', color: 'var(--primary)' }}>Sync Diagnostics</h3>
+
 
                 <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -225,8 +227,10 @@ const Profile = () => {
                     </p>
                 </div>
             </div>
-        </div>
-    );
+        )}
+    </div>
+);
 };
+
 
 export default Profile;

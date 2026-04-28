@@ -174,7 +174,32 @@ const Home = () => {
 
             {activeTab === 'dashboard' ? (
                 <>
+                    {/* Onboarding Flow for New Athletes */}
+                    {(workouts.length === 0 || !maxes.squat) && (
+                        <div className="glass-card animate-in" style={{ 
+                            marginBottom: '2.5rem', 
+                            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(251, 191, 36, 0.1))',
+                            border: '1px solid var(--primary)',
+                            padding: '2rem'
+                        }}>
+                            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <div style={{ fontSize: '3rem' }}>🚀</div>
+                                <div style={{ flex: 1, minWidth: '250px' }}>
+                                    <h2 style={{ margin: '0 0 0.5rem 0' }}>Welcome to the Platform</h2>
+                                    <p style={{ opacity: 0.8, fontSize: '0.95rem', margin: 0 }}>
+                                        To get the most out of IronLogic, please complete your setup to enable performance tracking.
+                                    </p>
+                                </div>
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <Link to="/profile" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>Set Your Maxes</Link>
+                                    <Link to="/log" className="btn" style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.05)' }}>Log First Session</Link>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="action-grid" style={{ marginBottom: '2.5rem' }}>
+
                         <Link to="/log" style={{ textDecoration: 'none' }}>
                             <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', border: '1px solid var(--border-glass)' }}>
                                 <span style={{ fontSize: '2rem' }}>🏋️</span>
