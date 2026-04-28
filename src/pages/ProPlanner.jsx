@@ -196,37 +196,81 @@ const ProPlanner = () => {
                 currentWeek[targetDayIdx].sessions[targetSessionIdx].exercises.push(dragItem.item);
             });
         } else if (dragItem.type === 'template') {
-            const template = dragItem.item;
-            const templateWeek = buildStructureFromPlanned(template.exercises.map(ex => ({
-                ...ex,
-                date: new Date().toISOString() 
-            })))[0];
+            const template = JSON.parse(JSON.stringify(dragItem.item));
+            console.log("[DRAG] Template object before processing:", template);
 
             modifyWeeks(newWeeks => {
                 const currentWeek = newWeeks[activeWeekIndex];
-                // If dropping on a session, merge exercises
-                if (targetSessionIdx !== undefined && currentWeek[targetDayIdx].sessions[targetSessionIdx]) {
-                    const newExs = templateWeek.flatMap(day => day.sessions.flatMap(s => s.exercises)).map(ex => ({
-                        ...ex,
-                        id: Math.random().toString()
-                    }));
-                    currentWeek[targetDayIdx].sessions[targetSessionIdx].exercises.push(...newExs);
-                } else {
-                    // If dropping on a day, add as new session(s)
-                    templateWeek.forEach(day => {
-                        day.sessions.forEach(s => {
-                            currentWeek[targetDayIdx].sessions.push({
-                                ...s,
-                                id: Math.random().toString(),
-                                exercises: s.exercises.map(ex => ({ ...ex, id: Math.random().toString() }))
+
+                // Helper to clone a single exercise with its sets
+                const cloneExercise = (ex) => ({
+                    exerciseId: ex.exerciseId || '',
+                    name: ex.exerciseName || ex.name || '',
+                    notes: ex.notes || '',
+                    modifiers: ex.modifiers ? JSON.parse(JSON.stringify(ex.modifiers)) : {},
+                    id: Math.random().toString(36).substr(2, 9),
+                    sets: (ex.sets || []).map(s => ({
+                        ...s,
+                        id: Math.random().toString(36).substr(2, 9),
+                        weight: s.weight || '',
+                        reps: s.reps || '',
+                        targetRpe: s.targetRpe || ''
+                    }))
+                });
+
+                if (template.weeks && Array.isArray(template.weeks)) {
+                    // Full program template - apply starting from current week
+                    console.log("[DRAG] Applying multi-week program template");
+                    template.weeks.forEach((week, wIdx) => {
+                        const targetWIdx = activeWeekIndex + wIdx;
+                        if (!newWeeks[targetWIdx]) newWeeks[targetWIdx] = createEmptyWeek();
+                        
+                        if (week.days && Array.isArray(week.days)) {
+                            week.days.forEach(day => {
+                                const dayIdx = day.dayOfWeek - 1;
+                                if (dayIdx >= 0 && dayIdx < 7) {
+                                    const newSession = {
+                                        id: Math.random().toString(36).substr(2, 9),
+                                        name: day.name || template.name || "Program Session",
+                                        exercises: (day.exercises || []).map(cloneExercise)
+                                    };
+                                    newWeeks[targetWIdx][dayIdx].sessions.push(newSession);
+                                }
                             });
-                        });
+                        }
                     });
+                } else {
+                    // Single workout template
+                    console.log("[DRAG] Applying single workout template");
+                    const exercises = (template.exercises || []).map(cloneExercise);
+                    
+                    if (exercises.length === 0) {
+                        console.warn("[DRAG] Template has no exercises!", template);
+                    }
+
+                    const newSession = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        name: template.name || "Template Session",
+                        exercises: exercises
+                    };
+
+                    console.log("[DRAG] Final session object to be dropped:", newSession);
+
+                    if (targetSessionIdx !== undefined && currentWeek[targetDayIdx].sessions[targetSessionIdx]) {
+                        // Merge into existing session
+                        console.log("[DRAG] Merging into existing session at day", targetDayIdx, "session", targetSessionIdx);
+                        currentWeek[targetDayIdx].sessions[targetSessionIdx].exercises.push(...newSession.exercises);
+                    } else {
+                        // Add as new session to the day
+                        console.log("[DRAG] Creating new session on day", targetDayIdx);
+                        currentWeek[targetDayIdx].sessions.push(newSession);
+                    }
                 }
             });
         }
         setDragItem(null);
     };
+
 
 
     // ==================== CORE ACTIONS ====================
@@ -299,17 +343,59 @@ const ProPlanner = () => {
         alert(`Applied week structure ${numWeeks} weeks forward.`);
     };
 
-    const applyTemplate = (template) => {
-        const templateWeek = buildStructureFromPlanned(template.exercises.map(ex => ({
-            ...ex,
-            date: new Date().toISOString() 
-        })))[0]; 
+    const applyTemplate = (templateData) => {
+        const template = JSON.parse(JSON.stringify(templateData));
+        console.log("[MENU] Applying template to week:", template);
 
         modifyWeeks(newWeeks => {
-            newWeeks[activeWeekIndex] = templateWeek;
+            const cloneExercise = (ex) => ({
+                exerciseId: ex.exerciseId || '',
+                name: ex.exerciseName || ex.name || '',
+                notes: ex.notes || '',
+                modifiers: ex.modifiers ? JSON.parse(JSON.stringify(ex.modifiers)) : {},
+                id: Math.random().toString(36).substr(2, 9),
+                sets: (ex.sets || []).map(s => ({
+                    ...s,
+                    id: Math.random().toString(36).substr(2, 9),
+                    weight: s.weight || '',
+                    reps: s.reps || '',
+                    targetRpe: s.targetRpe || ''
+                }))
+            });
+
+            if (template.weeks && Array.isArray(template.weeks)) {
+                // Multi-week program
+                template.weeks.forEach((week, wIdx) => {
+                    const targetWIdx = activeWeekIndex + wIdx;
+                    if (!newWeeks[targetWIdx]) newWeeks[targetWIdx] = createEmptyWeek();
+                    
+                    if (week.days && Array.isArray(week.days)) {
+                        week.days.forEach(day => {
+                            const dayIdx = day.dayOfWeek - 1;
+                            if (dayIdx >= 0 && dayIdx < 7) {
+                                newWeeks[targetWIdx][dayIdx].sessions.push({
+                                    id: Math.random().toString(36).substr(2, 9),
+                                    name: day.name || template.name || "Program Session",
+                                    exercises: (day.exercises || []).map(cloneExercise)
+                                });
+                            }
+                        });
+                    }
+                });
+            } else if (template.exercises && Array.isArray(template.exercises)) {
+                // Apply single workout to first day of active week by default if using Menu
+                const newSession = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: template.name || "Template Session",
+                    exercises: template.exercises.map(cloneExercise)
+                };
+                newWeeks[activeWeekIndex][0].sessions.push(newSession);
+                console.log("[MENU] Applied single workout to day 0 of active week.");
+            }
         });
         setShowTemplateMenu(false);
     };
+
 
 
     // ==================== BULK ADJUSTMENTS ====================
