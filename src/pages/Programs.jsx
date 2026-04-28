@@ -5,6 +5,8 @@ import { useToast } from '../context/ToastContext';
 import { getProgramTemplates, importProgramToCalendar, deleteProgramTemplate } from '../services/firestoreService';
 import ProgramPlanner from '../components/ProgramPlanner';
 import PartnerWorkout from './PartnerWorkout';
+import { advancedTemplates } from '../data/advancedTemplates';
+
 
 const Programs = () => {
     const { user } = useAuth();
@@ -26,10 +28,11 @@ const Programs = () => {
 
     // System Templates (Hardcoded for immediate availability)
     const systemTemplates = useMemo(() => [
-        { ...require('../data/advancedTemplates').advancedTemplates[0], id: 'sys-power-12', isSystem: true },
-        { ...require('../data/advancedTemplates').advancedTemplates[1], id: 'sys-shred-8', isSystem: true },
-        { ...require('../data/advancedTemplates').advancedTemplates[2], id: 'sys-preg-12', isSystem: true }
+        { ...advancedTemplates[0], id: 'sys-power-12', isSystem: true },
+        { ...advancedTemplates[1], id: 'sys-shred-8', isSystem: true },
+        { ...advancedTemplates[2], id: 'sys-preg-12', isSystem: true }
     ], []);
+
 
     useEffect(() => {
         loadTemplates();
