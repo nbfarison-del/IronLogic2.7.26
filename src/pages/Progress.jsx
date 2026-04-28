@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useData } from '../context/DataContext';
+
 import { useSettings } from '../context/SettingsContext';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -20,6 +21,8 @@ const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
 const Progress = () => {
     const { weights, workouts, isLoading } = useData();
     const { unit } = useSettings();
+    const [selectedExercise, setSelectedExercise] = useState('bb_squat');
+
 
     if (isLoading) return <div className="card">Loading progress data...</div>;
 
@@ -41,108 +44,178 @@ const Progress = () => {
         return Object.values(weeks).reverse();
     };
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // List of exercises for comparison
+    const exerciseList = useMemo(() => {
+        const unique = {};
+        workouts.forEach(w => {
+            if (w.exerciseId && w.exerciseName) unique[w.exerciseId] = w.exerciseName;
+        });
+        return Object.entries(unique).map(([id, name]) => ({ id, name }));
+    }, [workouts]);
+
+    const e1rmData = useMemo(() => {
+        return workouts
+            .filter(w => w.exerciseId === selectedExercise && w.estimated1RM)
+            .sort((a, b) => new Date(a.date) - new Date(b.date))
+            .map(w => ({
+                date: w.date,
+                e1rm: w.estimated1RM
+            }));
+    }, [workouts, selectedExercise]);
+
+    const tonnageData = useMemo(() => {
+        const weeks = {};
+        const now = new Date();
+        // Last 12 weeks
+        for (let i = 0; i < 12; i++) {
+            const d = new Date(now);
+            d.setDate(d.getDate() - (i * 7));
+            const weekStr = `Week -${i}`;
+            const weekKey = Math.floor(d.getTime() / (7 * 24 * 60 * 60 * 1000));
+            weeks[weekKey] = { name: weekStr, volume: 0 };
+        }
+
+        workouts.forEach(w => {
+            const d = new Date(w.date);
+            const weekKey = Math.floor(d.getTime() / (7 * 24 * 60 * 60 * 1000));
+            if (weeks[weekKey]) {
+                const vol = (w.weight || 0) * (w.reps || 0);
+                weeks[weekKey].volume += Math.round(vol);
+            }
+        });
+
+        return Object.values(weeks).reverse();
+    }, [workouts]);
+
+    // DOTS Score Trend (keep existing logic but optimize)
     const dotsData = useMemo(() => {
         if (weights.length === 0 || workouts.length === 0) return [];
-        const sortedWorkouts = [...workouts].reverse();
+        const sortedBw = [...weights].sort((a,b) => new Date(a.date) - new Date(b.date));
+        const sortedWorkouts = [...workouts].sort((a,b) => new Date(a.date) - new Date(b.date));
+        
         const data = [];
-        let workoutIdx = 0;
-        const currentMaxes = { squat: 0, bench: 0, deadlift: 0 };
-        const squatIds = ['bb_squat', 'bb_front_squat', 'ssb_squat'];
-        const benchIds = ['bb_bench'];
-        const dlIds = ['bb_deadlift', 'sumo_deadlift'];
+        const currentMaxes = { bb_squat: 0, bb_bench: 0, bb_deadlift: 0 };
 
-        weights.forEach(bwEntry => {
+        sortedBw.forEach(bwEntry => {
             const bwDate = new Date(bwEntry.date);
-            while (workoutIdx < sortedWorkouts.length) {
-                const w = sortedWorkouts[workoutIdx];
+            sortedWorkouts.forEach(w => {
                 const wDate = new Date(w.date);
-                if (wDate > bwDate) break;
-                if (w.estimated1RM) {
-                    if (squatIds.includes(w.exerciseId)) currentMaxes.squat = Math.max(currentMaxes.squat, w.estimated1RM);
-                    if (benchIds.includes(w.exerciseId)) currentMaxes.bench = Math.max(currentMaxes.bench, w.estimated1RM);
-                    if (dlIds.includes(w.exerciseId)) currentMaxes.deadlift = Math.max(currentMaxes.deadlift, w.estimated1RM);
+                if (wDate <= bwDate && w.estimated1RM) {
+                    if (['bb_squat', 'bb_front_squat', 'ssb_squat'].includes(w.exerciseId)) 
+                        currentMaxes.bb_squat = Math.max(currentMaxes.bb_squat, w.estimated1RM);
+                    if (['bb_bench'].includes(w.exerciseId)) 
+                        currentMaxes.bb_bench = Math.max(currentMaxes.bb_bench, w.estimated1RM);
+                    if (['bb_deadlift', 'sumo_deadlift'].includes(w.exerciseId)) 
+                        currentMaxes.bb_deadlift = Math.max(currentMaxes.bb_deadlift, w.estimated1RM);
                 }
-                workoutIdx++;
-            }
-            if (currentMaxes.squat > 0 && currentMaxes.bench > 0 && currentMaxes.deadlift > 0) {
-                const total = currentMaxes.squat + currentMaxes.bench + currentMaxes.deadlift;
+            });
+
+            if (currentMaxes.bb_squat > 0 && currentMaxes.bb_bench > 0 && currentMaxes.bb_deadlift > 0) {
+                const total = currentMaxes.bb_squat + currentMaxes.bb_bench + currentMaxes.bb_deadlift;
                 const dots = getDOTSScore(parseFloat(bwEntry.weight), total, true);
                 data.push({
                     date: bwEntry.date,
-                    dots: Math.round(dots * 100) / 100,
-                    total,
-                    bw: bwEntry.weight
+                    dots: Math.round(dots * 10) / 10
                 });
             }
         });
-        return data.slice(-30);
+        return data;
     }, [workouts, weights]);
 
-    return (
-        <div className="animate-in" style={{ textAlign: 'left', paddingBottom: '3rem' }}>
-            <h1 style={{ marginBottom: '2rem' }}>Training Analytics</h1>
 
-            <div className="glass-card" style={{ marginBottom: '2.5rem', borderTop: '4px solid var(--secondary)' }}>
-                <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{ fontSize: '1.25rem' }}>🏋️</span> Powerlifting DOTS Progress
-                </h2>
-                {dotsData.length > 1 ? (
-                    <div style={{ height: '350px', width: '100%', marginTop: '1rem' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={dotsData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickMargin={10} />
-                                <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={11} tickMargin={10} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '12px', backdropFilter: 'blur(10px)' }}
-                                    formatter={(value, name) => [value, name === 'dots' ? 'DOTS Score' : name]}
-                                />
-                                <Line type="monotone" dataKey="dots" stroke="var(--secondary)" strokeWidth={4} dot={{ r: 4, fill: 'var(--secondary)', strokeWidth: 2 }} activeDot={{ r: 8, strokeWidth: 0 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                ) : (
-                    <div style={{ padding: '3rem', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--border-glass)' }}>
-                        <p style={{ fontStyle: 'italic', color: 'var(--text-muted)', margin: 0 }}>
-                            Insufficient data (Weight + SBD maxes) to generate DOTS trend.
-                        </p>
-                    </div>
-                )}
+    return (
+        <div className="animate-in" style={{ textAlign: 'left', paddingBottom: '5rem', maxWidth: '1200px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+                <h1 style={{ margin: 0 }}>Performance Analytics</h1>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Focus Exercise:</label>
+                    <select 
+                        value={selectedExercise} 
+                        onChange={(e) => setSelectedExercise(e.target.value)}
+                        style={{ padding: '0.5rem', borderRadius: '8px', background: '#222', color: 'white', border: '1px solid #444' }}
+                    >
+                        {exerciseList.map(ex => (
+                            <option key={ex.id} value={ex.id}>{ex.name}</option>
+                        ))}
+                    </select>
+                </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
-                <div className="glass-card">
-                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>Body Weight Trend ({unit})</h2>
-                    <div style={{ height: '280px', width: '100%' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+                {/* E1RM Trend Chart */}
+                <div className="glass-card" style={{ borderTop: '4px solid var(--primary)' }}>
+                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        📈 {exerciseList.find(e => e.id === selectedExercise)?.name} Intensity (e1RM)
+                    </h2>
+                    <div style={{ height: '300px', width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={weights}>
+                            <LineChart data={e1rmData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} />
-                                <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={11} />
+                                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} />
+                                <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={10} />
                                 <Tooltip contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '12px' }} />
-                                <Line type="monotone" dataKey="weight" stroke="#ec4899" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 6 }} />
+                                <Line type="stepAfter" dataKey="e1rm" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                <div className="glass-card">
-                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>Session Consistency</h2>
-                    <div style={{ height: '280px', width: '100%' }}>
+                {/* Tonnage Trend Chart */}
+                <div className="glass-card" style={{ borderTop: '4px solid #10b981' }}>
+                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        🧱 Weekly Training Volume (Tonnage)
+                    </h2>
+                    <div style={{ height: '300px', width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={getConsistencyData()}>
+                            <BarChart data={tonnageData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} />
-                                <YAxis stroke="var(--text-muted)" fontSize={11} />
+                                <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={10} />
+                                <YAxis stroke="var(--text-muted)" fontSize={10} />
                                 <Tooltip contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '12px' }} />
-                                <Bar dataKey="count" fill="var(--primary)" radius={[6, 6, 0, 0]} barSize={30} />
+                                <Bar dataKey="volume" fill="#10b981" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
             </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
+                <div className="glass-card">
+                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        ⚖️ Body Weight Trend ({unit})
+                    </h2>
+                    <div style={{ height: '250px', width: '100%' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={weights}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} />
+                                <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={10} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '12px' }} />
+                                <Line type="monotone" dataKey="weight" stroke="#ec4899" strokeWidth={2} dot={{ r: 3 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
+                <div className="glass-card">
+                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        🏆 DOTS Score Progress
+                    </h2>
+                    <div style={{ height: '250px', width: '100%' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={dotsData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} />
+                                <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={10} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '12px' }} />
+                                <Line type="monotone" dataKey="dots" stroke="var(--secondary)" strokeWidth={4} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
         </div>
+
     );
 };
 

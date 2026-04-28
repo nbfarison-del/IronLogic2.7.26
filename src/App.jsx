@@ -103,15 +103,8 @@ function AppContent() {
           <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Public/Landing Routes */}
-          <Route path="/" element={
-            user ? (
-              <ProtectedRoute>
-                <Home />
-              </ProtectedRoute>
-            ) : (
-              <LandingPage />
-            )
-          } />
+          <Route path="/" element={user ? <Home /> : <LandingPage />} />
+
 
           <Route path="/log" element={
             <ProtectedRoute>
