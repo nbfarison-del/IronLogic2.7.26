@@ -276,8 +276,13 @@ const CalendarView = () => {
 
     const selectedDateStr = getDateStr(selectedDate);
     const dayWorkouts = effectiveWorkouts.filter(w => w.date?.startsWith(selectedDateStr));
-    const dayPlanned = effectivePlanned.filter(p => p.date === selectedDateStr);
+    
+    // Deduplicate planned workouts for the day to avoid "excessive population"
+    const rawDayPlanned = effectivePlanned.filter(p => p.date === selectedDateStr);
+    const dayPlanned = Array.from(new Map(rawDayPlanned.map(p => [p.name || p.planName, p])).values());
+
     const dayRecovery = effectiveRecovery.find(r => r.date === selectedDateStr);
+
     const dayMobility = effectiveMobility.filter(m => m.date === selectedDateStr);
 
     return (

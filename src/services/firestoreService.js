@@ -436,6 +436,10 @@ export const importProgramToCalendar = async (userId, templateId, startDateStr) 
     const startDate = new Date(startDateStr + 'T12:00:00');
     const promises = [];
     
+    // Fetch existing plans to avoid duplicates
+    const existingPlans = await getPlannedWorkouts(userId);
+    const existingMap = new Set(existingPlans.map(p => `${p.templateId}_${p.date}`));
+
     if (template.weeks && Array.isArray(template.weeks)) {
         template.weeks.forEach((week, weekIdx) => {
             if (week.days && Array.isArray(week.days)) {
@@ -445,7 +449,11 @@ export const importProgramToCalendar = async (userId, templateId, startDateStr) 
                     workoutDate.setDate(startDate.getDate() + daysToAdd);
                     const dateStr = workoutDate.toISOString().split('T')[0];
                     
+                    // Skip if already exists
+                    if (existingMap.has(`${templateId}_${dateStr}`)) return;
+
                     promises.push(saveAthleteProgram(userId, 'system', {
+
                         name: day.name || `Week ${weekIdx + 1} Day ${day.dayOfWeek}`,
                         date: dateStr,
                         exercises: day.exercises || [],
