@@ -41,15 +41,26 @@ const Programs = () => {
         }
     };
 
+    const [confirmingDelete, setConfirmingDelete] = useState(null);
+
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to delete this template from the global library?")) return;
+        if (confirmingDelete !== id) {
+            setConfirmingDelete(id);
+            setTimeout(() => setConfirmingDelete(null), 3000);
+            return;
+        }
         try {
             await deleteProgramTemplate(id);
             setTemplates(templates.filter(t => t.id !== id));
+            showToast("Template removed from library", "success");
         } catch (error) {
             console.error("Error deleting template:", error);
+            showToast("Failed to delete template", "error");
+        } finally {
+            setConfirmingDelete(null);
         }
     };
+
 
     const handleImport = async (templateId) => {
         if (!startDate) return showToast("Please select a start date", "info");
@@ -148,17 +159,52 @@ const Programs = () => {
                                 {user?.role === 'admin' && (
                                     <button 
                                         onClick={() => handleDelete(template.id)}
-                                        style={{ background: 'none', border: 'none', color: 'var(--accent-error)', cursor: 'pointer', fontSize: '1rem' }}
+                                        style={{ 
+                                            background: confirmingDelete === template.id ? 'var(--accent-error)' : 'none', 
+                                            border: 'none', 
+                                            color: confirmingDelete === template.id ? 'white' : 'var(--accent-error)', 
+                                            cursor: 'pointer', 
+                                            fontSize: confirmingDelete === template.id ? '0.7rem' : '1rem',
+                                            padding: confirmingDelete === template.id ? '4px 8px' : '0',
+                                            borderRadius: '4px',
+                                            fontWeight: 'bold'
+                                        }}
                                     >
-                                        🗑️
+                                        {confirmingDelete === template.id ? 'Confirm?' : '🗑️'}
                                     </button>
                                 )}
                             </div>
-                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
                                 <span className="badge" style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem' }}>{template.duration}</span>
                                 <span className="badge" style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem' }}>{template.frequency}</span>
-                                <span className="badge" style={{ background: template.visibility === 'public' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', color: template.visibility === 'public' ? 'var(--accent-success)' : 'var(--accent-error)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem' }}>{template.visibility}</span>
+                                <span className="badge" style={{ 
+                                    background: template.visibility === 'public' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                                    color: template.visibility === 'public' ? 'var(--accent-success)' : 'var(--accent-error)', 
+                                    padding: '2px 8px', 
+                                    borderRadius: '4px', 
+                                    fontSize: '0.7rem',
+                                    textTransform: 'capitalize'
+                                }}>
+                                    {template.visibility}
+                                </span>
                             </div>
+                            {template.tags && template.tags.length > 0 && (
+                                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                                    {template.tags.map(tag => (
+                                        <span key={tag} style={{ 
+                                            background: 'rgba(251, 191, 36, 0.1)', 
+                                            color: 'var(--primary)', 
+                                            padding: '2px 8px', 
+                                            borderRadius: '20px', 
+                                            fontSize: '0.65rem',
+                                            fontWeight: '700',
+                                            border: '1px solid rgba(251, 191, 36, 0.2)'
+                                        }}>
+                                            #{tag}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', flex: 1 }}>{template.goal}</p>
                         <hr style={{ border: 'none', borderTop: '1px solid var(--border-glass)', margin: '1rem 0' }} />
@@ -171,6 +217,7 @@ const Programs = () => {
                         </div>
                     </div>
                 ))}
+
             </div>
 
             {templates.length === 0 && (

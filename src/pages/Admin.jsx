@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getAllRegisteredUsers, updateUserRole, assignAthleteToCoach, updateUserRole as syncRole } from '../services/firestoreService';
+import { getAllRegisteredUsers, updateUserRole, assignAthleteToCoach, updateUserRole as syncRole, addProgramTemplate } from '../services/firestoreService';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
+import { advancedTemplates } from '../data/advancedTemplates';
+
 
 
 const Admin = () => {
@@ -14,6 +16,8 @@ const Admin = () => {
     const [error, setError] = useState(null);
     const [updatingId, setUpdatingId] = useState(null);
     const [syncDone, setSyncDone] = useState(false);
+    const [seedingLoading, setSeedingLoading] = useState(false);
+
 
     const ADMIN_EMAIL = 'nbfarison@gmail.com';
 
@@ -88,6 +92,29 @@ const Admin = () => {
         }
     };
 
+    const handleSeedTemplates = async () => {
+        if (user.email !== ADMIN_EMAIL) return;
+        
+        setSeedingLoading(true);
+        try {
+            const promises = advancedTemplates.map(template => 
+                addProgramTemplate({
+                    ...template,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                }, user.id)
+            );
+            await Promise.all(promises);
+            showToast('Advanced Templates successfully added to Global Library!', 'success');
+        } catch (err) {
+            console.error('Library seeding failed:', err);
+            showToast('Error seeding library: ' + err.message, 'error');
+        } finally {
+            setSeedingLoading(false);
+        }
+    };
+
+
 
     if (!user || user.email !== ADMIN_EMAIL) {
         return <Navigate to="/" />;
@@ -127,8 +154,17 @@ const Admin = () => {
                     >
                         {loading ? 'Refreshing...' : 'Refresh List'}
                     </button>
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleSeedTemplates}
+                        disabled={seedingLoading}
+                        style={{ fontSize: '0.8rem', background: 'var(--accent-success)', border: 'none' }}
+                    >
+                        {seedingLoading ? 'Seeding...' : '📂 Seed Advanced Templates'}
+                    </button>
                 </div>
             </div>
+
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.05)' }}>
