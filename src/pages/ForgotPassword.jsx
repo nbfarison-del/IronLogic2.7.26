@@ -16,15 +16,20 @@ const ForgotPassword = () => {
         setLoading(true);
 
         try {
-            await resetPassword(email);
-            setMessage('Check your inbox for further instructions.');
+            const trimmedEmail = email.trim();
+            if (!trimmedEmail) throw new Error("Please enter a valid email address.");
+            
+            console.log("Attempting to send reset email to:", trimmedEmail);
+            await resetPassword(trimmedEmail);
+            setMessage('Password reset link sent to your email');
         } catch (err) {
-            console.error(err);
-            // Show generic response even if email not found for security, OR handle specific errors
+            console.error("Reset Password Failed:", err);
             if (err.code === 'auth/user-not-found') {
-                setMessage('Check your inbox for further instructions.');
+                setMessage('Password reset link sent to your email'); // Security best practice
+            } else if (err.code === 'auth/invalid-email') {
+                setError('Please enter a valid email address.');
             } else {
-                setError(err.message || 'Failed to reset password.');
+                setError(err.message || 'Failed to reset password. Please try again later.');
             }
         } finally {
             setLoading(false);

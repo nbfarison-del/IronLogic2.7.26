@@ -83,9 +83,12 @@ export const AuthProvider = ({ children }) => {
     const resetPassword = async (email) => {
         if (!auth) throw new Error("Firebase Auth not initialized");
         try {
-            await sendPasswordResetEmail(auth, email);
+            console.log("Firebase Auth: Requesting password reset for", email);
+            const response = await sendPasswordResetEmail(auth, email);
+            console.log("Firebase Auth: Password reset email sent successfully", response);
+            return response;
         } catch (error) {
-            console.error('Password reset email error:', error.message);
+            console.error('Firebase Auth: Password reset email error:', error.code, error.message);
             throw error;
         }
     };

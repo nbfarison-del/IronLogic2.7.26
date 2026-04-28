@@ -457,29 +457,83 @@ export const importProgramToCalendar = async (userId, templateId, startDateStr, 
     const existingPlans = await getPlannedWorkouts(userId);
     const existingMap = new Set(existingPlans.map(p => `${p.templateId}_${p.date}`));
 
-    if (template.weeks && Array.isArray(template.weeks)) {
-        template.weeks.forEach((week, weekIdx) => {
-            if (week.days && Array.isArray(week.days)) {
-                week.days.forEach((day) => {
-                    const daysToAdd = (weekIdx * 7) + (day.dayOfWeek - 1);
-                    const workoutDate = new Date(startDate);
-                    workoutDate.setDate(startDate.getDate() + daysToAdd);
-                    const dateStr = workoutDate.toISOString().split('T')[0];
-                    
-                    // Skip if already exists
-                    if (existingMap.has(`${templateId}_${dateStr}`)) return;
+    const weeksList = Array.isArray(template.weeks) ? template.weeks : Object.values(template.weeks || {});
 
-                    promises.push(saveAthleteProgram(userId, 'system', {
+    // Find the very first day in the entire template to use as our "Day 0" offset base
+    let firstDayOffset = null;
+    
+    if (weeksList.length > 0) {
+        weeksList.forEach((week, weekIdx) => {
+            const daysList = Array.isArray(week?.days) ? week.days : Object.values(week?.days || {});
+            
+            daysList.forEach((day) => {
+                const currentOffset = (weekIdx * 7) + ((day?.dayOfWeek || 1) - 1);
+                
+                // Establish the very first workout in the program as the baseline
+                if (firstDayOffset === null || currentOffset < firstDayOffset) {
+                    firstDayOffset = currentOffset;
+                }
+            });
+        });
+    }
 
-                        name: day.name || `Week ${weekIdx + 1} Day ${day.dayOfWeek}`,
-                        date: dateStr,
-                        exercises: day.exercises || [],
-                        notes: day.notes || '',
-                        isFromTemplate: true,
-                        templateId: templateId
-                    }));
+    if (weeksList.length > 0) {
+        weeksList.forEach((week, weekIdx) => {
+            const daysList = Array.isArray(week?.days) ? week.days : Object.values(week?.days || {});
+            
+            daysList.forEach((day) => {
+                const rawOffset = (weekIdx * 7) + ((day?.dayOfWeek || 1) - 1);
+                // Subtract the firstDayOffset so the very first workout strictly lands on the selected startDate
+                const normalizedDaysToAdd = rawOffset - (firstDayOffset || 0);
+                
+                const workoutDate = new Date(startDate);
+                workoutDate.setDate(startDate.getDate() + normalizedDaysToAdd);
+                const dateStr = workoutDate.toISOString().split('T')[0];
+                
+                // Skip if already exists
+                if (existingMap.has(`${templateId}_${dateStr}`)) return;
+
+                const exercisesList = Array.isArray(day?.exercises) ? day.exercises : Object.values(day?.exercises || {});
+
+                // Ensure exercises are properly formatted for the calendar UI (converting string sets to arrays)
+                const formattedExercises = exercisesList.map(ex => {
+                    let setsArray = [];
+                    if (Array.isArray(ex.sets)) {
+                        setsArray = ex.sets.map(s => ({
+                            id: s.id || Math.random().toString(36).substr(2, 9),
+                            weight: s.weight || '',
+                            reps: s.reps || '',
+                            targetRpe: s.targetRpe || ''
+                        }));
+                    } else {
+                        // Handle shorthand string formats like sets: "3" from advanced templates
+                        const setsCount = parseInt(ex.sets) || 1;
+                        setsArray = Array.from({ length: setsCount }, () => ({
+                            id: Math.random().toString(36).substr(2, 9),
+                            weight: '',
+                            reps: ex.reps || '',
+                            targetRpe: ex.intensity || ex.targetRpe || ''
+                        }));
+                    }
+
+                    return {
+                        id: ex.id || Math.random().toString(36).substr(2, 9),
+                        exerciseId: ex.exerciseId || '',
+                        name: ex.name || ex.exerciseName || 'Exercise',
+                        notes: ex.notes || '',
+                        sets: setsArray
+                    };
                 });
-            }
+
+                promises.push(saveAthleteProgram(userId, 'system', {
+                    name: day?.name || `Week ${weekIdx + 1} Day ${day?.dayOfWeek || 1}`,
+                    date: dateStr,
+                    exercises: formattedExercises,
+                    notes: day?.notes || '',
+                    isFromTemplate: true,
+                    templateId: templateId
+                }));
+            });
         });
     }
     
