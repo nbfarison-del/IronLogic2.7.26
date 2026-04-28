@@ -10,9 +10,12 @@ import { ToastProvider } from './context/ToastContext';
 // Components
 import Layout from './components/Layout';
 import TimerWidget from './components/TimerWidget';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages - Lazy Loaded
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Home = lazy(() => import('./pages/Home'));
+
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const WorkoutLog = lazy(() => import('./pages/WorkoutLog'));
@@ -30,9 +33,10 @@ const PartnerWorkout = lazy(() => import('./pages/PartnerWorkout'));
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="card">Authenticating...</div>;
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <Navigate to="/" />;
   return children;
 };
+
 
 const RoleProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -98,12 +102,17 @@ function AppContent() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Protected Routes */}
+          {/* Public/Landing Routes */}
           <Route path="/" element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
+            user ? (
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            ) : (
+              <LandingPage />
+            )
           } />
+
           <Route path="/log" element={
             <ProtectedRoute>
               <WorkoutLog />
@@ -209,8 +218,11 @@ function App() {
                   <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
                 </div>
               }>
-                <AppContent />
+                <ErrorBoundary>
+                  <AppContent />
+                </ErrorBoundary>
               </Suspense>
+
             </ToastProvider>
           </TimerProvider>
         </SettingsProvider>

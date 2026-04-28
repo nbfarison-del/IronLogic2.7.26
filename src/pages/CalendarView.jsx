@@ -55,6 +55,8 @@ const CalendarView = () => {
     // Input State for Weight
     const [weightInput, setWeightInput] = useState('');
     const [noteInput, setNoteInput] = useState('');
+    const [confirmingDelete, setConfirmingDelete] = useState(null);
+
 
     const queryParams = new URLSearchParams(location.search);
     const planParam = queryParams.get('plan');
@@ -165,13 +167,20 @@ const CalendarView = () => {
     };
 
     const deletePlannedWorkout = async (id) => {
-        if (!user || !confirm('Are you sure you want to delete this planned workout?')) return;
+        if (confirmingDelete !== id) {
+            setConfirmingDelete(id);
+            setTimeout(() => setConfirmingDelete(null), 3000);
+            return;
+        }
+        
         try {
             await firestoreService.deletePlannedWorkout(targetUserId, id);
+            setConfirmingDelete(null);
         } catch (error) {
             console.error('Error deleting planned workout:', error);
         }
     };
+
 
     const startWorkout = (program) => {
         navigate('/log', { state: { plannedWorkout: program } });
@@ -366,8 +375,21 @@ const CalendarView = () => {
                                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                                 <button className="btn btn-primary" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => startWorkout(p)}>Start</button>
                                                 <button className="btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => { setEditingProgram(p); setIsPlanning(true); }}>Edit</button>
-                                                <button className="btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', background: '#f44336' }} onClick={() => deletePlannedWorkout(p.id)}>Delete</button>
+                                                <button 
+                                                    className="btn" 
+                                                    style={{ 
+                                                        padding: '0.2rem 0.5rem', 
+                                                        fontSize: '0.8rem', 
+                                                        background: confirmingDelete === p.id ? 'var(--accent-error)' : '#333',
+                                                        color: confirmingDelete === p.id ? '#fff' : 'inherit',
+                                                        transition: 'all 0.2s'
+                                                    }} 
+                                                    onClick={() => deletePlannedWorkout(p.id)}
+                                                >
+                                                    {confirmingDelete === p.id ? 'Confirm?' : 'Delete'}
+                                                </button>
                                             </div>
+
                                         </div>
                                     ))}
                                 </div>
