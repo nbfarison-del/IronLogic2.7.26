@@ -431,8 +431,9 @@ const WorkoutLog = () => {
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <Link to="/calendar" className="btn" style={{ background: 'transparent', padding: '0.5rem' }}>&larr; Calendar</Link>
                     {!isCoachViewing && (
-                        <Link to="/partner" className="btn" style={{ fontSize: '0.8rem', background: 'rgba(var(--primary-rgb), 0.1)', border: '1px solid var(--primary)', color: 'var(--primary)' }}>🤝 Partner Mode</Link>
+                        <Link to="/programs?tab=partner" className="btn" style={{ fontSize: '0.8rem', background: 'rgba(var(--primary-rgb), 0.1)', border: '1px solid var(--primary)', color: 'var(--primary)' }}>🤝 Partner Mode</Link>
                     )}
+
                 </div>
                 <h1 style={{ margin: 0, fontSize: '1.75rem' }}>{isCoachViewing ? `Review Log` : 'Workout Log'}</h1>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>

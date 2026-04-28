@@ -1,13 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useToast } from '../context/ToastContext';
 import { getProgramTemplates, importProgramToCalendar, deleteProgramTemplate } from '../services/firestoreService';
 
 import ProgramPlanner from '../components/ProgramPlanner';
+import PartnerWorkout from './PartnerWorkout';
 
 const Programs = () => {
     const { user } = useAuth();
+    const location = useLocation();
+    const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+    const [subTab, setSubTab] = useState(queryParams.get('tab') === 'partner' ? 'partner' : 'library');
+
+
     const { showToast } = useToast();
     const [templates, setTemplates] = useState([]);
 
@@ -78,12 +86,58 @@ const Programs = () => {
 
     return (
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <h1 style={{ margin: 0 }}>Program Library</h1>
-                {user?.role === 'admin' && (
-                    <button className="btn btn-primary" onClick={() => setShowPlanner(true)}>+ Create Program Template</button>
-                )}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2.5rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
+                <button
+                    onClick={() => setSubTab('library')}
+                    style={{
+                        flex: 1,
+                        background: subTab === 'library' ? 'rgba(255,255,255,0.07)' : 'transparent',
+                        border: 'none',
+                        color: subTab === 'library' ? 'var(--primary)' : '#888',
+                        padding: '0.75rem',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '0.9rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        transition: 'all 0.2s ease'
+                    }}
+                >
+                    📚 Program Library
+                </button>
+                <button
+                    onClick={() => setSubTab('partner')}
+                    style={{
+                        flex: 1,
+                        background: subTab === 'partner' ? 'rgba(255,255,255,0.07)' : 'transparent',
+                        border: 'none',
+                        color: subTab === 'partner' ? 'var(--primary)' : '#888',
+                        padding: '0.75rem',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        fontWeight: '700',
+                        fontSize: '0.9rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        transition: 'all 0.2s ease'
+                    }}
+                >
+                    🤝 Partner Hub
+                </button>
             </div>
+
+            {subTab === 'partner' ? (
+                <PartnerWorkout />
+            ) : (
+                <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                        <h1 style={{ margin: 0 }}>Program Library</h1>
+                        {user?.role === 'admin' && (
+                            <button className="btn btn-primary" onClick={() => setShowPlanner(true)}>+ Create Program Template</button>
+                        )}
+                    </div>
+
 
             <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
                 {templates.map(template => (
@@ -169,8 +223,11 @@ const Programs = () => {
                     </div>
                 </div>
             )}
+            </>
+        )}
         </div>
     );
 };
+
 
 export default Programs;
