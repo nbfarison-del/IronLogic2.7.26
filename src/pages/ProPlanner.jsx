@@ -18,6 +18,7 @@ const ProPlanner = () => {
     const [weeks, setWeeks] = useState([]); 
     const [activeWeekIndex, setActiveWeekIndex] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [deletedDocIds, setDeletedDocIds] = useState(new Set());
     
     // Undo History
     const [history, setHistory] = useState([]);
@@ -105,23 +106,36 @@ const ProPlanner = () => {
         return Monday;
     };
 
+    const getDayDate = (weekIdx, dayIdx) => {
+        const Monday = getMondayOfWeek(weekIdx);
+        const d = new Date(Monday);
+        d.setDate(Monday.getDate() + dayIdx);
+        return d.toISOString().split('T')[0];
+    };
+
     const triggerAutoSync = (currentWeeks = weeks, currentWeekIdx = activeWeekIndex) => {
         if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
         syncTimeoutRef.current = setTimeout(async () => {
             setIsSyncing(true);
             try {
-                const MondayDate = getMondayOfWeek(currentWeekIdx);
+                if (deletedDocIds.size > 0) {
+                    const deletePromises = Array.from(deletedDocIds).map(id => 
+                        firestoreService.deletePlannedWorkout(targetAthleteId, id)
+                    );
+                    await Promise.all(deletePromises);
+                    setDeletedDocIds(new Set());
+                }
+
                 const promises = [];
                 currentWeeks[currentWeekIdx].forEach((day, dayIdx) => {
-                    const workoutDate = new Date(MondayDate);
-                    workoutDate.setDate(MondayDate.getDate() + dayIdx);
-                    const dateStr = workoutDate.toISOString().split('T')[0];
-
+                    const dateStr = getDayDate(currentWeekIdx, dayIdx);
                     day.sessions.forEach(session => {
-                        promises.push(firestoreService.saveAthleteProgram(targetAthleteId, user.id, {
-                            ...session,
-                            date: dateStr,
-                        }));
+                        if (session.exercises.length > 0 || session.name) {
+                            promises.push(firestoreService.saveAthleteProgram(targetAthleteId, user.id, {
+                                ...session,
+                                date: dateStr,
+                            }));
+                        }
                     });
                 });
                 await Promise.all(promises);
@@ -274,6 +288,20 @@ const ProPlanner = () => {
 
 
     // ==================== CORE ACTIONS ====================
+
+    const deleteSession = (dayIdx, sIdx) => {
+        if (!window.confirm("Delete this entire session?")) return;
+        
+        const session = weeks[activeWeekIndex][dayIdx].sessions[sIdx];
+        // If the ID looks like a Firestore ID (alphanumeric, no dots, length around 20), track for deletion
+        if (session.id && !session.id.includes('.') && session.id.length > 10) {
+            setDeletedDocIds(prev => new Set(prev).add(session.id));
+        }
+
+        modifyWeeks(newWeeks => {
+            newWeeks[activeWeekIndex][dayIdx].sessions.splice(sIdx, 1);
+        });
+    };
 
     const addSession = (dayIdx) => {
         modifyWeeks(newWeeks => {
@@ -616,7 +644,7 @@ const ProPlanner = () => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                     <input 
                                         className="pro-input" 
-                                        style={{ fontWeight: 800, textAlign: 'left', border: 'none', background: 'transparent', fontSize: '0.8rem', color: 'var(--primary)' }} 
+                                        style={{ fontWeight: 800, textAlign: 'left', border: 'none', background: 'transparent', fontSize: '0.8rem', color: 'var(--primary)', flex: 1 }} 
                                         value={session.name} 
                                         onClick={(e) => e.stopPropagation()}
                                         onChange={(e) => {
@@ -625,6 +653,13 @@ const ProPlanner = () => {
                                             });
                                         }}
                                     />
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); deleteSession(dayIdx, sIdx); }}
+                                        style={{ background: 'none', border: 'none', color: 'var(--accent-error)', cursor: 'pointer', fontSize: '0.9rem', opacity: 0.6, padding: '4px' }}
+                                        title="Delete Workout"
+                                    >
+                                        🗑
+                                    </button>
                                 </div>
 
                                 {session.exercises.map((ex, exIdx) => (
@@ -708,8 +743,29 @@ const ProPlanner = () => {
                                         });
                                     }}
                                 >
-                                    + ADD LIFT
                                 </button>
+                                
+                                <textarea 
+                                    placeholder="Add session notes..."
+                                    style={{ 
+                                        width: '100%', 
+                                        background: 'rgba(255,255,255,0.03)', 
+                                        border: '1px solid var(--border-glass)', 
+                                        borderRadius: '4px', 
+                                        marginTop: '12px', 
+                                        fontSize: '0.7rem', 
+                                        color: 'var(--text-muted)', 
+                                        padding: '6px',
+                                        minHeight: '40px',
+                                        resize: 'vertical'
+                                    }}
+                                    value={session.notes || ''}
+                                    onChange={(e) => {
+                                        modifyWeeks(newWeeks => {
+                                            newWeeks[activeWeekIndex][dayIdx].sessions[sIdx].notes = e.target.value;
+                                        });
+                                    }}
+                                />
                             </div>
                         )})}
                     </div>
