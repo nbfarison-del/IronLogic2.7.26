@@ -15,7 +15,7 @@ const Profile = () => {
         goals,
         plannedWorkouts,
         notesHistory,
-        maxes: syncedMaxes,
+        trainingMaxes: syncedMaxes,
         isLoading,
         syncStatus,
         syncTimestamps,
@@ -76,7 +76,7 @@ const Profile = () => {
         if (!user) return;
 
         try {
-            await firestoreService.updateUserProfile(user.id, { maxes });
+            await firestoreService.updateUserProfile(user.id, { trainingMaxes: maxes, maxes });
             setNotifications('Maxes saved successfully!');
             setTimeout(() => setNotifications(''), 3000);
         } catch (error) {

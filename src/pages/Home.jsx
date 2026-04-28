@@ -41,9 +41,11 @@ const Home = () => {
         goals,
         coaching,
         plannedWorkouts,
-        maxes,
+        trainingMaxes,
         isLoading: loading
     } = useData();
+
+
 
 
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -55,15 +57,15 @@ const Home = () => {
 
     const recentPRs = useMemo(() => {
         const prList = [];
-        const maxes = {};
+        const prTrackingMaxes = {};
         const chronological = [...workouts].reverse();
         chronological.forEach(w => {
             if (w.type === 'strength' && w.estimated1RM) {
                 const exId = w.exerciseId;
-                const currentMax = maxes[exId] || 0;
+                const currentMax = prTrackingMaxes[exId] || 0;
                 if (w.estimated1RM > currentMax) {
                     const increase = w.estimated1RM - currentMax;
-                    maxes[exId] = w.estimated1RM;
+                    prTrackingMaxes[exId] = w.estimated1RM;
                     prList.push({
                         ...w,
                         increase: increase > 0 && currentMax > 0 ? increase : 0,
@@ -74,6 +76,7 @@ const Home = () => {
         });
         return prList.reverse().slice(0, 10);
     }, [workouts]);
+
 
     const dotsData = useMemo(() => {
         if (weightHistory.length === 0 || workouts.length === 0) return [];
@@ -177,7 +180,9 @@ const Home = () => {
             {activeTab === 'dashboard' ? (
                 <>
                     {/* Onboarding Flow for New Athletes */}
-                    {(workouts.length === 0 || !maxes.squat) && (
+                    {(workouts.length === 0 || !trainingMaxes?.squat) && (
+
+
                         <div className="glass-card animate-in" style={{ 
                             marginBottom: '2.5rem', 
                             background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(251, 191, 36, 0.1))',

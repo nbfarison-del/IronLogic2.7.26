@@ -167,8 +167,9 @@ export const DataProvider = ({ children }) => {
         syncTimestamps,
         syncError,
         settings: profile?.settings || { unit: 'kg' },
-        maxes: profile?.maxes || {}
+        trainingMaxes: profile?.trainingMaxes || profile?.maxes || {}
     }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, mobilityLogs, isLoading, syncStatus, syncTimestamps, syncError]);
+
 
     return (
         <DataContext.Provider value={value}>

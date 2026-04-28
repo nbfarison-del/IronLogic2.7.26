@@ -61,8 +61,9 @@ const WorkoutLog = () => {
         customExercises: syncedCustom,
         plannedWorkouts,
         isLoading: dataLoading,
-        maxes
+        trainingMaxes
     } = useData();
+
 
     useEffect(() => {
         if (!isViewingOther) return;
@@ -380,7 +381,8 @@ const WorkoutLog = () => {
         if (entry.type !== 'strength' || !entry.estimated1RM) return false;
         const mapping = { bb_squat: 'squat', bb_bench: 'bench', bb_deadlift: 'deadlift', sumo_deadlift: 'deadlift', bb_ohp: 'ohp' };
         const key = mapping[entry.exerciseId];
-        return key && maxes[key] ? entry.estimated1RM > parseFloat(maxes[key]) : false;
+        return key && trainingMaxes[key] ? entry.estimated1RM > parseFloat(trainingMaxes[key]) : false;
+
     };
 
     const activeConfig = EXERCISE_CONFIG[selectedExerciseId] || {};
