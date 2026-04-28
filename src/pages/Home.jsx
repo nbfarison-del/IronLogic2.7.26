@@ -41,8 +41,10 @@ const Home = () => {
         goals,
         coaching,
         plannedWorkouts,
+        maxes,
         isLoading: loading
     } = useData();
+
 
     const [activeTab, setActiveTab] = useState('dashboard');
 
