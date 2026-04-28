@@ -81,111 +81,113 @@ function App() {
       <DataProvider>
         <SettingsProvider>
           <TimerProvider>
-            <Suspense fallback={
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#111', color: '#fff' }}>
-                <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite' }}></div>
-                <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-              </div>
-            }>
-              <TimerWidget />
-              <Routes>
-                <Route element={<Layout />}>
-                  {/* Public Routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
+            <ToastProvider>
+              <Suspense fallback={
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#111', color: '#fff' }}>
+                  <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite' }}></div>
+                  <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+                </div>
+              }>
+                <TimerWidget />
+                <Routes>
+                  <Route element={<Layout />}>
+                    {/* Public Routes */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
 
-                  {/* Protected Routes */}
-                  <Route path="/" element={
-                    <ProtectedRoute>
-                      <Home />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/log" element={
-                    <ProtectedRoute>
-                      <WorkoutLog />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/progress" element={
-                    <ProtectedRoute>
-                      <Progress />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/programs" element={
-                    <ProtectedRoute>
-                      <Programs />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/checkin" element={
-                    <ProtectedRoute>
-                      <SubscriptionGuard>
-                        <WeeklyCheckIn />
-                      </SubscriptionGuard>
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/profile" element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/calendar" element={
-                    <ProtectedRoute>
-                      <CalendarView />
-                    </ProtectedRoute>
-                  } />
-
-                  {/* Role-Specific Routes */}
-                  <Route path="/coach" element={
-                    <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                      <SubscriptionGuard>
-                        <CoachDashboard />
-                      </SubscriptionGuard>
-                    </RoleProtectedRoute>
-                  } />
-                  <Route path="/coach/plan/:athleteId" element={
-                    <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                      <SubscriptionGuard>
-                        <ProPlanner />
-                      </SubscriptionGuard>
-                    </RoleProtectedRoute>
-                  } />
-                  <Route path="/coach/adaptive/:athleteId" element={
-                    <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                      <SubscriptionGuard>
-                        <AdaptiveCoach />
-                      </SubscriptionGuard>
-                    </RoleProtectedRoute>
-                  } />
-                  <Route path="/coach/athlete/:athleteId" element={
-                    <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                      <SubscriptionGuard>
+                    {/* Protected Routes */}
+                    <Route path="/" element={
+                      <ProtectedRoute>
+                        <Home />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/log" element={
+                      <ProtectedRoute>
                         <WorkoutLog />
-                      </SubscriptionGuard>
-                    </RoleProtectedRoute>
-                  } />
-                  <Route path="/calendar/:athleteId" element={
-                    <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                      <SubscriptionGuard>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/progress" element={
+                      <ProtectedRoute>
+                        <Progress />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/programs" element={
+                      <ProtectedRoute>
+                        <Programs />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/checkin" element={
+                      <ProtectedRoute>
+                        <SubscriptionGuard>
+                          <WeeklyCheckIn />
+                        </SubscriptionGuard>
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/profile" element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/calendar" element={
+                      <ProtectedRoute>
                         <CalendarView />
-                      </SubscriptionGuard>
-                    </RoleProtectedRoute>
-                  } />
-                  <Route path="/coach/checkin/:athleteId" element={
-                    <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-                      <SubscriptionGuard>
-                        <WeeklyCheckIn />
-                      </SubscriptionGuard>
-                    </RoleProtectedRoute>
-                  } />
-                  <Route path="/admin" element={
-                    <RoleProtectedRoute allowedRoles={['admin']}>
-                      <Admin />
-                    </RoleProtectedRoute>
-                  } />
-                </Route>
-              </Routes>
-            </Suspense>
+                      </ProtectedRoute>
+                    } />
+
+                    {/* Role-Specific Routes */}
+                    <Route path="/coach" element={
+                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                        <SubscriptionGuard>
+                          <CoachDashboard />
+                        </SubscriptionGuard>
+                      </RoleProtectedRoute>
+                    } />
+                    <Route path="/coach/plan/:athleteId" element={
+                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                        <SubscriptionGuard>
+                          <ProPlanner />
+                        </SubscriptionGuard>
+                      </RoleProtectedRoute>
+                    } />
+                    <Route path="/coach/adaptive/:athleteId" element={
+                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                        <SubscriptionGuard>
+                          <AdaptiveCoach />
+                        </SubscriptionGuard>
+                      </RoleProtectedRoute>
+                    } />
+                    <Route path="/coach/athlete/:athleteId" element={
+                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                        <SubscriptionGuard>
+                          <WorkoutLog />
+                        </SubscriptionGuard>
+                      </RoleProtectedRoute>
+                    } />
+                    <Route path="/calendar/:athleteId" element={
+                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                        <SubscriptionGuard>
+                          <CalendarView />
+                        </SubscriptionGuard>
+                      </RoleProtectedRoute>
+                    } />
+                    <Route path="/coach/checkin/:athleteId" element={
+                      <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
+                        <SubscriptionGuard>
+                          <WeeklyCheckIn />
+                        </SubscriptionGuard>
+                      </RoleProtectedRoute>
+                    } />
+                    <Route path="/admin" element={
+                      <RoleProtectedRoute allowedRoles={['admin']}>
+                        <Admin />
+                      </RoleProtectedRoute>
+                    } />
+                  </Route>
+                </Routes>
+              </Suspense>
+            </ToastProvider>
           </TimerProvider>
         </SettingsProvider>
       </DataProvider>
