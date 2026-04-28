@@ -151,7 +151,8 @@ const Programs = () => {
                         flex: 1,
                         background: subTab === 'library' ? 'var(--bg-card)' : 'transparent',
                         border: 'none',
-                        color: subTab === 'library' ? 'var(--primary)' : 'var(--text-muted)',
+                        color: subTab === 'library' ? 'var(--accent-warning)' : 'var(--text-muted)',
+
                         padding: '1rem',
                         borderRadius: '12px',
                         cursor: 'pointer',
