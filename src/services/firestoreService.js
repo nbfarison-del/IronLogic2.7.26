@@ -392,18 +392,19 @@ export const updateAthleteProgram = async (athleteId, programId, updates) => {
 
 export const getProgramTemplates = async (includePrivate = false) => {
     const templatesRef = collection(db, 'program_templates');
-    let q;
-    if (includePrivate) {
-        q = query(templatesRef, orderBy('createdAt', 'desc'));
-    } else {
-        q = query(templatesRef, where('visibility', '==', 'public'), orderBy('createdAt', 'desc'));
-    }
+    // Fetch all templates ordered by date. 
+    // We filter 'public' visibility in JS to avoid requiring a composite index in the Firebase Console.
+    const q = query(templatesRef, orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => ({
+    const allTemplates = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
     }));
+
+    if (includePrivate) return allTemplates;
+    return allTemplates.filter(t => t.visibility === 'public');
 };
+
 
 export const addProgramTemplate = async (templateData, authorId) => {
     const templatesRef = collection(db, 'program_templates');
