@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { generateStrengthBlock, analyzeTrends } from '../services/GeminiService';
 import { getWorkouts, getPlannedWorkouts, assignProgramToAthlete } from '../services/firestoreService';
+import { validateProgram } from '../utils/programValidation';
 
 const AISuggestionModal = ({ athlete, onClose }) => {
     const [loading, setLoading] = useState(true);
@@ -44,6 +45,12 @@ const AISuggestionModal = ({ athlete, onClose }) => {
                 getPlannedWorkouts(athlete.id)
             ]);
             const program = await generateStrengthBlock({ workouts, planned }, goal);
+            const validation = validateProgram(program);
+            if (!validation.isValid) {
+                alert(`Generated program needs review before assignment:\n\n${validation.errors.slice(0, 5).join('\n')}`);
+                setGeneratedProgram(null);
+                return;
+            }
             setGeneratedProgram(program);
         } catch (error) {
             console.error('Error generating program:', error);
@@ -56,6 +63,11 @@ const AISuggestionModal = ({ athlete, onClose }) => {
 
     const handleApplyProgram = async () => {
         if (!generatedProgram || !startDate) return;
+        const validation = validateProgram(generatedProgram);
+        if (!validation.isValid) {
+            alert(`This program cannot be assigned yet:\n\n${validation.errors.slice(0, 8).join('\n')}`);
+            return;
+        }
         setStatus('applying');
         setLoading(true);
         try {

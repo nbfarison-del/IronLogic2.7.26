@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate, Link } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Routes, Route, Navigate, Link, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import { SettingsProvider } from './context/SettingsContext';
@@ -57,11 +57,11 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 
 const SubscriptionGuard = ({ children }) => {
   const { user, loading } = useAuth();
+  const [now] = useState(() => Date.now());
 
   if (loading) return null;
 
   // New athletes get a 14-day trial
-  const now = Date.now();
   const trialStillActive = user?.trialExpiresAt ? (user.trialExpiresAt.toMillis ? user.trialExpiresAt.toMillis() : user.trialExpiresAt) > now : false;
   
   const isSubscriber = user?.subscriptionStatus === 'beta' || 
@@ -81,6 +81,48 @@ const SubscriptionGuard = ({ children }) => {
     );
   }
 
+  return children;
+};
+
+const CoachAthleteAccessGuard = ({ children }) => {
+  const { user, loading } = useAuth();
+  const { athleteId } = useParams();
+  const [accessState, setAccessState] = useState('checking');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const verifyAccess = async () => {
+      if (loading) return;
+      if (!user || !athleteId) {
+        if (isMounted) setAccessState('denied');
+        return;
+      }
+
+      if (user.role === 'admin' && user.email === 'nbfarison@gmail.com') {
+        if (isMounted) setAccessState('allowed');
+        return;
+      }
+
+      try {
+        const { getUserProfile } = await import('./services/firestoreService');
+        const athleteProfile = await getUserProfile(athleteId);
+        const isAssignedCoach = athleteProfile?.coach_id === user.id || athleteProfile?.coachId === user.id;
+        if (isMounted) setAccessState(isAssignedCoach ? 'allowed' : 'denied');
+      } catch (error) {
+        console.error('Coach-athlete access check failed:', error);
+        if (isMounted) setAccessState('denied');
+      }
+    };
+
+    verifyAccess();
+    return () => {
+      isMounted = false;
+    };
+  }, [athleteId, loading, user]);
+
+  if (loading || accessState === 'checking') return <div className="card">Checking athlete access...</div>;
+  if (accessState !== 'allowed') return <Navigate to="/coach" replace />;
   return children;
 };
 
@@ -155,35 +197,45 @@ function AppContent() {
           <Route path="/coach/plan/:athleteId" element={
             <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
               <SubscriptionGuard>
-                <ProPlanner />
+                <CoachAthleteAccessGuard>
+                  <ProPlanner />
+                </CoachAthleteAccessGuard>
               </SubscriptionGuard>
             </RoleProtectedRoute>
           } />
           <Route path="/coach/adaptive/:athleteId" element={
             <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
               <SubscriptionGuard>
-                <AdaptiveCoach />
+                <CoachAthleteAccessGuard>
+                  <AdaptiveCoach />
+                </CoachAthleteAccessGuard>
               </SubscriptionGuard>
             </RoleProtectedRoute>
           } />
           <Route path="/coach/athlete/:athleteId" element={
             <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
               <SubscriptionGuard>
-                <WorkoutLog />
+                <CoachAthleteAccessGuard>
+                  <WorkoutLog />
+                </CoachAthleteAccessGuard>
               </SubscriptionGuard>
             </RoleProtectedRoute>
           } />
           <Route path="/calendar/:athleteId" element={
             <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
               <SubscriptionGuard>
-                <CalendarView />
+                <CoachAthleteAccessGuard>
+                  <CalendarView />
+                </CoachAthleteAccessGuard>
               </SubscriptionGuard>
             </RoleProtectedRoute>
           } />
           <Route path="/coach/checkin/:athleteId" element={
             <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
               <SubscriptionGuard>
-                <WeeklyCheckIn />
+                <CoachAthleteAccessGuard>
+                  <WeeklyCheckIn />
+                </CoachAthleteAccessGuard>
               </SubscriptionGuard>
             </RoleProtectedRoute>
           } />

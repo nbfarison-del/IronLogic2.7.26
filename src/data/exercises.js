@@ -80,7 +80,6 @@ export const EXERCISE_CONFIG = {
         hasPause: true,
         hasBelt: true,
         hasTempo: true,
-        hasTempo: true,
         hasBenchShirt: true,
         hasSlingshot: true,
         hasFeetUp: true,

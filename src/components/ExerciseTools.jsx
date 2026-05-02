@@ -125,7 +125,9 @@ const ExerciseTools = ({ exerciseId, exerciseName }) => {
             {activeTool === 'history' && (
                 <div style={{ background: '#1a1a1a', padding: '1rem', borderRadius: '8px', border: '1px solid #444' }}>
                     <h4 style={{ margin: '0 0 1rem 0' }}>{exerciseName} History</h4>
-                    {history.length > 0 ? (
+                    {loading ? (
+                        <p style={{ color: '#888', fontStyle: 'italic', fontSize: '0.9rem' }}>Loading history...</p>
+                    ) : history.length > 0 ? (
                         <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             {history.map((entry, idx) => (
                                 <div key={entry.id || idx} style={{ background: '#222', padding: '0.6rem', borderRadius: '4px', fontSize: '0.85rem' }}>

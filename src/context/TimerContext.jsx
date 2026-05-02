@@ -22,7 +22,7 @@ export const TimerProvider = ({ children }) => {
     const [currentRound, setCurrentRound] = useState(1);
     const [phase, setPhase] = useState('focus'); // 'focus' | 'rest' | 'complete'
 
-    const lastTickRef = useRef(Date.now());
+    const lastTickRef = useRef(null);
     const rafRef = useRef(null);
 
     const toggleTimer = () => setIsOpen(prev => !prev);

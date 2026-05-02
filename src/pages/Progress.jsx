@@ -23,27 +23,6 @@ const Progress = () => {
     const { unit } = useSettings();
     const [selectedExercise, setSelectedExercise] = useState('bb_squat');
 
-
-    if (isLoading) return <div className="card">Loading progress data...</div>;
-
-    // Consistency Helper: Workouts per week for last 8 weeks
-    const getConsistencyData = () => {
-        const weeks = {};
-        const now = new Date();
-        for (let i = 0; i < 8; i++) {
-            const d = new Date(now);
-            d.setDate(d.getDate() - (i * 7));
-            const weekNum = Math.floor(d.getTime() / (7 * 24 * 60 * 60 * 1000));
-            weeks[weekNum] = { name: `Week -${i}`, count: 0 };
-        }
-        workouts.forEach(w => {
-            const d = new Date(w.date);
-            const weekNum = Math.floor(d.getTime() / (7 * 24 * 60 * 60 * 1000));
-            if (weeks[weekNum]) weeks[weekNum].count++;
-        });
-        return Object.values(weeks).reverse();
-    };
-
     // List of exercises for comparison
     const exerciseList = useMemo(() => {
         const unique = {};
@@ -122,6 +101,7 @@ const Progress = () => {
         return data;
     }, [workouts, weights]);
 
+    if (isLoading) return <div className="card">Loading progress data...</div>;
 
     return (
         <div className="animate-in" style={{ textAlign: 'left', paddingBottom: '5rem', maxWidth: '1200px', margin: '0 auto' }}>

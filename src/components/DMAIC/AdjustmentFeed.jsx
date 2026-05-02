@@ -11,8 +11,19 @@ const AdjustmentFeed = ({ programAdj }) => {
               <div style={{ fontSize: '0.9rem', color: 'var(--primary)', fontWeight: 'bold' }}>{programAdj.type.toUpperCase()}</div>
               <div style={{ fontSize: '0.7rem', color: '#888' }}>{new Date().toLocaleDateString()}</div>
             </div>
+            {programAdj.label && (
+              <div style={{ fontSize: '0.8rem', color: '#aaa', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                {programAdj.label}
+              </div>
+            )}
             <div style={{ fontSize: '1.1rem', marginBottom: '0.8rem', lineHeight: '1.4', fontWeight: '500' }}>
               {programAdj.description}
+            </div>
+            <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.9rem', color: '#ccc' }}>
+              {programAdj.intensityShift && <div><strong>Intensity:</strong> {programAdj.intensityShift}</div>}
+              {programAdj.volumeShift && <div><strong>Volume:</strong> {programAdj.volumeShift}</div>}
+              {programAdj.focus && <div><strong>Focus:</strong> {programAdj.focus}</div>}
+              {programAdj.requiresCoachReview && <div style={{ color: '#ff9800' }}><strong>Coach review recommended before assignment.</strong></div>}
             </div>
             {programAdj.action && (
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>

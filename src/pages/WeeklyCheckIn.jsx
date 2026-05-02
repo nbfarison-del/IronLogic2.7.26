@@ -26,7 +26,7 @@ const WeeklyCheckIn = () => {
         try {
             await performCheckIn(readiness);
             setStep(2);
-        } catch (e) {
+        } catch {
             // Error is handled in the hook
         }
     };

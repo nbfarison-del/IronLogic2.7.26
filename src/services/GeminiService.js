@@ -148,7 +148,7 @@ Please use this context to provide personalized advice. Reference their previous
         const result = await sendMessageWithTimeout(messages[messages.length - 1].content, 20000);
         const response = await result.response;
         return response.text();
-      } catch (retryErr) {
+      } catch {
         throw new Error("Coach is currently overloaded. Please try again in a few minutes.");
       }
     }
@@ -187,8 +187,8 @@ export const parseProgramFromResponse = (text) => {
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
-  } catch (e) {
-    console.error("Failed to parse program JSON:", e);
+  } catch (error) {
+    console.error("Failed to parse program JSON:", error);
   }
   return null;
 };

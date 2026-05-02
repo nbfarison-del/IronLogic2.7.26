@@ -7,6 +7,7 @@ import * as firestoreService from '../services/firestoreService';
 import { chatWithAI, parseProgramFromResponse } from '../services/GeminiService';
 import { exercises } from '../data/exercises';
 import aiCoachAvatar from '../assets/ai_coach.png';
+import { validateProgram } from '../utils/programValidation';
 
 const AIAgentTab = () => {
     const { user } = useAuth();
@@ -81,7 +82,15 @@ const AIAgentTab = () => {
 
             const program = parseProgramFromResponse(aiResponseText);
             if (program) {
-                setGeneratedProgram(program);
+                const validation = validateProgram(program);
+                if (validation.isValid) {
+                    setGeneratedProgram(program);
+                } else {
+                    setMessages(prev => [...prev, {
+                        role: 'model',
+                        content: `I detected a program structure, but it needs review before it can be saved:\n\n${validation.errors.slice(0, 8).map(error => `- ${error}`).join('\n')}`
+                    }]);
+                }
             }
         } catch (error) {
             console.error("AI Chat Error Details:", error);
@@ -114,6 +123,11 @@ const AIAgentTab = () => {
 
     const handleSaveProgram = async () => {
         if (!generatedProgram || !user) return;
+        const validation = validateProgram(generatedProgram);
+        if (!validation.isValid) {
+            alert(`This program cannot be saved yet:\n\n${validation.errors.slice(0, 8).join('\n')}`);
+            return;
+        }
         try {
             await firestoreService.ensureCustomExercisesExist(user.id, generatedProgram);
             await firestoreService.saveAIProgram(user.id, generatedProgram);
@@ -137,6 +151,11 @@ const AIAgentTab = () => {
 
     const handleSyncToCalendar = async () => {
         if (!generatedProgram || !user) return;
+        const validation = validateProgram(generatedProgram);
+        if (!validation.isValid) {
+            alert(`This program cannot be synced yet:\n\n${validation.errors.slice(0, 8).join('\n')}`);
+            return;
+        }
         setLoading(true);
         try {
             await firestoreService.ensureCustomExercisesExist(user.id, generatedProgram);

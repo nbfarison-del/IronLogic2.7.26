@@ -97,7 +97,7 @@ const AnalyzeStep = ({ checkInData, setStep }) => (
     </>
 );
 
-const StrategyStep = ({ checkInData, setStep, readiness }) => (
+const StrategyStep = ({ checkInData, setStep }) => (
     <div style={{ animation: 'fadeIn 0.5s ease' }}>
         <div className="card" style={{ background: 'linear-gradient(135deg, #111, #1a1a1a)', border: '1px solid var(--primary)', padding: '2rem', marginBottom: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
             <h3 style={{ margin: 0, textTransform: 'uppercase', color: 'var(--primary)', fontSize: '0.8rem', letterSpacing: '2px' }}>ILM DIRECTIVES</h3>
@@ -145,7 +145,7 @@ const StrategyStep = ({ checkInData, setStep, readiness }) => (
     </div>
 );
 
-const ControlStep = ({ checkInData, readiness, onComplete }) => (
+const ControlStep = ({ readiness, onComplete }) => (
     <div style={{ animation: 'fadeIn 0.5s ease' }}>
         <h2 style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>Step 5: CONTROL (Commit & Monitor)</h2>
         <div className="card" style={{ background: '#111', border: '1px solid #4caf50', padding: '1.5rem', marginBottom: '2rem' }}>

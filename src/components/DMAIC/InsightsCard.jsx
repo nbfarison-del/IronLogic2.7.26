@@ -1,6 +1,9 @@
 import React from 'react';
+import { getRecommendationForInsight } from '../../services/DMAICService';
 
-const InsightsCard = ({ coachInsight, insights, metrics }) => {
+const InsightsCard = ({ coachInsight, insights }) => {
+  const recommendation = getRecommendationForInsight(insights);
+
   return (
     <div className="card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--primary)', background: 'linear-gradient(to right, rgba(33, 150, 243, 0.05), transparent)' }}>
       <h3 style={{ margin: '0 0 1rem 0', color: 'var(--primary)', textTransform: 'uppercase', fontSize: '0.9rem' }}>Coach's Analysis</h3>
@@ -13,7 +16,7 @@ const InsightsCard = ({ coachInsight, insights, metrics }) => {
           <strong>Pattern:</strong> {insights?.replace('_', ' ').toUpperCase()}
         </div>
         <div style={{ fontSize: '0.8rem', color: '#888', textAlign: 'right' }}>
-          <strong>Recommendation:</strong> {insights === 'high_fatigue' ? 'Deload' : insights === 'progressing' ? 'Increase Load' : insights === 'plateau' ? 'Variation Shift' : 'Maintain Course'}
+          <strong>Recommendation:</strong> {recommendation.label}
         </div>
       </div>
     </div>

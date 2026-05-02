@@ -3,7 +3,7 @@
  * Adaptive training engine using Define-Measure-Analyze-Improve-Control framework.
  */
 
-import { getUserProfile, getWorkouts, addWorkout, saveAIProgram, setDoc, doc } from './firestoreService';
+import { getUserProfile, getWorkouts, setDoc, doc } from './firestoreService';
 import { calculateMetrics } from './MetricsService';
 import { chatWithAI } from './GeminiService';
 import { db } from '../config/firebaseConfig';
@@ -12,7 +12,6 @@ export const runDMAICCycle = async (athleteId) => {
     try {
         // 1. DEFINE (Get profile and goals)
         const profile = await getUserProfile(athleteId);
-        const goals = profile?.goals || {};
         
         // 2. MEASURE (Gather recent workout data)
         const recentSessions = await getWorkouts(athleteId, 14); // Last 14 workouts
@@ -46,16 +45,15 @@ export const runDMAICCycle = async (athleteId) => {
  * Identify patterns based on metrics and readiness
  */
 export const analyzePerformance = (metrics, readiness = {}) => {
-    const { fatigue_index, e1rm, trend } = metrics;
-    const { sleep, soreness, fatigue: mentalFatigue, weight } = readiness;
+    const { fatigue_index = 0, trend = {} } = metrics || {};
+    const { sleep, soreness, fatigue: mentalFatigue } = readiness;
     
     const FATIGUE_THRESHOLD = 8.5; 
-    const RECOVERY_FAIL_THRESHOLD = 5; // e.g., < 6 hrs sleep or > 7/10 soreness
 
     // 1. High Fatigue Detection (Physical + Mental)
     const isPhysicalOverload = fatigue_index > FATIGUE_THRESHOLD;
-    const isMentalOverload = mentalFatigue > 7;
-    const isUnderRecovered = (sleep < 6 || soreness > 7);
+    const isMentalOverload = Number(mentalFatigue) > 7;
+    const isUnderRecovered = (Number(sleep) < 6 || Number(soreness) > 7);
 
     if (isPhysicalOverload && isUnderRecovered) return "overreaching_danger";
     if (isPhysicalOverload) return "high_physical_fatigue";
@@ -71,16 +69,16 @@ export const analyzePerformance = (metrics, readiness = {}) => {
     const isOverallDropping = downCount > (trendValues.length / 3);
     const isOverallProgressing = upCount > 0;
 
-    if (isOverallFlat && !isPhysicalOverload) {
-        return "true_plateau"; 
-    }
-    
     if (isOverallDropping && isPhysicalOverload) {
         return "accumulated_fatigue_plateau";
     }
 
     if (isOverallFlat && isUnderRecovered) {
         return "recovery_lead_plateau";
+    }
+
+    if (isOverallFlat && !isPhysicalOverload) {
+        return "true_plateau"; 
     }
 
     if (isOverallProgressing) {
@@ -93,40 +91,97 @@ export const analyzePerformance = (metrics, readiness = {}) => {
 /**
  * Logic for program adjustments
  */
-const adjustProgram = async (profile, insights, metrics) => {
-    // This would ideally interact with currently assigned programs
-    // or generate a new block with updated intensity/volume
-    
-    let adjustment = { type: 'none', description: 'Maintain current program.' };
-
-    switch (insights) {
-        case "high_fatigue":
-            adjustment = { 
-                type: 'deload', 
-                description: 'Fatigue is high. Reducing volume by 20% while maintaining intensity to recover.',
-                action: 'reduce_volume'
-            };
-            break;
-        case "progressing":
-            adjustment = { 
-                type: 'progression', 
-                description: 'Progress looks good! Increasing load by 2.5-5% on main lifts.',
-                action: 'increase_load'
-            };
-            break;
-        case "plateau":
-            adjustment = { 
-                type: 'adjustment', 
-                description: 'Progress has stalled. Swapping a variation (e.g. Pause Squat) for the plateaued lift.',
-                action: 'swap_variation'
-            };
-            break;
-        default:
-            break;
+const RECOMMENDATION_MAP = {
+    overreaching_danger: {
+        type: 'deload',
+        label: 'Deload Required',
+        description: 'High training load is paired with poor readiness. Reduce volume 30-40%, cap top sets around RPE 6-7, and avoid adding load until sleep/soreness normalize.',
+        action: 'reduce_volume_and_intensity',
+        intensityShift: 'Reduce intensity to RPE 6-7.',
+        volumeShift: 'Reduce total working sets by 30-40%.',
+        focus: 'Restore readiness before pushing adaptation.',
+        requiresCoachReview: true
+    },
+    high_physical_fatigue: {
+        type: 'fatigue_management',
+        label: 'Manage Physical Fatigue',
+        description: 'Physical fatigue is elevated. Hold main lift intensity steady and reduce accessory volume so the athlete can recover without losing skill practice.',
+        action: 'reduce_volume',
+        intensityShift: 'Keep main work stable; avoid new PR attempts.',
+        volumeShift: 'Reduce accessories and back-off work by 15-25%.',
+        focus: 'Keep reps crisp and stop sets before technical breakdown.',
+        requiresCoachReview: false
+    },
+    lifestyle_stress_high: {
+        type: 'readiness_adjustment',
+        label: 'Readiness Constraint',
+        description: 'Reported mental fatigue is high. Keep the plan simple, lower optional work, and use RPE caps to avoid forcing load on a low-readiness week.',
+        action: 'cap_rpe',
+        intensityShift: 'Cap top sets at RPE 7.',
+        volumeShift: 'Keep only the highest-priority accessories.',
+        focus: 'Protect consistency while life stress is high.',
+        requiresCoachReview: false
+    },
+    accumulated_fatigue_plateau: {
+        type: 'pivot',
+        label: 'Pivot Block',
+        description: 'Performance is dropping while fatigue is high. Move into a low-stress pivot week with close variations and lower total stress.',
+        action: 'pivot_block',
+        intensityShift: 'Use close variations at RPE 6-7.',
+        volumeShift: 'Reduce total volume by 25-35%.',
+        focus: 'Shed fatigue while maintaining movement practice.',
+        requiresCoachReview: true
+    },
+    recovery_lead_plateau: {
+        type: 'recovery_first',
+        label: 'Recovery-Led Plateau',
+        description: 'Performance is flat while readiness is poor. Maintain the core lifts, remove nonessential work, and prioritize sleep and soreness management.',
+        action: 'recovery_intervention',
+        intensityShift: 'Hold loads steady; no forced progression.',
+        volumeShift: 'Reduce optional volume by 15-25%.',
+        focus: 'Improve recovery before changing exercise selection.',
+        requiresCoachReview: false
+    },
+    true_plateau: {
+        type: 'variation_shift',
+        label: 'Variation Shift',
+        description: 'Performance is broadly flat without a clear fatigue signal. Keep the development block structure but rotate one stalled lift to a close variation.',
+        action: 'swap_variation',
+        intensityShift: 'Keep effort targets similar at RPE 7-8.',
+        volumeShift: 'Maintain weekly set count unless readiness changes.',
+        focus: 'Introduce a specific stress change without rebuilding the whole plan.',
+        requiresCoachReview: false
+    },
+    progressing: {
+        type: 'progression',
+        label: 'Progressing',
+        description: 'Performance is trending up. Continue the microcycle and apply a conservative load increase where bar speed and RPE support it.',
+        action: 'increase_load',
+        intensityShift: 'Increase main lift load by 2.5-5% only if target RPE is preserved.',
+        volumeShift: 'Keep volume stable.',
+        focus: 'Repeat what is working and avoid unnecessary novelty.',
+        requiresCoachReview: false
+    },
+    maintaining: {
+        type: 'maintenance',
+        label: 'Maintain Course',
+        description: 'No strong fatigue, plateau, or progression signal was detected. Keep the current plan and collect another week of clean data.',
+        action: 'maintain',
+        intensityShift: 'Keep planned load and RPE targets.',
+        volumeShift: 'Keep weekly set count stable.',
+        focus: 'Improve data quality and execution consistency.',
+        requiresCoachReview: false
     }
-
-    return adjustment;
 };
+
+export const getRecommendationForInsight = (insights) => {
+    return RECOMMENDATION_MAP[insights] || RECOMMENDATION_MAP.maintaining;
+};
+
+/**
+ * Logic for program adjustments
+ */
+export const adjustProgram = async (_profile, insights) => getRecommendationForInsight(insights);
 
 /**
  * Log the current state for future refinement
@@ -201,15 +256,17 @@ export const runWeeklyCheckIn = async (athleteId, currentReadiness = {}) => {
 };
 
 const generateNextWeekPlan = async (profile, insights, metrics, readiness) => {
+    const deterministicRecommendation = getRecommendationForInsight(insights);
     // Combine metrics and readiness for a smart next week recommendation
     const prompt = `
         You are a strength coach using the IronLogic DMAIC framework.
         Previous Week Metrics: ${JSON.stringify(metrics)}
         Athlete Readiness: ${JSON.stringify(readiness)}
         Pattern: ${insights}
+        Required Strategy: ${JSON.stringify(deterministicRecommendation)}
 
         TASK:
-        Generate a specific recommendation for the NEXT WEEK of training.
+        Generate a specific recommendation for the NEXT WEEK of training. Stay consistent with the required strategy above.
         Include:
         1. Intensity shift (e.g. increase weight by 2kg on main lifts)
         2. Volume shift (e.g. add 1 set to accessories)
@@ -221,8 +278,12 @@ const generateNextWeekPlan = async (profile, insights, metrics, readiness) => {
     try {
         const response = await chatWithAI([{ role: 'user', content: prompt }]);
         return response;
-    } catch (e) {
-        return "Increase load slightly on main lifts (+2.5kg) while maintaining sets/reps.";
+    } catch {
+        return [
+            `- Intensity: ${deterministicRecommendation.intensityShift}`,
+            `- Volume: ${deterministicRecommendation.volumeShift}`,
+            `- Focus of the Week: ${deterministicRecommendation.focus}`
+        ].join('\n');
     }
 };
 
@@ -246,8 +307,9 @@ export const generateCoachInsight = async (insights, metrics) => {
     try {
         const response = await chatWithAI([{ role: 'user', content: prompt }]);
         return response;
-    } catch (e) {
-        return "Maintaining course. Focus on high-quality execution and managing recovery as highlighted in the directives.";
+    } catch {
+        const fallback = getRecommendationForInsight(insights);
+        return `${fallback.label}: ${fallback.description}`;
     }
 };
 

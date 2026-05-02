@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } from '../data/exercises';
-import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 import ExerciseTools from './ExerciseTools';
@@ -8,7 +7,6 @@ import ExerciseTools from './ExerciseTools';
 const ADMIN_EMAIL = 'nbfarison@gmail.com';
 
 const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'assign' }) => {
-    const { unit } = useSettings();
     const { user } = useAuth();
     const [allExercises, setAllExercises] = useState(defaultExercises);
     const [programName, setProgramName] = useState(initialData?.name || 'New Program');
@@ -118,6 +116,17 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
                 };
             }
             return ex;
+        }));
+    };
+
+    const removeSet = (exerciseId, setId) => {
+        setPlannedExercises(plannedExercises.map(ex => {
+            if (ex.id !== exerciseId) return ex;
+            if (ex.sets.length <= 1) return ex;
+            return {
+                ...ex,
+                sets: ex.sets.filter(set => set.id !== setId)
+            };
         }));
     };
 
@@ -273,7 +282,7 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
                         </div>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                            {ex.sets.map((s, sIdx) => (
+                            {ex.sets.map((s) => (
                                 <div key={s.id} style={{ display: 'flex', gap: '0.5rem' }}>
                                     <input type="number" placeholder="Weight" value={s.weight} onChange={e => handleSetChange(ex.id, s.id, 'weight', e.target.value)} style={{ flex: 1 }} disabled={isTemplate} />
                                     <input type="text" placeholder="Reps" value={s.reps} onChange={e => handleSetChange(ex.id, s.id, 'reps', e.target.value)} style={{ flex: 1 }} />
