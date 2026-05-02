@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data)
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)/profile/data).data.role == 'admin';
+    }
+
+    function ownsUserDoc(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isAssignedCoach(userId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(userId)/profile/data)
+        && get(/databases/$(database)/documents/users/$(userId)/profile/data).data.coach_id == request.auth.uid;
+    }
+
+    function canReadUser(userId) {
+      return ownsUserDoc(userId) || isAssignedCoach(userId) || isAdmin();
+    }
+
+    function canWriteUser(userId) {
+      return ownsUserDoc(userId) || isAssignedCoach(userId) || isAdmin();
+    }
+
+    match /users/{userId}/{document=**} {
+      allow read: if canReadUser(userId);
+      allow write: if canWriteUser(userId);
+    }
+
+    match /registered_users/{userId} {
+      allow read: if ownsUserDoc(userId) || isAdmin();
+      allow create: if ownsUserDoc(userId) || isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    match /program_templates/{templateId} {
+      allow read: if signedIn() && (resource.data.visibility == 'public' || resource.data.authorId == request.auth.uid || isAdmin());
+      allow create: if signedIn();
+      allow update, delete: if signedIn() && (resource.data.authorId == request.auth.uid || isAdmin());
+    }
+  }
+}
+

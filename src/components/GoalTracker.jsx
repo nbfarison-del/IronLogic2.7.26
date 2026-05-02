@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import * as firestoreService from '../services/firestoreService';
@@ -22,8 +22,6 @@ const GoalTracker = () => {
         e.preventDefault();
         if (!newEventName || !newEventDate || !user) return;
 
-        const d = new Date();
-        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const newEvent = {
             name: newEventName,
             date: newEventDate,
@@ -55,8 +53,6 @@ const GoalTracker = () => {
         if (!text || !user) return;
 
         const event = events.find(ev => ev.id === eventId);
-        const d = new Date();
-        const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         const newGoal = { id: Date.now(), text, completed: false };
         const updatedEvent = {
             ...event,

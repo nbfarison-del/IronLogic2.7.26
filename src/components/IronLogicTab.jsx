@@ -26,7 +26,7 @@ const IronLogicTab = () => {
                     setDmaicData(JSON.parse(cached));
                     setLoading(false);
                     return;
-                } catch (e) {
+                } catch {
                     sessionStorage.removeItem(cacheKey);
                 }
             }
@@ -65,7 +65,7 @@ const IronLogicTab = () => {
             const result = await runDMAICCycle(user.id);
             setDmaicData(result);
             sessionStorage.setItem(`dmaic_cache_${user.id}`, JSON.stringify(result));
-        } catch (err) {
+        } catch {
             setError("Analysis failed.");
         } finally {
             setLoading(false);

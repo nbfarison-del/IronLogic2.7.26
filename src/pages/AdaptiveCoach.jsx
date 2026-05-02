@@ -52,7 +52,7 @@ const AdaptiveCoach = () => {
         try {
             const result = await runDMAICCycle(athleteId);
             setDmaicData(result);
-        } catch (err) {
+        } catch {
             setError("Analysis failed. Try again.");
         } finally {
             setLoading(false);
