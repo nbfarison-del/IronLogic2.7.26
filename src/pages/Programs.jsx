@@ -60,6 +60,10 @@ const Programs = () => {
         const templateId = template.id;
         setImporting(templateId);
         try {
+            const userId = user.id || user.uid;
+            if (!userId) throw new Error('Cannot apply template because no signed-in user was found.');
+
+            let result;
             if (template.isSystem) {
                 // If it's a system template, we need to pass the actual template data 
                 // because it might not be in the DB yet.
@@ -68,15 +72,16 @@ const Programs = () => {
                 
                 // For simplicity, let's just use the ID if we decide to seed them properly.
                 // But to make it "Just Work", let's update firestoreService to handle objects.
-                await importProgramToCalendar(user.uid, templateId, startDate, template.isSystem ? template : null);
+                result = await importProgramToCalendar(userId, templateId, startDate, template.isSystem ? template : null);
             } else {
-                await importProgramToCalendar(user.uid, templateId, startDate);
+                result = await importProgramToCalendar(userId, templateId, startDate);
             }
-            showToast('Program successfully added to your calendar!', 'success');
+            console.log('Template import response:', result);
+            showToast(`Program added to your calendar: ${result.createdCount} sessions scheduled.`, 'success');
             setShowPreview(null);
         } catch (err) {
             console.error('Import error:', err);
-            showToast('Error importing program.', 'error');
+            showToast(err.message || 'Error importing program.', 'error');
         } finally {
             setImporting(null);
         }
@@ -97,6 +102,7 @@ const Programs = () => {
             showToast('Template deleted.', 'success');
             loadTemplates();
         } catch (err) {
+            console.error('Delete template error:', err);
             showToast('Error deleting template.', 'error');
         }
     };

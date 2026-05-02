@@ -63,6 +63,46 @@ export const getAllRegisteredUsers = async () => {
     }));
 };
 
+export const getRegisteredUserByEmail = async (email) => {
+    const normalizedEmail = email?.trim().toLowerCase();
+    if (!normalizedEmail) return null;
+
+    const usersRef = collection(db, 'registered_users');
+    const exactEmail = email.trim();
+    const queries = exactEmail === normalizedEmail
+        ? [query(usersRef, where('email', '==', normalizedEmail), limit(1))]
+        : [
+            query(usersRef, where('email', '==', exactEmail), limit(1)),
+            query(usersRef, where('email', '==', normalizedEmail), limit(1))
+        ];
+
+    let querySnapshot = null;
+    for (const userQuery of queries) {
+        querySnapshot = await getDocs(userQuery);
+        if (!querySnapshot.empty) break;
+    }
+
+    if (!querySnapshot || querySnapshot.empty) {
+        const allUsersSnapshot = await getDocs(usersRef);
+        const matchingDoc = allUsersSnapshot.docs.find(userDoc => {
+            return userDoc.data()?.email?.trim().toLowerCase() === normalizedEmail;
+        });
+
+        return matchingDoc
+            ? {
+                id: matchingDoc.id,
+                ...matchingDoc.data()
+            }
+            : null;
+    }
+
+    const userDoc = querySnapshot.docs[0];
+    return {
+        id: userDoc.id,
+        ...userDoc.data()
+    };
+};
+
 export const updateUserRole = async (userId, role) => {
     const regDocRef = doc(db, 'registered_users', userId);
     const profileDocRef = doc(db, 'users', userId, 'profile', 'data');
@@ -437,7 +477,96 @@ export const deleteProgramTemplate = async (templateId) => {
     await deleteDoc(docRef);
 };
 
+const toDateStr = (date) => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
+const normalizeCollection = (value) => {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (value && typeof value === 'object') return Object.values(value).filter(Boolean);
+    return [];
+};
+
+const normalizeTemplateExercises = (exercises) => {
+    return normalizeCollection(exercises)
+        .filter(ex => ex && (ex.exerciseId || ex.exerciseName || ex.name))
+        .map(ex => {
+            let setsArray = [];
+            if (Array.isArray(ex.sets)) {
+                setsArray = ex.sets
+                    .filter(Boolean)
+                    .map(s => ({
+                        id: s.id || Math.random().toString(36).substr(2, 9),
+                        weight: s.weight || '',
+                        reps: s.reps || '',
+                        targetRpe: s.targetRpe || s.rpe || s.intensity || ''
+                    }));
+            } else {
+                const setsCount = Math.max(parseInt(ex.sets, 10) || 1, 1);
+                setsArray = Array.from({ length: setsCount }, () => ({
+                    id: Math.random().toString(36).substr(2, 9),
+                    weight: '',
+                    reps: ex.reps || '',
+                    targetRpe: ex.intensity || ex.targetRpe || ex.rpe || ''
+                }));
+            }
+
+            return {
+                id: ex.id || Math.random().toString(36).substr(2, 9),
+                exerciseId: ex.exerciseId || '',
+                exerciseName: ex.exerciseName || ex.name || 'Exercise',
+                name: ex.name || ex.exerciseName || 'Exercise',
+                notes: ex.notes || '',
+                modifiers: ex.modifiers || {},
+                sets: setsArray
+            };
+        });
+};
+
+const getTemplateSessions = (template) => {
+    const weeksList = normalizeCollection(template?.weeks);
+
+    if (weeksList.length === 0) {
+        const exercises = normalizeTemplateExercises(template?.exercises);
+        return exercises.length > 0
+            ? [{ offset: 0, weekNumber: 1, dayNumber: 1, name: template.name || 'Workout', exercises, notes: template.notes || '' }]
+            : [];
+    }
+
+    const sessions = [];
+    weeksList.forEach((week, weekIdx) => {
+        const daysList = normalizeCollection(week?.days);
+        daysList.forEach((day, dayIdx) => {
+            const exercises = normalizeTemplateExercises(day?.exercises);
+            if (exercises.length === 0) return;
+
+            const dayOfWeek = Number(day?.dayOfWeek || day?.dayNumber || dayIdx + 1);
+            const weekNumber = Number(week?.weekNumber || weekIdx + 1);
+            const rawOffset = ((weekNumber - 1) * 7) + Math.max(dayOfWeek - 1, 0);
+
+            sessions.push({
+                offset: rawOffset,
+                weekNumber,
+                dayNumber: dayOfWeek,
+                name: day?.name || `${template.name || 'Workout'} - Week ${weekNumber} Day ${dayOfWeek}`,
+                exercises,
+                notes: day?.notes || ''
+            });
+        });
+    });
+
+    const firstOffset = sessions.reduce((min, session) => Math.min(min, session.offset), Infinity);
+    return sessions.map(session => ({
+        ...session,
+        offset: session.offset - (Number.isFinite(firstOffset) ? firstOffset : 0)
+    }));
+};
+
 export const importProgramToCalendar = async (userId, templateId, startDateStr, providedTemplateData = null) => {
+    if (!userId) throw new Error('Cannot apply template because no signed-in user was found.');
+    if (!templateId) throw new Error('Cannot apply template because the template ID is missing.');
+    if (!startDateStr) throw new Error('Choose a start date before applying this template.');
+
     let template;
     
     if (providedTemplateData) {
@@ -449,95 +578,45 @@ export const importProgramToCalendar = async (userId, templateId, startDateStr, 
         template = templateSnap.data();
     }
 
-    
     const startDate = new Date(startDateStr + 'T12:00:00');
-    const promises = [];
+    if (Number.isNaN(startDate.getTime())) throw new Error('Choose a valid start date before applying this template.');
+
+    const sessions = getTemplateSessions(template);
+    if (sessions.length === 0) throw new Error('This template does not contain any schedulable workout sessions.');
     
     // Fetch existing plans to avoid duplicates
     const existingPlans = await getPlannedWorkouts(userId);
     const existingMap = new Set(existingPlans.map(p => `${p.templateId}_${p.date}`));
 
-    const weeksList = Array.isArray(template.weeks) ? template.weeks : Object.values(template.weeks || {});
+    const promises = sessions
+        .map(session => {
+            const workoutDate = new Date(startDate);
+            workoutDate.setDate(startDate.getDate() + session.offset);
+            const dateStr = toDateStr(workoutDate);
 
-    // Find the very first day in the entire template to use as our "Day 0" offset base
-    let firstDayOffset = null;
-    
-    if (weeksList.length > 0) {
-        weeksList.forEach((week, weekIdx) => {
-            const daysList = Array.isArray(week?.days) ? week.days : Object.values(week?.days || {});
-            
-            daysList.forEach((day) => {
-                const currentOffset = (weekIdx * 7) + ((day?.dayOfWeek || 1) - 1);
-                
-                // Establish the very first workout in the program as the baseline
-                if (firstDayOffset === null || currentOffset < firstDayOffset) {
-                    firstDayOffset = currentOffset;
-                }
+            if (existingMap.has(`${templateId}_${dateStr}`)) return null;
+
+            return saveAthleteProgram(userId, 'system', {
+                name: session.name,
+                planName: `${template.name || 'Program'} - W${session.weekNumber}D${session.dayNumber}`,
+                date: dateStr,
+                exercises: session.exercises,
+                notes: session.notes,
+                isFromTemplate: true,
+                templateId
             });
-        });
-    }
+        })
+        .filter(Boolean);
 
-    if (weeksList.length > 0) {
-        weeksList.forEach((week, weekIdx) => {
-            const daysList = Array.isArray(week?.days) ? week.days : Object.values(week?.days || {});
-            
-            daysList.forEach((day) => {
-                const rawOffset = (weekIdx * 7) + ((day?.dayOfWeek || 1) - 1);
-                // Subtract the firstDayOffset so the very first workout strictly lands on the selected startDate
-                const normalizedDaysToAdd = rawOffset - (firstDayOffset || 0);
-                
-                const workoutDate = new Date(startDate);
-                workoutDate.setDate(startDate.getDate() + normalizedDaysToAdd);
-                const dateStr = workoutDate.toISOString().split('T')[0];
-                
-                // Skip if already exists
-                if (existingMap.has(`${templateId}_${dateStr}`)) return;
-
-                const exercisesList = Array.isArray(day?.exercises) ? day.exercises : Object.values(day?.exercises || {});
-
-                // Ensure exercises are properly formatted for the calendar UI (converting string sets to arrays)
-                const formattedExercises = exercisesList.map(ex => {
-                    let setsArray = [];
-                    if (Array.isArray(ex.sets)) {
-                        setsArray = ex.sets.map(s => ({
-                            id: s.id || Math.random().toString(36).substr(2, 9),
-                            weight: s.weight || '',
-                            reps: s.reps || '',
-                            targetRpe: s.targetRpe || ''
-                        }));
-                    } else {
-                        // Handle shorthand string formats like sets: "3" from advanced templates
-                        const setsCount = parseInt(ex.sets) || 1;
-                        setsArray = Array.from({ length: setsCount }, () => ({
-                            id: Math.random().toString(36).substr(2, 9),
-                            weight: '',
-                            reps: ex.reps || '',
-                            targetRpe: ex.intensity || ex.targetRpe || ''
-                        }));
-                    }
-
-                    return {
-                        id: ex.id || Math.random().toString(36).substr(2, 9),
-                        exerciseId: ex.exerciseId || '',
-                        name: ex.name || ex.exerciseName || 'Exercise',
-                        notes: ex.notes || '',
-                        sets: setsArray
-                    };
-                });
-
-                promises.push(saveAthleteProgram(userId, 'system', {
-                    name: day?.name || `Week ${weekIdx + 1} Day ${day?.dayOfWeek || 1}`,
-                    date: dateStr,
-                    exercises: formattedExercises,
-                    notes: day?.notes || '',
-                    isFromTemplate: true,
-                    templateId: templateId
-                }));
-            });
-        });
+    if (promises.length === 0) {
+        throw new Error('This template is already applied on the selected dates.');
     }
     
-    await Promise.all(promises);
+    const savedIds = await Promise.all(promises);
+    return {
+        createdCount: savedIds.length,
+        totalSessions: sessions.length
+    };
 };
 
 // ==================== LEGACY COMPATIBILITY ====================

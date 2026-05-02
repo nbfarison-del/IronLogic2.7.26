@@ -19,15 +19,22 @@ const ForgotPassword = () => {
             const trimmedEmail = email.trim();
             if (!trimmedEmail) throw new Error("Please enter a valid email address.");
             
-            console.log("Attempting to send reset email to:", trimmedEmail);
-            await resetPassword(trimmedEmail);
+            console.log("Reset Password UI: submitting request for:", trimmedEmail);
+            const response = await resetPassword(trimmedEmail);
+            console.log("Reset Password UI: backend response:", response ?? { status: 'sent' });
             setMessage('Password reset link sent to your email');
         } catch (err) {
             console.error("Reset Password Failed:", err);
             if (err.code === 'auth/user-not-found') {
-                setMessage('Password reset link sent to your email'); // Security best practice
+                setError('No account was found for that email address.');
             } else if (err.code === 'auth/invalid-email') {
                 setError('Please enter a valid email address.');
+            } else if (err.code === 'auth/unauthorized-continue-uri') {
+                setError('Password reset is not configured for this app domain. Add this domain to Firebase authorized domains.');
+            } else if (err.code === 'auth/network-request-failed') {
+                setError('Network connection failed. Check your connection and try again.');
+            } else if (err.code === 'permission-denied') {
+                setError('Unable to verify that email in the user registry. Please contact support.');
             } else {
                 setError(err.message || 'Failed to reset password. Please try again later.');
             }

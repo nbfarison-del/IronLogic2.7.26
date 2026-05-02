@@ -5,9 +5,11 @@ import {
     signOut,
     onAuthStateChanged,
     sendPasswordResetEmail,
-    confirmPasswordReset
+    confirmPasswordReset,
+    verifyPasswordResetCode
 } from 'firebase/auth';
 import { auth } from '../config/firebaseConfig';
+import { getRegisteredUserByEmail } from '../services/firestoreService';
 
 const AuthContext = createContext();
 
@@ -82,13 +84,42 @@ export const AuthProvider = ({ children }) => {
 
     const resetPassword = async (email) => {
         if (!auth) throw new Error("Firebase Auth not initialized");
+        const trimmedEmail = email?.trim().toLowerCase();
+        if (!trimmedEmail) throw new Error("Please enter a valid email address.");
+
         try {
-            console.log("Firebase Auth: Requesting password reset for", email);
-            const response = await sendPasswordResetEmail(auth, email);
-            console.log("Firebase Auth: Password reset email sent successfully", response);
+            const registeredUser = await getRegisteredUserByEmail(trimmedEmail);
+            if (!registeredUser) {
+                throw Object.assign(new Error("No account was found for that email address."), {
+                    code: 'auth/user-not-found'
+                });
+            }
+
+            const actionCodeSettings = {
+                url: `${window.location.origin}/reset-password`,
+                handleCodeInApp: true
+            };
+
+            console.log("Firebase Auth: Requesting password reset", {
+                email: trimmedEmail,
+                userId: registeredUser.id,
+                actionUrl: actionCodeSettings.url
+            });
+            const response = await sendPasswordResetEmail(auth, trimmedEmail, actionCodeSettings);
+            console.log("Firebase Auth: Password reset email response", response ?? { status: 'sent' });
             return response;
         } catch (error) {
             console.error('Firebase Auth: Password reset email error:', error.code, error.message);
+            throw error;
+        }
+    };
+
+    const verifyResetCode = async (code) => {
+        if (!auth) throw new Error("Firebase Auth not initialized");
+        try {
+            return await verifyPasswordResetCode(auth, code);
+        } catch (error) {
+            console.error('Verify reset code error:', error.code, error.message);
             throw error;
         }
     };
@@ -119,6 +150,7 @@ export const AuthProvider = ({ children }) => {
         login,
         register,
         resetPassword,
+        verifyResetCode,
         confirmReset,
         logout
     }), [user, loading]);
