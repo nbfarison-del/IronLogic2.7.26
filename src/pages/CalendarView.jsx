@@ -49,7 +49,7 @@ const CalendarView = () => {
     const [extLoading, setExtLoading] = useState(false);
 
     // UI State
-    const [isPlanning, setIsPlanning] = useState(false);
+    const [isPlanning, setIsPlanning] = useState(planParam === 'true');
     const [editingProgram, setEditingProgram] = useState(null);
 
     // Input State for Weight
@@ -64,7 +64,6 @@ const CalendarView = () => {
     // Auto-open planner if coming from Home with ?plan=true
     useEffect(() => {
         if (planParam === 'true') {
-            setIsPlanning(true);
             // Optional: clean up URL
             navigate(location.pathname, { replace: true });
         }
@@ -75,13 +74,26 @@ const CalendarView = () => {
     useEffect(() => {
         if (!isCoachViewing) return;
 
-        setExtLoading(true);
-        const unsubWorkouts = firestoreService.subscribeToWorkouts(targetUserId, setExtWorkouts, () => { });
-        const unsubPlanned = firestoreService.subscribeToPlannedWorkouts(targetUserId, setExtPlanned, () => { });
-        const unsubRecovery = firestoreService.subscribeToRecovery(targetUserId, setExtRecovery, () => { });
-        const unsubWeights = firestoreService.subscribeToBodyWeight(targetUserId, setExtWeights, () => { });
-        const unsubNotes = firestoreService.subscribeToCalendarNotes(targetUserId, setExtNotes, () => { });
-        const unsubMobility = firestoreService.subscribeToMobilityLogs(targetUserId, setExtMobility, () => { });
+        let receivedSnapshots = 0;
+        const markLoaded = () => {
+            receivedSnapshots += 1;
+            if (receivedSnapshots >= 6) setExtLoading(false);
+        };
+        const wrap = (setter) => (data) => {
+            setter(data);
+            markLoaded();
+        };
+        const handleError = (error) => {
+            console.error('Calendar subscription error:', error);
+            setExtLoading(false);
+        };
+
+        const unsubWorkouts = firestoreService.subscribeToWorkouts(targetUserId, wrap(setExtWorkouts), handleError);
+        const unsubPlanned = firestoreService.subscribeToPlannedWorkouts(targetUserId, wrap(setExtPlanned), handleError);
+        const unsubRecovery = firestoreService.subscribeToRecovery(targetUserId, wrap(setExtRecovery), handleError);
+        const unsubWeights = firestoreService.subscribeToBodyWeight(targetUserId, wrap(setExtWeights), handleError);
+        const unsubNotes = firestoreService.subscribeToCalendarNotes(targetUserId, wrap(setExtNotes), handleError);
+        const unsubMobility = firestoreService.subscribeToMobilityLogs(targetUserId, wrap(setExtMobility), handleError);
 
         return () => {
             unsubWorkouts();
@@ -266,7 +278,7 @@ const CalendarView = () => {
         return days;
     };
 
-    if (isLoading) {
+    if (isLoading || extLoading) {
         return <div className="card">Syncing calendar...</div>;
     }
 
@@ -417,6 +429,17 @@ const CalendarView = () => {
                             {dayRecovery && (
                                 <div style={{ padding: '1rem', background: '#222', borderRadius: '8px', borderLeft: `4px solid ${dayRecovery.score >= 8 ? '#4caf50' : dayRecovery.score >= 5 ? '#ff9800' : '#f44336'} ` }}>
                                     <div style={{ fontWeight: 'bold' }}>Recovery Score: {dayRecovery.score}/10</div>
+                                </div>
+                            )}
+
+                            {dayMobility.length > 0 && (
+                                <div style={{ marginTop: '1rem', padding: '1rem', background: '#222', borderRadius: '8px', borderLeft: '4px solid #9c27b0' }}>
+                                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>Mobility</div>
+                                    {dayMobility.map(entry => (
+                                        <div key={entry.id} style={{ fontSize: '0.85rem', color: '#ccc' }}>
+                                            {entry.pathName || entry.name || 'Mobility session'}{entry.duration ? ` - ${entry.duration} min` : ''}
+                                        </div>
+                                    ))}
                                 </div>
                             )}
 

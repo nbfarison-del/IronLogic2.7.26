@@ -1,30 +1,13 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useData } from '../context/DataContext';
-import * as firestoreService from '../services/firestoreService';
-import { exercises as allExercises } from '../data/exercises';
-import { calculateEstimated1RM } from '../utils/calculator';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import RecoveryTracker from '../components/RecoveryTracker';
 import WeightTracker from '../components/WeightTracker';
 import GoalTracker from '../components/GoalTracker';
 import MobilityTab from '../components/MobilityTab';
 import IronLogicTab from '../components/IronLogicTab';
-import { generateProgram } from '../services/ProgramGenerator';
-import logo from '../assets/logo.png';
-
-// DOTS Utilities
-const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
-    const mCoeffs = [-0.000001093, 0.0007391293, -0.191875104, 24.0900756, -307.75076];
-    const fCoeffs = [-0.0000010706, 0.0005158568, -0.1126655495, 13.6175032, -57.96288];
-    const c = isMale ? mCoeffs : fCoeffs;
-    const bw = bodyWeight;
-    const denom = c[0] * Math.pow(bw, 4) + c[1] * Math.pow(bw, 3) + c[2] * Math.pow(bw, 2) + c[3] * bw + c[4];
-    if (denom === 0) return 0;
-    return (liftWeight * 500) / denom;
-};
 
 // Browser-robust YYYY-MM-DD helper
 const getDateStr = (date) => {
@@ -36,10 +19,6 @@ const Home = () => {
     const { unit: appUnit } = useSettings();
     const {
         workouts,
-        weights: weightHistory,
-        recovery: recoveryHistory,
-        goals,
-        coaching,
         plannedWorkouts,
         trainingMaxes,
         isLoading: loading
@@ -76,46 +55,6 @@ const Home = () => {
         });
         return prList.reverse().slice(0, 10);
     }, [workouts]);
-
-
-    const dotsData = useMemo(() => {
-        if (weightHistory.length === 0 || workouts.length === 0) return [];
-        const sortedWeights = weightHistory;
-        const sortedWorkouts = [...workouts].reverse();
-        const data = [];
-        let workoutIdx = 0;
-        const currentMaxes = { squat: 0, bench: 0, deadlift: 0 };
-        const squatIds = ['bb_squat', 'bb_front_squat', 'ssb_squat'];
-        const benchIds = ['bb_bench'];
-        const dlIds = ['bb_deadlift', 'sumo_deadlift'];
-
-        sortedWeights.forEach(bwEntry => {
-            const bwDate = new Date(bwEntry.date);
-            while (workoutIdx < sortedWorkouts.length) {
-                const w = sortedWorkouts[workoutIdx];
-                const wDate = new Date(w.date);
-                if (wDate > bwDate) break;
-                if (w.estimated1RM) {
-                    if (squatIds.includes(w.exerciseId)) currentMaxes.squat = Math.max(currentMaxes.squat, w.estimated1RM);
-                    if (benchIds.includes(w.exerciseId)) currentMaxes.bench = Math.max(currentMaxes.bench, w.estimated1RM);
-                    if (dlIds.includes(w.exerciseId)) currentMaxes.deadlift = Math.max(currentMaxes.deadlift, w.estimated1RM);
-                }
-                workoutIdx++;
-            }
-            if (currentMaxes.squat > 0 && currentMaxes.bench > 0 && currentMaxes.deadlift > 0) {
-                const total = currentMaxes.squat + currentMaxes.bench + currentMaxes.deadlift;
-                const dots = getDOTSScore(parseFloat(bwEntry.weight), total, true);
-                data.push({
-                    date: bwEntry.date,
-                    dots: Math.round(dots * 100) / 100,
-                    total: total,
-                    bw: bwEntry.weight
-                });
-            }
-        });
-        return data.slice(-30);
-    }, [workouts, weightHistory]);
-
     const weeklySummary = useMemo(() => {
         const now = new Date();
         const startOfWeek = new Date(now);

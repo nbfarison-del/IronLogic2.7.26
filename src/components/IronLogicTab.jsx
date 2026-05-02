@@ -92,7 +92,7 @@ const IronLogicTab = () => {
             </div>
 
             <p style={{ color: '#888', marginBottom: '1.5rem', fontSize: '1rem', lineHeight: '1.5' }}>
-                Your training is managed by the **DMAIC Engine**. We define your goals, measure your stress (RPE), 
+                Your training is managed by the <strong>IronLogic Method (ILM)</strong> engine. We define your goals, measure your stress (RPE), 
                 analyze fatigue, improve your program, and control for performance outcomes.
             </p>
 
@@ -111,7 +111,7 @@ const IronLogicTab = () => {
             <div className="card" style={{ background: 'rgba(33, 150, 243, 0.05)', border: '1px solid var(--primary)', marginTop: '2rem' }}>
                 <h3>Why this works?</h3>
                 <p style={{ fontSize: '0.9rem', color: '#ccc' }}>
-                    IronLogic uses <strong>Autoregulation</strong> and <strong>Bottom-Up Periodization</strong>. 
+                    ILM uses <strong>Autoregulation</strong> and <strong>Bottom-Up Periodization</strong>. 
                     Instead of following a rigid calendar, the engine adjusts to your recovery in real-time. 
                     If fatigue is high, we pull back. If performance is peaking, we push harder.
                 </p>

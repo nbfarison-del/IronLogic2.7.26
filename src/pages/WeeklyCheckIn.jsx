@@ -60,7 +60,7 @@ const WeeklyCheckIn = () => {
             {(step >= 2 && checkInData) && (
                 <div style={{ maxWidth: '900px', margin: '0 auto' }}>
                     <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-                        <button className={`btn ${step === 2 ? 'btn-primary' : ''}`} onClick={() => setStep(2)}>MEASURE</button>
+                        <button className={`btn ${step === 2 ? 'btn-primary' : ''}`} onClick={() => setStep(2)}>MEASURE &amp; ANALYZE</button>
                         <button className={`btn ${step === 4 ? 'btn-primary' : ''}`} onClick={() => setStep(4)}>IMPROVE</button>
                         <button className={`btn ${step === 5 ? 'btn-primary' : ''}`} onClick={() => setStep(5)}>CONTROL</button>
                     </div>

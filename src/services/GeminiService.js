@@ -161,7 +161,7 @@ Please use this context to provide personalized advice. Reference their previous
 export const generateStrengthBlock = async (userContext, goal = 'Strength') => {
   const prompt = `
     Generate a 4-6 week ${goal} based strength block following IronLogic principles.
-    The user is a powerlifter. 
+    The user is a powerlifter. ILM Status: ${userContext.ilmStatus || 'Maintaining'}. Goals: ${userContext.goals?.map(g => g.text).join(', ') || 'General'}. 
     Focus on: ${goal === 'Hypertrophy' ? 'higher volume variations' : goal === 'Peaking' ? 'high intensity singles' : 'balanced volume and intensity'}.
     Please provide the response in the JSON format specified in the system prompt.
   `;

@@ -11,6 +11,7 @@ import { ToastProvider } from './context/ToastContext';
 import Layout from './components/Layout';
 import TimerWidget from './components/TimerWidget';
 import ErrorBoundary from './components/ErrorBoundary';
+import { SUPER_ADMIN_EMAIL } from './config/constants';
 
 // Pages - Lazy Loaded
 const LandingPage = lazy(() => import('./pages/LandingPage'));
@@ -28,6 +29,7 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Programs = lazy(() => import('./pages/Programs'));
 const ProPlanner = lazy(() => import('./pages/ProPlanner'));
 const PartnerWorkout = lazy(() => import('./pages/PartnerWorkout'));
+const Questionnaire = lazy(() => import('./pages/Questionnaire'));
 
 
 const ProtectedRoute = ({ children }) => {
@@ -47,7 +49,7 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   // Double-security for Admin specifically
-  if (allowedRoles.includes('admin') && (user.role !== 'admin' || user.email !== 'nbfarison@gmail.com')) {
+  if (allowedRoles.includes('admin') && (user.role !== 'admin' || user.email !== SUPER_ADMIN_EMAIL)) {
     return <Navigate to="/" replace />;
   }
 
@@ -99,7 +101,7 @@ const CoachAthleteAccessGuard = ({ children }) => {
         return;
       }
 
-      if (user.role === 'admin' && user.email === 'nbfarison@gmail.com') {
+      if (user.role === 'admin' && user.email === SUPER_ADMIN_EMAIL) {
         if (isMounted) setAccessState('allowed');
         return;
       }
@@ -183,6 +185,11 @@ function AppContent() {
           <Route path="/calendar" element={
             <ProtectedRoute>
               <CalendarView />
+            </ProtectedRoute>
+          } />
+          <Route path="/questionnaire" element={
+            <ProtectedRoute>
+              <Questionnaire />
             </ProtectedRoute>
           } />
 

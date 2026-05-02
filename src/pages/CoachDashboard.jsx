@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getAssignedAthletes, getWorkouts } from '../services/firestoreService';
+import { getAssignedAthletes } from '../services/firestoreService';
 import { Link } from 'react-router-dom';
 import * as firestoreService from '../services/firestoreService';
 import AISuggestionModal from '../components/AISuggestionModal';
+import { SUPER_ADMIN_EMAIL } from '../config/constants';
 
 const CoachDashboard = () => {
     const { user } = useAuth();
@@ -11,8 +12,6 @@ const CoachDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [metrics, setMetrics] = useState({});
     const [selectedAthleteForAI, setSelectedAthleteForAI] = useState(null);
-
-    const ADMIN_EMAIL = 'nbfarison@gmail.com';
 
     useEffect(() => {
         if (user && (user.role === 'coach' || user.role === 'admin')) {
@@ -24,11 +23,11 @@ const CoachDashboard = () => {
         setLoading(true);
         try {
             let data;
-            if (user.email === 'nbfarison@gmail.com') {
+            if (user.email === SUPER_ADMIN_EMAIL) {
                 // Master access for super admin
                 const allUsers = await firestoreService.getAllRegisteredUsers();
                 // Filter out the admin themselves so they aren't coaching themselves (optional, but cleaner)
-                data = allUsers.filter(u => u.email !== 'nbfarison@gmail.com');
+                data = allUsers.filter(u => u.email !== SUPER_ADMIN_EMAIL);
             } else {
                 data = await getAssignedAthletes(user.id);
             }
@@ -44,15 +43,25 @@ const CoachDashboard = () => {
                         firestoreService.getUserProfile(athlete.id)
                     ]);
 
-                    const lastWorkout = workouts.length > 0 ? workouts[0].date : 'None yet';
+                    const lastWorkoutDate = workouts.length > 0 ? new Date(workouts[0].date) : null;
+                    const lastWorkout = lastWorkoutDate ? workouts[0].date : 'None yet';
                     const activePlan = planned.length > 0
                         ? planned.sort((a, b) => new Date(b.date) - new Date(a.date))[0].name || 'General'
                         : 'No Plan';
 
                     // Simplified Compliance: Logged vs Planned in last 7 days
-                    const last7Days = workouts.filter(w => (new Date() - new Date(w.date)) < 7 * 86400000).length;
-                    const planned7Days = planned.filter(w => (new Date() - new Date(w.date)) < 7 * 86400000).length;
-                    const compliance = planned7Days > 0 ? Math.round((last7Days / planned7Days) * 100) : (last7Days > 0 ? 100 : 0);
+                    const now = new Date();
+                    const daysAgo = (date) => (now - new Date(date)) / 86400000;
+                    const last7Days = workouts.filter(w => {
+                        const diff = daysAgo(w.date);
+                        return diff >= 0 && diff <= 7;
+                    }).length;
+                    const planned7Days = planned.filter(w => {
+                        const diff = daysAgo(w.date);
+                        return diff >= 0 && diff <= 7;
+                    }).length;
+                    const compliance = planned7Days > 0 ? Math.min(100, Math.round((last7Days / planned7Days) * 100)) : (last7Days > 0 ? 100 : 0);
+                    const daysSinceLastWorkout = lastWorkoutDate ? Math.floor(daysAgo(lastWorkoutDate)) : null;
 
                     return {
                         id: athlete.id,
@@ -60,7 +69,9 @@ const CoachDashboard = () => {
                         metrics: {
                             lastWorkout,
                             currentBlock: activePlan,
-                            compliance
+                            compliance,
+                            needsAttention: daysSinceLastWorkout === null || daysSinceLastWorkout >= 7 || compliance < 70,
+                            daysSinceLastWorkout
                         }
                     };
                 } catch (err) {
@@ -77,7 +88,11 @@ const CoachDashboard = () => {
             });
             
             setMetrics(metricsData);
-            setAthletes(data.map(a => ({ ...a, displayName: namesData[a.id] })));
+            setAthletes(data.map(a => ({ ...a, displayName: namesData[a.id] })).sort((a, b) => {
+                const aNeeds = metricsData[a.id]?.needsAttention ? 0 : 1;
+                const bNeeds = metricsData[b.id]?.needsAttention ? 0 : 1;
+                return aNeeds - bNeeds || (a.displayName || '').localeCompare(b.displayName || '');
+            }));
         } catch (error) {
             console.error('Error fetching athletes:', error);
         } finally {
@@ -106,6 +121,14 @@ const CoachDashboard = () => {
                                 <h2 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--primary)', textTransform: 'capitalize' }}>{athlete.displayName}</h2>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{athlete.email}</div>
                                 <span style={{ fontSize: '0.6rem', color: '#555' }}>ID: {athlete.id}</span>
+                                {metrics[athlete.id]?.needsAttention && (
+                                    <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: '#ff9800', fontWeight: 'bold' }}>
+                                        Needs coach review
+                                    </div>
+                                )}
+                                <div style={{ marginTop: '0.2rem', fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 'bold' }}>
+                                    ILM Status: {metrics[athlete.id]?.ilmStatus || 'UNKNOWN'}
+                                </div>
                             </div>
 
 

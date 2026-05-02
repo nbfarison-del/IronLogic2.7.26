@@ -153,7 +153,7 @@ const ControlStep = ({ readiness, onComplete }) => (
             <div style={{ marginBottom: '1rem' }}>
                 <label style={{ fontSize: '0.8rem', color: '#888' }}>Overarching Goal: {readiness.overarchingGoal}</label>
                 <div style={{ background: '#333', height: '12px', borderRadius: '6px', overflow: 'hidden', marginTop: '0.5rem' }}>
-                    <div style={{ background: 'linear-gradient(90deg, #4caf50, #81c784)', width: '45%', height: '100%' }}></div>
+                    
                 </div>
             </div>
         </div>

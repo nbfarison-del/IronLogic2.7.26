@@ -27,8 +27,8 @@ const AdjustmentFeed = ({ programAdj }) => {
             </div>
             {programAdj.action && (
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                <button className="btn btn-primary" style={{ flex: 1, padding: '0.6rem', fontSize: '0.9rem' }}>Accept Adjustment</button>
-                <button className="btn" style={{ flex: 1, padding: '0.6rem', fontSize: '0.9rem', background: '#333', border: 'none' }}>Reject</button>
+                <button className="btn btn-primary" style={{ flex: 1, padding: '0.6rem', fontSize: '0.9rem' }} onClick={() => alert('Adjustment accepted and logged!')}>Accept Adjustment</button>
+                <button className="btn" style={{ flex: 1, padding: '0.6rem', fontSize: '0.9rem', background: '#333', border: 'none' }} onClick={() => alert('Adjustment rejected.')}>Reject</button>
               </div>
             )}
           </div>

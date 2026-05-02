@@ -13,7 +13,7 @@ const InsightsCard = ({ coachInsight, insights }) => {
       
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', paddingTop: '1rem', borderTop: '1px solid #333' }}>
         <div style={{ fontSize: '0.8rem', color: '#888' }}>
-          <strong>Pattern:</strong> {insights?.replace('_', ' ').toUpperCase()}
+          <strong>Pattern:</strong> {insights?.replace(/_/g, ' ').toUpperCase()}
         </div>
         <div style={{ fontSize: '0.8rem', color: '#888', textAlign: 'right' }}>
           <strong>Recommendation:</strong> {recommendation.label}

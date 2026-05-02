@@ -7,7 +7,7 @@ import { useTimer } from '../context/TimerContext';
 import { useToast } from '../context/ToastContext';
 
 
-import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } from '../data/exercises';
+import { exercises as defaultExercises, EXERCISE_CATEGORIES } from '../data/exercises';
 import ExerciseTools from '../components/ExerciseTools';
 import * as firestoreService from '../services/firestoreService';
 import { runDMAICCycle } from '../services/DMAICService';
@@ -137,7 +137,7 @@ const WorkoutLog = () => {
     const [isCreatingExercise, setIsCreatingExercise] = useState(false);
     const [newExerciseName, setNewExerciseName] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
-    const [modifiers, setModifiers] = useState({
+    const [modifiers] = useState({
         grip: '', bar: '', pause: '', tempo: '',
         isBelt: false, isKneeWraps: false,
         isSquatSuit: false, isSquatSuitStrapsUp: false,
@@ -155,7 +155,7 @@ const WorkoutLog = () => {
     const weightInputRef = useRef([]);
     const repsInputRef = useRef([]);
 
-    const { isWakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock();
+    const { requestWakeLock, releaseWakeLock } = useWakeLock();
     const [keepAwake, setKeepAwake] = useState(false);
 
     useEffect(() => {
@@ -183,7 +183,10 @@ const WorkoutLog = () => {
     const confirmFinalize = async () => {
         try {
             const dateStr = getDateStr(selectedDate);
-            await firestoreService.markSessionComplete(targetUserId, dateStr, true);
+            await firestoreService.markSessionComplete(targetUserId, dateStr, true, {
+                sessionRpe,
+                completedAt: new Date().toISOString()
+            });
             if (isCoachViewing) {
                 await runDMAICCycle(targetUserId);
             }
@@ -418,8 +421,6 @@ const WorkoutLog = () => {
         return key && trainingMaxes[key] ? entry.estimated1RM > parseFloat(trainingMaxes[key]) : false;
 
     };
-
-    const activeConfig = EXERCISE_CONFIG[selectedExerciseId] || {};
 
     if (dataLoading || extLoading) return <div className="card">Syncing logs...</div>;
 

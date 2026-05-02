@@ -229,9 +229,13 @@ export const subscribeToWorkouts = (userId, callback, errorCallback, limitCount 
 
 // ==================== SESSIONS ====================
 
-export const markSessionComplete = async (userId, dateStr, isComplete) => {
+export const markSessionComplete = async (userId, dateStr, isComplete, metadata = {}) => {
     const sessionRef = doc(db, 'users', userId, 'sessions', dateStr);
-    await setDoc(sessionRef, { isComplete }, { merge: true });
+    await setDoc(sessionRef, {
+        isComplete,
+        ...metadata,
+        updatedAt: new Date().toISOString()
+    }, { merge: true });
 };
 
 export const subscribeToSessionStatus = (userId, dateStr, callback) => {
