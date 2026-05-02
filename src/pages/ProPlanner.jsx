@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../context/ToastContext';
 
 import * as firestoreService from '../services/firestoreService';
@@ -13,9 +12,7 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 const ProPlanner = () => {
     const { athleteId: paramAthleteId } = useParams();
     const { user } = useAuth();
-    const { unit } = useSettings();
     const { showToast } = useToast();
-    const navigate = useNavigate();
 
 
     // Data State
@@ -34,8 +31,7 @@ const ProPlanner = () => {
     const [showTemplateMenu, setShowTemplateMenu] = useState(false);
 
     // Filter/Switch State
-    const [myAthletes, setMyAthletes] = useState([]);
-    const [targetAthleteId, setTargetAthleteId] = useState(paramAthleteId || user?.id);
+    const targetAthleteId = paramAthleteId || user?.id;
 
     // DB Sync
     const [isSyncing, setIsSyncing] = useState(false);
@@ -49,7 +45,7 @@ const ProPlanner = () => {
         if (!user) return;
         setLoading(true);
         try {
-            const [usersData, profileData, plannedData, templatesData] = await Promise.all([
+            const [, profileData, plannedData, templatesData] = await Promise.all([
                 user.email === 'nbfarison@gmail.com' ? firestoreService.getAllRegisteredUsers() : firestoreService.getAssignedAthletes(user.id),
                 firestoreService.getUserProfile(targetAthleteId),
                 firestoreService.getPlannedWorkouts(targetAthleteId),
@@ -65,7 +61,6 @@ const ProPlanner = () => {
             const seededNames = new Set(templatesData.map(t => t.name));
             const uniqueSystem = systemTemplates.filter(st => !seededNames.has(st.name));
             
-            setMyAthletes(usersData);
             setAthlete(profileData || { email: 'Unknown' });
             setTemplates([...uniqueSystem, ...templatesData]);
             setWeeks(buildStructureFromPlanned(plannedData));
@@ -141,8 +136,13 @@ const ProPlanner = () => {
                 }
 
                 const syncPromises = [];
-                currentWeeks[currentWeekIdx].forEach((day, dayIdx) => {
-                    const dateStr = getDayDate(currentWeekIdx, dayIdx);
+                const weekIndexes = currentWeekIdx === 'all'
+                    ? currentWeeks.map((_, idx) => idx)
+                    : [currentWeekIdx];
+
+                weekIndexes.forEach((weekIdx) => {
+                    currentWeeks[weekIdx]?.forEach((day, dayIdx) => {
+                    const dateStr = getDayDate(weekIdx, dayIdx);
                     day.sessions.forEach((session, sIdx) => {
                         if (session.exercises.length > 0 || session.name) {
                             syncPromises.push((async () => {
@@ -155,18 +155,19 @@ const ProPlanner = () => {
                                 if (newId && newId !== session.id) {
                                     setWeeks(prev => {
                                         const newWeeks = [...prev];
-                                        const weekCopy = [...newWeeks[currentWeekIdx]];
+                                        const weekCopy = [...newWeeks[weekIdx]];
                                         const dayCopy = { ...weekCopy[dayIdx] };
                                         const sessionsCopy = [...dayCopy.sessions];
                                         sessionsCopy[sIdx] = { ...sessionsCopy[sIdx], id: newId };
                                         dayCopy.sessions = sessionsCopy;
                                         weekCopy[dayIdx] = dayCopy;
-                                        newWeeks[currentWeekIdx] = weekCopy;
+                                        newWeeks[weekIdx] = weekCopy;
                                         return newWeeks;
                                     });
                                 }
                             })());
                         }
+                    });
                     });
                 });
                 await Promise.all(syncPromises);
@@ -180,12 +181,12 @@ const ProPlanner = () => {
 
     const copyData = (data) => JSON.parse(JSON.stringify(data));
 
-    const modifyWeeks = (updater) => {
+    const modifyWeeks = (updater, syncWeekIdx = activeWeekIndex) => {
         setHistory(prev => [...prev.slice(-19), copyData(weeks)]);
         const newWeeks = copyData(weeks);
         updater(newWeeks);
         setWeeks(newWeeks);
-        triggerAutoSync(newWeeks, activeWeekIndex);
+        triggerAutoSync(newWeeks, syncWeekIdx);
     };
 
     const undo = () => {
@@ -224,6 +225,103 @@ const ProPlanner = () => {
         e.stopPropagation();
     };
 
+    const normalizeCollection = (value) => {
+        if (Array.isArray(value)) return value.filter(Boolean);
+        if (value && typeof value === 'object') return Object.values(value).filter(Boolean);
+        return [];
+    };
+
+    const cloneTemplateExercise = (ex) => {
+        const rawSets = normalizeCollection(ex.sets);
+        const sets = rawSets.length > 0
+            ? rawSets.map(s => ({
+                ...s,
+                id: Math.random().toString(36).substr(2, 9),
+                sets: s.sets || ex.sets || '',
+                weight: s.weight || '',
+                reps: s.reps || ex.reps || '',
+                targetRpe: s.targetRpe || s.rpe || ex.targetRpe || ex.rpe || ex.intensity || ''
+            }))
+            : [{
+                id: Math.random().toString(36).substr(2, 9),
+                sets: ex.sets || '',
+                weight: '',
+                reps: ex.reps || '',
+                targetRpe: ex.targetRpe || ex.rpe || ex.intensity || ''
+            }];
+
+        return {
+            exerciseId: ex.exerciseId || '',
+            name: ex.exerciseName || ex.name || '',
+            notes: ex.notes || '',
+            modifiers: ex.modifiers ? copyData(ex.modifiers) : {},
+            id: Math.random().toString(36).substr(2, 9),
+            sets
+        };
+    };
+
+    const applyTemplateToWeeks = (templateData, targetDayIdx = 0) => {
+        const template = copyData(templateData);
+        const weeksList = normalizeCollection(template.weeks);
+
+        modifyWeeks(newWeeks => {
+            if (weeksList.length > 0) {
+                const firstTemplateDay = weeksList.reduce((min, week) => {
+                    const daysList = normalizeCollection(week?.days);
+                    daysList.forEach((day, dayIdx) => {
+                        const dayNumber = Number(day?.dayOfWeek || day?.dayNumber || dayIdx + 1);
+                        if (Number.isFinite(dayNumber)) min = Math.min(min, dayNumber);
+                    });
+                    return min;
+                }, 7);
+
+                weeksList.forEach((week, wIdx) => {
+                    const weekNumber = Number(week?.weekNumber || wIdx + 1);
+                    const daysList = normalizeCollection(week?.days);
+
+                    daysList.forEach((day, dayIdx) => {
+                        const templateDayNumber = Number(day?.dayOfWeek || day?.dayNumber || dayIdx + 1);
+                        const dayOffset = Math.max(templateDayNumber - firstTemplateDay, 0);
+                        const totalOffset = ((weekNumber - 1) * 7) + targetDayIdx + dayOffset;
+                        const targetWIdx = activeWeekIndex + Math.floor(totalOffset / 7);
+                        const finalDayIdx = totalOffset % 7;
+
+                        while (newWeeks.length <= targetWIdx) {
+                            newWeeks.push(createEmptyWeek());
+                        }
+
+                        const exercisesList = normalizeCollection(day?.exercises);
+                        if (exercisesList.length === 0) return;
+
+                        newWeeks[targetWIdx][finalDayIdx].sessions.push({
+                            id: Math.random().toString(36).substr(2, 9),
+                            name: day?.name || `${template.name || 'Program'} W${weekNumber}D${templateDayNumber}`,
+                            planName: template.name || 'Program',
+                            templateId: template.id || '',
+                            exercises: exercisesList.map(cloneTemplateExercise),
+                            notes: day?.notes || ''
+                        });
+                    });
+                });
+            } else {
+                const exercisesList = normalizeCollection(template.exercises);
+                if (exercisesList.length === 0) return;
+                newWeeks[activeWeekIndex][targetDayIdx].sessions.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: template.name || "Template Session",
+                    planName: template.name || "Template",
+                    templateId: template.id || '',
+                    exercises: exercisesList.map(cloneTemplateExercise),
+                    notes: template.notes || ''
+                });
+            }
+        }, 'all');
+
+        setShowTemplateMenu(false);
+        const durationLabel = weeksList.length > 0 ? `${weeksList.length} weeks` : '1 workout';
+        showToast(`${template.name || 'Template'} applied for ${durationLabel}.`, 'success');
+    };
+
     const onDrop = (e, targetDayIdx, targetSessionIdx) => {
         e.preventDefault();
         setDragOverInfo(null);
@@ -241,82 +339,7 @@ const ProPlanner = () => {
                 currentWeek[targetDayIdx].sessions[targetSessionIdx].exercises.push(dragItem.item);
             });
         } else if (dragItem.type === 'template') {
-            const template = JSON.parse(JSON.stringify(dragItem.item));
-            console.log("[DRAG] Template object before processing:", template);
-
-            modifyWeeks(newWeeks => {
-                const currentWeek = newWeeks[activeWeekIndex];
-
-                // Helper to clone a single exercise with its sets
-                const cloneExercise = (ex) => ({
-                    exerciseId: ex.exerciseId || '',
-                    name: ex.exerciseName || ex.name || '',
-                    notes: ex.notes || '',
-                    modifiers: ex.modifiers ? JSON.parse(JSON.stringify(ex.modifiers)) : {},
-                    id: Math.random().toString(36).substr(2, 9),
-                    sets: (ex.sets || []).map(s => ({
-                        ...s,
-                        id: Math.random().toString(36).substr(2, 9),
-                        weight: s.weight || '',
-                        reps: s.reps || '',
-                        targetRpe: s.targetRpe || ''
-                    }))
-                });
-
-                const weeksList = Array.isArray(template.weeks) ? template.weeks : Object.values(template.weeks || {});
-
-                if (weeksList.length > 0) {
-                    // Full program template - apply starting from current week
-                    console.log("[DRAG] Applying multi-week program template");
-                    weeksList.forEach((week, wIdx) => {
-                        const targetWIdx = activeWeekIndex + wIdx;
-                        while (newWeeks.length <= targetWIdx) {
-                            newWeeks.push(createEmptyWeek());
-                        }
-                        
-                        const daysList = Array.isArray(week?.days) ? week.days : Object.values(week?.days || {});
-                        daysList.forEach(day => {
-                            const dayIdx = (day?.dayOfWeek || 1) - 1;
-                            if (dayIdx >= 0 && dayIdx < 7) {
-                                const exercisesList = Array.isArray(day?.exercises) ? day.exercises : Object.values(day?.exercises || {});
-                                const newSession = {
-                                    id: Math.random().toString(36).substr(2, 9),
-                                    name: day?.name || template.name || "Program Session",
-                                    exercises: exercisesList.map(cloneExercise)
-                                };
-                                newWeeks[targetWIdx][dayIdx].sessions.push(newSession);
-                            }
-                        });
-                    });
-                } else {
-                    // Single workout template
-                    console.log("[DRAG] Applying single workout template");
-                    const exercisesList = Array.isArray(template.exercises) ? template.exercises : Object.values(template.exercises || {});
-                    const exercises = exercisesList.map(cloneExercise);
-                    
-                    if (exercises.length === 0) {
-                        console.warn("[DRAG] Template has no exercises!", template);
-                    }
-
-                    const newSession = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        name: template.name || "Template Session",
-                        exercises: exercises
-                    };
-
-                    console.log("[DRAG] Final session object to be dropped:", newSession);
-
-                    if (targetSessionIdx !== undefined && currentWeek[targetDayIdx].sessions[targetSessionIdx]) {
-                        // Merge into existing session
-                        console.log("[DRAG] Merging into existing session at day", targetDayIdx, "session", targetSessionIdx);
-                        currentWeek[targetDayIdx].sessions[targetSessionIdx].exercises.push(...newSession.exercises);
-                    } else {
-                        // Add as new session to the day
-                        console.log("[DRAG] Creating new session on day", targetDayIdx);
-                        currentWeek[targetDayIdx].sessions.push(newSession);
-                    }
-                }
-            });
+            applyTemplateToWeeks(dragItem.item, targetDayIdx);
         }
         setDragItem(null);
     };
@@ -410,61 +433,13 @@ const ProPlanner = () => {
     };
 
     const applyTemplate = (templateData) => {
-        const template = JSON.parse(JSON.stringify(templateData));
-        console.log("[MENU] Applying template to week:", template);
-
-        modifyWeeks(newWeeks => {
-            const cloneExercise = (ex) => ({
-                exerciseId: ex.exerciseId || '',
-                name: ex.exerciseName || ex.name || '',
-                notes: ex.notes || '',
-                modifiers: ex.modifiers ? JSON.parse(JSON.stringify(ex.modifiers)) : {},
-                id: Math.random().toString(36).substr(2, 9),
-                sets: (ex.sets || []).map(s => ({
-                    ...s,
-                    id: Math.random().toString(36).substr(2, 9),
-                    weight: s.weight || '',
-                    reps: s.reps || '',
-                    targetRpe: s.targetRpe || ''
-                }))
-            });
-
-            const weeksList = Array.isArray(template.weeks) ? template.weeks : Object.values(template.weeks || {});
-
-            if (weeksList.length > 0) {
-                // Multi-week program
-                weeksList.forEach((week, wIdx) => {
-                    const targetWIdx = activeWeekIndex + wIdx;
-                    while (newWeeks.length <= targetWIdx) {
-                        newWeeks.push(createEmptyWeek());
-                    }
-                    
-                    const daysList = Array.isArray(week?.days) ? week.days : Object.values(week?.days || {});
-                    daysList.forEach(day => {
-                        const dayIdx = (day?.dayOfWeek || 1) - 1;
-                        if (dayIdx >= 0 && dayIdx < 7) {
-                            const exercisesList = Array.isArray(day?.exercises) ? day.exercises : Object.values(day?.exercises || {});
-                            newWeeks[targetWIdx][dayIdx].sessions.push({
-                                id: Math.random().toString(36).substr(2, 9),
-                                name: day?.name || template.name || "Program Session",
-                                exercises: exercisesList.map(cloneExercise)
-                            });
-                        }
-                    });
-                });
-            } else if (template.exercises) {
-                // Apply single workout to first day of active week by default if using Menu
-                const exercisesList = Array.isArray(template.exercises) ? template.exercises : Object.values(template.exercises || {});
-                const newSession = {
-                    id: Math.random().toString(36).substr(2, 9),
-                    name: template.name || "Template Session",
-                    exercises: exercisesList.map(cloneExercise)
-                };
-                newWeeks[activeWeekIndex][0].sessions.push(newSession);
-                console.log("[MENU] Applied single workout to day 0 of active week.");
-            }
-        });
-        setShowTemplateMenu(false);
+        const startDayInput = prompt(
+            `Start "${templateData.name}" on which day?\n1 Monday, 2 Tuesday, 3 Wednesday, 4 Thursday, 5 Friday, 6 Saturday, 7 Sunday`,
+            '1'
+        );
+        const startDay = Number.parseInt(startDayInput || '1', 10);
+        if (!Number.isFinite(startDay) || startDay < 1 || startDay > 7) return;
+        applyTemplateToWeeks(templateData, startDay - 1);
     };
 
 
