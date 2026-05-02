@@ -949,3 +949,12 @@ export const getDataInRange = async (userId, collectionName, startDate, endDate)
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 };
+export const getLatestPerformanceOutcome = async (userId) => {
+    const outcomeRef = collection(db, 'users', userId, 'performanceOutcome');
+    const q = query(outcomeRef, limit(5)); // just fetch a few and sort in memory to avoid index issues
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    docs.sort((a, b) => b.id.localeCompare(a.id));
+    return docs[0];
+};

@@ -1,6 +1,8 @@
 import React from 'react';
+import { useToast } from '../../context/ToastContext';
 
 const AdjustmentFeed = ({ programAdj }) => {
+  const { showToast } = useToast();
   return (
     <div className="card" style={{ marginBottom: '2rem' }}>
       <h3 style={{ margin: '0 0 1rem 0' }}>Program Modifications</h3>
@@ -27,8 +29,8 @@ const AdjustmentFeed = ({ programAdj }) => {
             </div>
             {programAdj.action && (
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-                <button className="btn btn-primary" style={{ flex: 1, padding: '0.6rem', fontSize: '0.9rem' }} onClick={() => alert('Adjustment accepted and logged!')}>Accept Adjustment</button>
-                <button className="btn" style={{ flex: 1, padding: '0.6rem', fontSize: '0.9rem', background: '#333', border: 'none' }} onClick={() => alert('Adjustment rejected.')}>Reject</button>
+                <button className="btn btn-primary" style={{ flex: 1, padding: '0.6rem', fontSize: '0.9rem' }} onClick={() => showToast('Adjustment accepted and logged!', 'success')}>Accept Adjustment</button>
+                <button className="btn" style={{ flex: 1, padding: '0.6rem', fontSize: '0.9rem', background: '#333', border: 'none' }} onClick={() => showToast('Adjustment rejected.', 'info')}>Reject</button>
               </div>
             )}
           </div>

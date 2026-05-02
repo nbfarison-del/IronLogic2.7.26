@@ -138,6 +138,7 @@ const Home = () => {
                                 </div>
                                 <div style={{ display: 'flex', gap: '1rem' }}>
                                     <Link to="/profile" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>Set Your Maxes</Link>
+                                    <Link to="/questionnaire" className="btn" style={{ padding: '0.75rem 1.5rem', background: 'var(--primary)', color: '#000' }}>Setup AI Coach</Link>
                                     <Link to="/log" className="btn" style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.05)' }}>Log First Session</Link>
                                 </div>
                             </div>

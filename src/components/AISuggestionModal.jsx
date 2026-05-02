@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { generateStrengthBlock, analyzeTrends } from '../services/GeminiService';
 import { getWorkouts, getPlannedWorkouts, assignProgramToAthlete } from '../services/firestoreService';
 import { validateProgram } from '../utils/programValidation';
+import { useToast } from '../context/ToastContext';
 
 const AISuggestionModal = ({ athlete, onClose }) => {
+    const { showToast } = useToast();
     const [loading, setLoading] = useState(true);
     const [trendAnalysis, setTrendAnalysis] = useState('');
     const [generatedProgram, setGeneratedProgram] = useState(null);
@@ -47,14 +49,14 @@ const AISuggestionModal = ({ athlete, onClose }) => {
             const program = await generateStrengthBlock({ workouts, planned }, goal);
             const validation = validateProgram(program);
             if (!validation.isValid) {
-                alert(`Generated program needs review before assignment:\n\n${validation.errors.slice(0, 5).join('\n')}`);
+                showToast(`Generated program needs review before assignment:\n\n${validation.errors.slice(0, 5).join('\n')}`, 'info');
                 setGeneratedProgram(null);
                 return;
             }
             setGeneratedProgram(program);
         } catch (error) {
             console.error('Error generating program:', error);
-            alert('Failed to generate program.');
+            showToast('Failed to generate program.', 'error');
         } finally {
             setLoading(false);
             setStatus('idle');
@@ -65,7 +67,7 @@ const AISuggestionModal = ({ athlete, onClose }) => {
         if (!generatedProgram || !startDate) return;
         const validation = validateProgram(generatedProgram);
         if (!validation.isValid) {
-            alert(`This program cannot be assigned yet:\n\n${validation.errors.slice(0, 8).join('\n')}`);
+            showToast(`This program cannot be assigned yet: ${validation.errors.slice(0, 2).join(', ')}`, 'error');
             return;
         }
         setStatus('applying');
@@ -93,11 +95,11 @@ const AISuggestionModal = ({ athlete, onClose }) => {
             });
 
             await Promise.all(assignments);
-            alert('Program applied successfully!');
+            showToast('Program applied successfully!', 'success');
             onClose();
         } catch (error) {
             console.error('Error applying program:', error);
-            alert('Failed to apply program.');
+            showToast('Failed to apply program.', 'error');
         } finally {
             setLoading(false);
             setStatus('idle');

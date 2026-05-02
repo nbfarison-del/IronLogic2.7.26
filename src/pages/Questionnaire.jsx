@@ -8,6 +8,8 @@ const Questionnaire = () => {
     const navigate = useNavigate();
     const [step, setStep] = useState(0);
     const [answers, setAnswers] = useState({});
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const questions = [
         { id: 'age', type: 'number', label: 'What is your age?', required: true },
@@ -50,22 +52,16 @@ const Questionnaire = () => {
     const handleSubmit = async () => {
         if (!user) return;
 
+        setLoading(true);
+        setError('');
         try {
-            // Save answers to Firestore
             await firestoreService.saveQuestionnaire(user.id, answers);
-
-            // Generate new program immediately or just clear old one? 
-            // Let's clear the old program so Home.jsx regenerates it
-            // Since we don't have a direct delete, we can save null or overwrite. 
-            // Simpler: Just save the questionnaire. The Home component logic will see the new questionnaire? 
-            // Actually Home.jsx checks if program exists. We should probably force a regeneration.
-            // Let's rely on Home.jsx for generation for now, but we might want to clear the 'program' collection if we could.
-            // For now, let's just save the questionnaire.
-
-            console.log('Submitted Answers:', answers);
             navigate('/');
         } catch (error) {
             console.error('Error saving questionnaire:', error);
+            setError('Failed to save your answers. Please try again.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -78,6 +74,8 @@ const Questionnaire = () => {
                 <div style={{ marginBottom: '1rem', color: '#888', fontSize: '0.9rem' }}>
                     Question {step + 1} of {questions.length}
                 </div>
+
+                {error && <div style={{ color: '#ff4444', marginBottom: '1rem' }}>{error}</div>}
 
                 <div className="input-group">
                     <label style={{ fontSize: '1.2rem', marginBottom: '1rem' }}>{currentQ.label}</label>

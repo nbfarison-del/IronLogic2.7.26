@@ -32,15 +32,14 @@ const CoachDashboard = () => {
                 data = await getAssignedAthletes(user.id);
             }
 
-            setAthletes(data);
-
             // Fetch quick metrics for each athlete in parallel to avoid N+1 slow loading
             const results = await Promise.all(data.map(async (athlete) => {
                 try {
-                    const [workouts, planned, profile] = await Promise.all([
+                    const [workouts, planned, profile, latestOutcome] = await Promise.all([
                         firestoreService.getWorkouts(athlete.id, 5),
                         firestoreService.getPlannedWorkouts(athlete.id),
-                        firestoreService.getUserProfile(athlete.id)
+                        firestoreService.getUserProfile(athlete.id),
+                        firestoreService.getLatestPerformanceOutcome(athlete.id)
                     ]);
 
                     const lastWorkoutDate = workouts.length > 0 ? new Date(workouts[0].date) : null;
@@ -71,12 +70,13 @@ const CoachDashboard = () => {
                             currentBlock: activePlan,
                             compliance,
                             needsAttention: daysSinceLastWorkout === null || daysSinceLastWorkout >= 7 || compliance < 70,
-                            daysSinceLastWorkout
+                            daysSinceLastWorkout,
+                            ilmStatus: latestOutcome?.insights ? latestOutcome.insights.replace(/_/g, ' ').toUpperCase() : 'MAINTAINING'
                         }
                     };
                 } catch (err) {
                     console.error(`Error fetching data for ${athlete.id}:`, err);
-                    return { id: athlete.id, name: athlete.email, metrics: { lastWorkout: 'Error', currentBlock: '-', compliance: 0 } };
+                    return { id: athlete.id, name: athlete.email, metrics: { lastWorkout: 'Error', currentBlock: '-', compliance: 0, ilmStatus: 'UNKNOWN' } };
                 }
             }));
 

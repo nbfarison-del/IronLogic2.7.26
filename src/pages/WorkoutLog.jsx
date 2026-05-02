@@ -454,10 +454,10 @@ const WorkoutLog = () => {
                     {!isCoachViewing && (
                         <button
                             onClick={() => setKeepAwake(!keepAwake)}
-                            className={`btn ${keepAwake ? 'btn-secondary' : ''}`}
+                            className={`btn ${keepAwake ? 'btn-primary' : ''}`}
                             style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
                         >
-                            {keepAwake ? '💡 Awake' : '😴 Sleep'}
+                            {keepAwake ? '💡 Screen: ON' : '😴 Allow Sleep'}
                         </button>
                     )}
                 </div>
