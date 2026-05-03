@@ -48,6 +48,9 @@ const CalendarView = () => {
     const [extMobility, setExtMobility] = useState([]);
     const [extLoading, setExtLoading] = useState(false);
 
+    const queryParams = new URLSearchParams(location.search);
+    const planParam = queryParams.get('plan');
+
     // UI State
     const [isPlanning, setIsPlanning] = useState(planParam === 'true');
     const [editingProgram, setEditingProgram] = useState(null);
@@ -57,9 +60,6 @@ const CalendarView = () => {
     const [noteInput, setNoteInput] = useState('');
     const [confirmingDelete, setConfirmingDelete] = useState(null);
 
-
-    const queryParams = new URLSearchParams(location.search);
-    const planParam = queryParams.get('plan');
 
     // Auto-open planner if coming from Home with ?plan=true
     useEffect(() => {
@@ -227,7 +227,7 @@ const CalendarView = () => {
         const days = [];
 
         for (let i = 0; i < startDay; i++) {
-            days.push(<div key={`empty - ${i} `} className="calendar-day empty"></div>);
+            days.push(<div key={`empty-${i}`} className="calendar-day empty"></div>);
         }
 
         for (let d = 1; d <= totalDays; d++) {
@@ -247,7 +247,7 @@ const CalendarView = () => {
             days.push(
                 <div
                     key={d}
-                    className={`calendar - day ${isSelected ? 'selected' : ''} `}
+                    className={`calendar-day ${isSelected ? 'selected' : ''}`}
                     onClick={() => setSelectedDate(date)}
                     style={{
                         border: isSelected ? '2px solid var(--primary)' : '1px solid #444',
@@ -266,7 +266,7 @@ const CalendarView = () => {
                             <div style={{
                                 width: '6px', height: '6px', borderRadius: '50%',
                                 background: recoveryEntry.score >= 8 ? '#4caf50' : recoveryEntry.score >= 5 ? '#ff9800' : '#f44336'
-                            }} title={`Recovery: ${recoveryEntry.score} `}></div>
+                            }} title={`Recovery: ${recoveryEntry.score}`}></div>
                         )}
                         {hasWeight && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#9c27b0' }} title="Weight Logged"></div>}
                         {hasNote && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ffeb3b' }} title="Note Added"></div>}
@@ -427,7 +427,7 @@ const CalendarView = () => {
                             </form>
 
                             {dayRecovery && (
-                                <div style={{ padding: '1rem', background: '#222', borderRadius: '8px', borderLeft: `4px solid ${dayRecovery.score >= 8 ? '#4caf50' : dayRecovery.score >= 5 ? '#ff9800' : '#f44336'} ` }}>
+                                <div style={{ padding: '1rem', background: '#222', borderRadius: '8px', borderLeft: `4px solid ${dayRecovery.score >= 8 ? '#4caf50' : dayRecovery.score >= 5 ? '#ff9800' : '#f44336'}` }}>
                                     <div style={{ fontWeight: 'bold' }}>Recovery Score: {dayRecovery.score}/10</div>
                                 </div>
                             )}
