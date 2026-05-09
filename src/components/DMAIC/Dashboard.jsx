@@ -8,14 +8,13 @@ const DMACDashboard = ({ metrics, insights }) => {
     const { e1rm = {}, fatigue_index = 0, trend = {} } = metrics;
 
     const getStatusColor = (insight) => {
-        switch (insight) {
+        const lowerInsight = (insight || '').toLowerCase();
+        switch (lowerInsight) {
             case 'progressing': return '#4caf50';
-            case 'high_physical_fatigue':
-            case 'overreaching_danger': return '#ff5252';
-            case 'lifestyle_stress_high':
-            case 'recovery_lead_plateau': return '#ff9800';
-            case 'true_plateau':
-            case 'accumulated_fatigue_plateau': return '#2196f3';
+            case 'fatigued':
+            case 'regression': return '#ff5252';
+            case 'stalled': return '#ff9800';
+            case 'stable': return '#2196f3';
             default: return '#888';
         }
     };

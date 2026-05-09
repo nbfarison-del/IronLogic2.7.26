@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
+import * as ILMService from '../services/ILMService';
 
 const Questionnaire = () => {
     const { user } = useAuth();
@@ -18,14 +19,14 @@ const Questionnaire = () => {
             options: ['Beginner', 'Intermediate', 'Advanced']
         },
         {
-            id: 'goal', type: 'multi-select', label: 'Primary goals?',
-            options: ['Strength', 'Hypertrophy', 'Weight Loss', 'Athletic Performance', 'General Fitness']
+            id: 'goalType', type: 'select', label: 'What is your primary goal?',
+            options: ['Strength', 'Hypertrophy', 'Powerlifting', 'Conditioning', 'Rehab', 'General Fitness']
         },
-        { id: 'frequency', type: 'number', label: 'Days per week available?', min: 1, max: 7 },
-        { id: 'duration', type: 'number', label: 'Minutes per session?', min: 15, max: 180 },
+        { id: 'daysPerWeek', type: 'number', label: 'Days per week available?', min: 1, max: 7 },
+        { id: 'sessionDuration', type: 'number', label: 'Minutes per session?', min: 15, max: 180 },
         {
             id: 'equipment', type: 'multi-select', label: 'Available equipment?',
-            options: ['Full Gym', 'Dumbbells Only', 'Barbell Only', 'Bodyweight Only', 'Resistance Bands']
+            options: ['Barbell', 'Dumbbells', 'Cables', 'Machines', 'Rack', 'Bodyweight']
         },
         { id: 'injuries', type: 'textarea', label: 'Any injuries or limitations?', required: false },
         { id: 'preferences', type: 'textarea', label: 'Exercise preferences or dislikes?', required: false },
@@ -55,7 +56,18 @@ const Questionnaire = () => {
         setLoading(true);
         setError('');
         try {
+            // Save to legacy questionnaire path for backward compatibility
             await firestoreService.saveQuestionnaire(user.id, answers);
+            
+            // Save to formal ILM Training Intent Profile
+            await ILMService.saveTrainingIntent(user.id, {
+                goalType: answers.goalType,
+                daysPerWeek: parseInt(answers.daysPerWeek),
+                sessionDuration: parseInt(answers.sessionDuration),
+                equipment: answers.equipment,
+                injuries: answers.injuries ? [answers.injuries] : []
+            });
+            
             navigate('/');
         } catch (error) {
             console.error('Error saving questionnaire:', error);

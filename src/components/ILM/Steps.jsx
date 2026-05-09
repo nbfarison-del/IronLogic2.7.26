@@ -74,23 +74,23 @@ const DefineStep = ({ readiness, setReadiness, onAnalyze, loading, fetchingData 
 const AnalyzeStep = ({ checkInData, setStep }) => (
     <>
         <h2 style={{ marginBottom: '1rem' }}>Step 2/3: MEASURE & ANALYZE</h2>
-        <DMAICDashboard metrics={checkInData.metrics} insights={checkInData.insights} />
+        <DMAICDashboard metrics={checkInData.analysis.metrics.rawMetrics} insights={checkInData.analysis.category} />
         
         <h2 style={{ marginTop: '2rem' }}>Previous Week History</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '2rem' }}>
-            {checkInData.lastWeekWorkouts.map(w => (
+            {checkInData.performanceData.workouts.slice(0, 7).map(w => (
                 <div key={w.id} className="card" style={{ padding: '0.8rem', background: '#222' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <strong>{w.exerciseName}</strong>
                         <span style={{ fontSize: '0.8rem', color: '#888' }}>{w.date}</span>
                     </div>
                     <div style={{ fontSize: '0.9rem' }}>
-                        {w.weight ? `${w.weight}kg x ${w.reps} @ ${w.actualRpe || w.targetRpe}` : `${w.duration}m`}
+                        {w.weight ? `${w.weight}kg x ${w.reps} @ ${w.actualRpe || w.targetRpe || 'N/A'}` : `${w.duration}m`}
                     </div>
                 </div>
             ))}
         </div>
-        <InsightsCard coachInsight={checkInData.coachInsight} insights={checkInData.insights} metrics={checkInData.metrics} />
+        <InsightsCard coachInsight={checkInData.adjustments.instruction} insights={checkInData.analysis.category} metrics={checkInData.analysis.metrics.rawMetrics} />
         <button className="btn btn-primary" style={{ width: '100%', marginTop: '2rem', padding: '1rem' }} onClick={() => setStep(4)}>
             Continue to Strategy &rarr;
         </button>
@@ -102,7 +102,7 @@ const StrategyStep = ({ checkInData, setStep }) => (
         <div className="card" style={{ background: 'linear-gradient(135deg, #111, #1a1a1a)', border: '1px solid var(--primary)', padding: '2rem', marginBottom: '2rem', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
             <h3 style={{ margin: 0, textTransform: 'uppercase', color: 'var(--primary)', fontSize: '0.8rem', letterSpacing: '2px' }}>ILM DIRECTIVES</h3>
             <div style={{ color: '#fff', margin: '1.5rem 0' }} className="markdown-body">
-                 <ReactMarkdown>{checkInData.recommendation}</ReactMarkdown>
+                 <ReactMarkdown>{checkInData.adjustments.detailedRecommendation}</ReactMarkdown>
             </div>
             
             <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
@@ -124,7 +124,7 @@ const StrategyStep = ({ checkInData, setStep }) => (
                                     </head>
                                     <body>
                                         <div class="header">ILM DIRECTIVE - ${new Date().toLocaleDateString()}</div>
-                                        <div class="box">${checkInData.recommendation.replace(/\n/g, '<br/>')}</div>
+                                        <div class="box">${checkInData.adjustments.detailedRecommendation.replace(/\n/g, '<br/>')}</div>
                                     </body>
                                 </html>
                             `);
@@ -133,7 +133,7 @@ const StrategyStep = ({ checkInData, setStep }) => (
                         🪟 Side-Reference
                     </button>
                     <button className="btn" style={{ flex: 1, background: '#333' }} onClick={() => {
-                        navigator.clipboard.writeText(checkInData.recommendation);
+                        navigator.clipboard.writeText(checkInData.adjustments.detailedRecommendation);
                         alert("Copied!");
                     }}>📋 Copy</button>
             </div>

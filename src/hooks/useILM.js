@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as firestoreService from '../services/firestoreService';
-import { runWeeklyCheckIn } from '../services/DMAICService';
+import { runILMCheckIn } from '../services/ILMService';
 
 /**
  * useILM hook
@@ -58,7 +58,7 @@ export const useILM = (athleteId) => {
         setLoading(true);
         setError(null);
         try {
-            const result = await runWeeklyCheckIn(athleteId, currentReadiness);
+            const result = await runILMCheckIn(athleteId, currentReadiness);
             setCheckInData(result);
             return result;
         } catch (e) {
