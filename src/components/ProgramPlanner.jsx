@@ -142,6 +142,26 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
         }));
     };
 
+    const applyCalculatedTarget = (exerciseId, target) => {
+        setPlannedExercises(plannedExercises.map(ex => {
+            if (ex.id !== exerciseId) return ex;
+
+            const targetSetId = ex.sets.find(s => !s.weight && !s.reps)?.id || ex.sets[0]?.id;
+            return {
+                ...ex,
+                sets: ex.sets.map(s => s.id === targetSetId
+                    ? {
+                        ...s,
+                        weight: String(target.weight || ''),
+                        reps: String(target.reps || s.reps || ''),
+                        targetRpe: String(target.targetRpe || s.targetRpe || '')
+                    }
+                    : s
+                )
+            };
+        }));
+    };
+
     const handleSave = async () => {
         if (!programName) return alert('Please enter a program name');
         if (plannedExercises.length === 0) return alert('Please add at least one exercise');
@@ -292,6 +312,13 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
                             ))}
                             <button className="btn" onClick={() => addSet(ex.id)}>+ Add Set</button>
                         </div>
+
+                        <ExerciseTools
+                            exerciseId={ex.exerciseId}
+                            exerciseName={ex.exerciseName}
+                            athleteId={targetAthleteId}
+                            onApplyTarget={isTemplate ? undefined : (target) => applyCalculatedTarget(ex.id, target)}
+                        />
                     </div>
                 ))}
             </div>

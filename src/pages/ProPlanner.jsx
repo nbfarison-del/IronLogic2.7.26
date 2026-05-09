@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import * as firestoreService from '../services/firestoreService';
 import { exercises as defaultExercises, EXERCISE_CATEGORIES } from '../data/exercises';
 import { advancedTemplates } from '../data/advancedTemplates';
+import ExerciseTools from '../components/ExerciseTools';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -393,6 +394,19 @@ const ProPlanner = () => {
         });
     };
 
+    const applyCalculatedTarget = (sIdx, dayIdx, exIdx, target) => {
+        modifyWeeks(newWeeks => {
+            const ex = newWeeks[activeWeekIndex][dayIdx].sessions[sIdx].exercises[exIdx];
+            if (!ex.sets || ex.sets.length === 0) ex.sets = [{ id: 1 }];
+            ex.sets[0] = {
+                ...ex.sets[0],
+                weight: String(target.weight || ''),
+                reps: String(target.reps || ex.sets[0].reps || ''),
+                targetRpe: String(target.targetRpe || ex.sets[0].targetRpe || '')
+            };
+        });
+    };
+
     const copyWeekForward = () => {
         const currentWeek = copyData(weeks[activeWeekIndex]);
         const newWeek = currentWeek.map(day => ({
@@ -731,9 +745,9 @@ const ProPlanner = () => {
                                         <input className="pro-input" placeholder="R" value={ex.sets?.[0]?.reps || ''} onClick={(e) => e.stopPropagation()} onChange={(e) => handleInlineChange(sIdx, dayIdx, exIdx, 'reps', e.target.value)} />
                                         <input className="pro-input" placeholder="@" value={ex.sets?.[0]?.targetRpe || ''} onClick={(e) => e.stopPropagation()} onChange={(e) => handleInlineChange(sIdx, dayIdx, exIdx, 'targetRpe', e.target.value)} />
                                         
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <input className="pro-input" placeholder="W" value={ex.sets?.[0]?.weight || ''} onClick={(e) => e.stopPropagation()} onChange={(e) => handleInlineChange(sIdx, dayIdx, exIdx, 'weight', e.target.value)} />
-                                            <div style={{ position: 'relative' }}>
+                                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                             <input className="pro-input" placeholder="W" value={ex.sets?.[0]?.weight || ''} onClick={(e) => e.stopPropagation()} onChange={(e) => handleInlineChange(sIdx, dayIdx, exIdx, 'weight', e.target.value)} />
+                                             <div style={{ position: 'relative' }}>
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); setMenuOpenExId(menuOpenExId === ex.id ? null : ex.id); }}
                                                     style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0 4px', fontSize: '1.2rem' }}
@@ -752,11 +766,19 @@ const ProPlanner = () => {
 
                                                         <button className="btn" style={{ minHeight: '26px', fontSize: '0.7rem', padding: '4px', justifyContent: 'flex-start', color: 'var(--accent-error)', borderColor: 'var(--accent-error)', marginTop: '4px' }} onClick={() => deleteExercise(dayIdx, sIdx, exIdx)}>🗑 Delete</button>
                                                     </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
+                                                 )}
+                                             </div>
+                                         </div>
+                                         <div style={{ gridColumn: '1 / -1' }} onClick={(e) => e.stopPropagation()}>
+                                             <ExerciseTools
+                                                 exerciseId={ex.exerciseId}
+                                                 exerciseName={ex.name}
+                                                 athleteId={targetAthleteId}
+                                                 onApplyTarget={(target) => applyCalculatedTarget(sIdx, dayIdx, exIdx, target)}
+                                             />
+                                         </div>
+                                     </div>
+                                 ))}
 
                                 <button 
                                     className="btn" 
