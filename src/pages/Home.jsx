@@ -8,6 +8,7 @@ import WeightTracker from '../components/WeightTracker';
 import GoalTracker from '../components/GoalTracker';
 import MobilityTab from '../components/MobilityTab';
 import IronLogicTab from '../components/IronLogicTab';
+import HyroxTracker from './HyroxTracker';
 
 // Browser-robust YYYY-MM-DD helper
 const getDateStr = (date) => {
@@ -92,7 +93,7 @@ const Home = () => {
             </div>
 
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
-                {['dashboard', 'mobility', 'ironlogic-method'].map(tab => (
+                {['dashboard', 'hyrox', 'mobility', 'ironlogic-method'].map(tab => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
@@ -100,18 +101,18 @@ const Home = () => {
                             flex: 1,
                             background: activeTab === tab ? 'rgba(255,255,255,0.07)' : 'transparent',
                             border: 'none',
-                            color: activeTab === tab ? 'var(--primary)' : '#888',
+                            color: activeTab === tab ? (tab === 'hyrox' ? '#00bcd4' : 'var(--primary)') : '#888',
                             padding: '0.75rem',
                             borderRadius: '12px',
                             cursor: 'pointer',
                             fontWeight: '700',
-                            fontSize: '0.9rem',
+                            fontSize: '0.85rem',
                             textTransform: 'uppercase',
                             letterSpacing: '0.05em',
                             transition: 'all 0.2s ease'
                         }}
                     >
-                        {tab.replace('-', ' ')}
+                        {tab === 'hyrox' ? '🏁 Hyrox' : tab.replace('-', ' ')}
                     </button>
                 ))}
             </div>
@@ -214,6 +215,8 @@ const Home = () => {
                         IronLogic v2.7.26 • Built for Performance
                     </div>
                 </>
+            ) : activeTab === 'hyrox' ? (
+                <HyroxTracker />
             ) : activeTab === 'mobility' ? (
                 <MobilityTab />
             ) : (

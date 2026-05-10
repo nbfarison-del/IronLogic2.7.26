@@ -6,6 +6,7 @@ export const EXERCISE_CATEGORIES = {
     BODYWEIGHT: 'Bodyweight',
     CORE: 'Core',
     CARDIO: 'Cardio',
+    HYROX: 'Hyrox',
     CUSTOM: 'Custom'
 };
 
@@ -55,6 +56,18 @@ export const exercises = [
     { id: 'rowing_machine', name: 'Rowing Machine', category: EXERCISE_CATEGORIES.CARDIO },
     { id: 'group_hiit', name: 'HIIT Class', category: EXERCISE_CATEGORIES.CARDIO },
     { id: 'yoga', name: 'Yoga Class', category: EXERCISE_CATEGORIES.CARDIO },
+
+    // Hyrox Training (non-race)
+    { id: 'hyrox_skierg_training', name: 'SkiErg Intervals', category: EXERCISE_CATEGORIES.HYROX },
+    { id: 'hyrox_sled_push_training', name: 'Sled Push (Training)', category: EXERCISE_CATEGORIES.HYROX },
+    { id: 'hyrox_sled_pull_training', name: 'Sled Pull (Training)', category: EXERCISE_CATEGORIES.HYROX },
+    { id: 'hyrox_burpee_bj_training', name: 'Burpee Broad Jump (Training)', category: EXERCISE_CATEGORIES.HYROX },
+    { id: 'hyrox_rowing_training', name: 'Row Intervals', category: EXERCISE_CATEGORIES.HYROX },
+    { id: 'hyrox_farmers_carry_training', name: 'Farmers Carry (Training)', category: EXERCISE_CATEGORIES.HYROX },
+    { id: 'hyrox_sandbag_lunge_training', name: 'Sandbag Lunges (Training)', category: EXERCISE_CATEGORIES.HYROX },
+    { id: 'hyrox_wall_balls_training', name: 'Wall Balls (Training)', category: EXERCISE_CATEGORIES.HYROX },
+    { id: 'hyrox_run_training', name: 'Running (Hyrox Pace)', category: EXERCISE_CATEGORIES.HYROX },
+    { id: 'hyrox_devils_press', name: "Devil's Press", category: EXERCISE_CATEGORIES.HYROX },
 ];
 
 export const EXERCISE_CONFIG = {

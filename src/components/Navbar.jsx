@@ -68,7 +68,7 @@ const Navbar = () => {
                                 <Link to="/" className={isActivePath('/')} onClick={handleClose}>Dashboard</Link>
                                 <Link to="/calendar" className={isActivePath('/calendar')} onClick={handleClose}>Calendar</Link>
                                 <Link to="/programs" className={isActivePath('/programs')} onClick={handleClose}>Programs</Link>
-
+                                <Link to="/hyrox" className={isActivePath('/hyrox')} onClick={handleClose} style={{ color: location.pathname === '/hyrox' ? '#00bcd4' : undefined }}>🏁 Hyrox</Link>
 
                                 
                                 <button 
