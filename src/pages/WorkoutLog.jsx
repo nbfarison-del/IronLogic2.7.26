@@ -13,6 +13,15 @@ import * as firestoreService from '../services/firestoreService';
 import { runDMAICCycle } from '../services/DMAICService';
 import { useRef } from 'react';
 
+// Exercises where distance is captured as whole meters rather than a decimal distance.
+const METER_BASED_EXERCISE_IDS = new Set([
+    'run_outdoor', 'treadmill', 'rowing_machine',
+    // Hyrox training variants
+    'hyrox_skierg_training', 'hyrox_rowing_training', 'hyrox_run_training',
+    // Hyrox stations
+    'hyrox_skierg', 'hyrox_rowing', 'hyrox_run',
+]);
+
 const useWakeLock = () => {
     const [isWakeLockActive, setIsWakeLockActive] = useState(false);
     const wakeLockRef = useRef(null);
@@ -133,6 +142,7 @@ const WorkoutLog = () => {
     const [notes, setNotes] = useState('');
     const [duration, setDuration] = useState('');
     const [distance, setDistance] = useState('');
+    const [meters, setMeters] = useState('');
     const [saving, setSaving] = useState(false);
     const [isCreatingExercise, setIsCreatingExercise] = useState(false);
     const [newExerciseName, setNewExerciseName] = useState('');
@@ -360,7 +370,8 @@ const WorkoutLog = () => {
                     category: exercise.category,
                     type: workoutType,
                     duration,
-                    distance,
+                    distance: METER_BASED_EXERCISE_IDS.has(exercise.id) ? undefined : distance,
+                    meters: METER_BASED_EXERCISE_IDS.has(exercise.id) ? meters : undefined,
                     notes,
                     video_url: videoUrl
                 }];
@@ -384,6 +395,7 @@ const WorkoutLog = () => {
             } else {
                 setDuration('');
                 setDistance('');
+                setMeters('');
             }
             setNotes('');
         } catch (error) {
@@ -675,15 +687,29 @@ const WorkoutLog = () => {
 
 
                             ) : (
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end' }}>
-                                    <div className="input-group" style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                                    <div className="input-group" style={{ flex: 1, minWidth: '100px' }}>
                                         <label>Duration (min)</label>
                                         <input type="number" value={duration} onChange={e => setDuration(e.target.value)} required />
                                     </div>
-                                    <div className="input-group" style={{ flex: 1 }}>
-                                        <label>Distance</label>
-                                        <input type="number" step="0.1" value={distance} onChange={e => setDistance(e.target.value)} />
-                                    </div>
+                                    {METER_BASED_EXERCISE_IDS.has(selectedExerciseId) ? (
+                                        <div className="input-group" style={{ flex: 1, minWidth: '100px' }}>
+                                            <label>Meters (m)</label>
+                                            <input
+                                                type="number"
+                                                step="1"
+                                                min="0"
+                                                value={meters}
+                                                onChange={e => setMeters(e.target.value)}
+                                                placeholder="e.g. 5000"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="input-group" style={{ flex: 1, minWidth: '100px' }}>
+                                            <label>Distance</label>
+                                            <input type="number" step="0.1" value={distance} onChange={e => setDistance(e.target.value)} />
+                                        </div>
+                                    )}
                                     <button type="submit" disabled={saving} className="btn btn-primary" style={{ marginBottom: '1.25rem' }}>Log Event</button>
                                 </div>
                             )}
@@ -723,15 +749,34 @@ const WorkoutLog = () => {
                                         {checkPR(entry) && <div style={{ color: 'var(--primary)', fontSize: '0.75rem', fontWeight: '800', marginTop: '0.25rem' }}>🔥 NEW PERSONAL RECORD</div>}
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                        <div style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '1.1rem' }}>
-                                            {entry.weight}{unit} x {entry.reps}
-                                        </div>
-                                        <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>RPE {entry.actualRpe || entry.targetRpe}</div>
+                                        {entry.type === 'cardio' || entry.type === 'hyrox' ? (
+                                            <>
+                                                <div style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '1.1rem' }}>
+                                                    {entry.meters ? `${entry.meters} m` : entry.distance ? `${entry.distance}` : '—'}
+                                                </div>
+                                                <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>
+                                                    {entry.duration ? `${entry.duration} min` : ''}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '1.1rem' }}>
+                                                    {entry.weight}{unit} x {entry.reps}
+                                                </div>
+                                                <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>RPE {entry.actualRpe || entry.targetRpe}</div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.8rem', opacity: 0.7, borderTop: '1px solid var(--border-glass)', paddingTop: '0.5rem' }}>
-                                    <span>e1RM: {entry.estimated1RM}{unit}</span>
-                                    <span>{entry.modifiers?.bar && `[${entry.modifiers.bar}]`} {entry.modifiers?.grip}</span>
+                                    {entry.type !== 'cardio' && entry.type !== 'hyrox' ? (
+                                        <>
+                                            <span>e1RM: {entry.estimated1RM}{unit}</span>
+                                            <span>{entry.modifiers?.bar && `[${entry.modifiers.bar}]`} {entry.modifiers?.grip}</span>
+                                        </>
+                                    ) : (
+                                        <span style={{ color: '#888' }}>{entry.category}</span>
+                                    )}
                                 </div>
                                 {entry.notes && <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', fontStyle: 'italic', opacity: 0.8 }}>"{entry.notes}"</div>}
                             </div>
