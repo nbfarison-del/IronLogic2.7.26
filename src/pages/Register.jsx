@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { recordUserSignup } from '../services/firestoreService';
+import { getFriendlyErrorMessage } from '../utils/errorMessages';
 
 
 const Register = () => {
@@ -34,7 +35,7 @@ const Register = () => {
             navigate('/');
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Failed to create account.');
+            setError(getFriendlyErrorMessage(err, 'Failed to create account. Please try again.'));
         } finally {
             setLoading(false);
         }
@@ -62,7 +63,7 @@ const Register = () => {
                         required
                     />
                 </div>
-                {error && <p style={{ color: 'var(--danger)', marginTop: '0.5rem' }}>{error}</p>}
+                {error && <p style={{ color: 'var(--accent-error)', marginTop: '0.5rem' }}>{error}</p>}
                 <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={loading}>
                     {loading ? 'Creating Account...' : 'Sign Up'}
                 </button>

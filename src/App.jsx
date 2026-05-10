@@ -35,7 +35,7 @@ const HyroxTracker = lazy(() => import('./pages/HyroxTracker'));
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="card">Authenticating...</div>;
+  if (loading) return <AppLoading label="Authenticating" />;
   if (!user) return <Navigate to="/" />;
   return children;
 };
@@ -43,7 +43,7 @@ const ProtectedRoute = ({ children }) => {
 
 const RoleProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="card">Checking permissions...</div>;
+  if (loading) return <AppLoading label="Checking permissions" />;
   if (!user) return <Navigate to="/login" />;
   if (user && !allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
@@ -62,7 +62,7 @@ const SubscriptionGuard = ({ children }) => {
   const { user, loading } = useAuth();
   const [now] = useState(() => Date.now());
 
-  if (loading) return null;
+  if (loading) return <AppLoading label="Checking subscription" />;
 
   // New athletes get a 14-day trial
   const trialStillActive = user?.trialExpiresAt ? (user.trialExpiresAt.toMillis ? user.trialExpiresAt.toMillis() : user.trialExpiresAt) > now : false;
@@ -76,10 +76,15 @@ const SubscriptionGuard = ({ children }) => {
 
 
     return (
-      <div className="container" style={{ textAlign: 'center', marginTop: '5rem' }}>
-        <h2>Subscription Required</h2>
-        <p>Your trial has expired or you do not have an active subscription.</p>
-        <Link to="/profile" className="btn btn-primary">Upgrade Now</Link>
+      <div className="app-state">
+        <div className="app-state-panel">
+          <p className="app-state-eyebrow">Account Access</p>
+          <h1>Subscription Required</h1>
+          <p>Your trial has expired or you do not have an active subscription.</p>
+          <div className="app-state-actions">
+            <Link to="/profile" className="btn btn-primary">Open Profile</Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -124,10 +129,35 @@ const CoachAthleteAccessGuard = ({ children }) => {
     };
   }, [athleteId, loading, user]);
 
-  if (loading || accessState === 'checking') return <div className="card">Checking athlete access...</div>;
+  if (loading || accessState === 'checking') return <AppLoading label="Checking athlete access" />;
   if (accessState !== 'allowed') return <Navigate to="/coach" replace />;
   return children;
 };
+
+const AppLoading = ({ label = 'Loading' }) => (
+  <div className="app-state">
+    <div className="app-state-panel">
+      <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }}></div>
+      <p className="app-state-eyebrow">{label}</p>
+      <p>Getting your workspace ready.</p>
+    </div>
+    <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+  </div>
+);
+
+const NotFound = () => (
+  <div className="app-state">
+    <div className="app-state-panel">
+      <p className="app-state-eyebrow">404</p>
+      <h1>That screen does not exist</h1>
+      <p>The link may be outdated, or the page may have moved.</p>
+      <div className="app-state-actions">
+        <Link to="/" className="btn btn-primary">Go to Dashboard</Link>
+        <Link to="/calendar" className="btn">Open Calendar</Link>
+      </div>
+    </div>
+  </div>
+);
 
 // ... inside App component ...
 const CoachDashboard = lazy(() => import('./pages/CoachDashboard'));
@@ -257,6 +287,7 @@ function AppContent() {
               <Admin />
             </RoleProtectedRoute>
           } />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </>
@@ -271,10 +302,7 @@ function App() {
           <TimerProvider>
             <ToastProvider>
               <Suspense fallback={
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#111', color: '#fff' }}>
-                  <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite' }}></div>
-                  <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-                </div>
+                <AppLoading label="Loading IronLogic" />
               }>
                 <ErrorBoundary>
                   <AppContent />

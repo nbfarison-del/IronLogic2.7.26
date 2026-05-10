@@ -9,19 +9,16 @@ export const useData = () => useContext(DataContext);
 export const DataProvider = ({ children }) => {
     const { user } = useAuth();
 
-    // Initialize from Cache for 0ms First Paint
-    const cachedData = useMemo(() => firestoreService.getCachedBootstrapData(), []);
-
-    const [workouts, setWorkouts] = useState(cachedData?.workouts || []);
-    const [weights, setWeights] = useState(cachedData?.weights || []);
-    const [recovery, setRecovery] = useState(cachedData?.recovery || []);
-    const [goals, setGoals] = useState(cachedData?.goals || []);
-    const [profile, setProfile] = useState(cachedData?.profile || null);
+    const [workouts, setWorkouts] = useState([]);
+    const [weights, setWeights] = useState([]);
+    const [recovery, setRecovery] = useState([]);
+    const [goals, setGoals] = useState([]);
+    const [profile, setProfile] = useState(null);
     const [customExercises, setCustomExercises] = useState([]); // Custom exercises don't change often, fetch OK
-    const [coaching, setCoaching] = useState(cachedData?.coaching || { program: null, questionnaire: null });
-    const [plannedWorkouts, setPlannedWorkouts] = useState(cachedData?.plannedWorkouts || []);
-    const [notesHistory, setNotesHistory] = useState(cachedData?.notesHistory || []);
-    const [mobilityLogs, setMobilityLogs] = useState(cachedData?.mobilityLogs || []);
+    const [coaching, setCoaching] = useState({ program: null, questionnaire: null });
+    const [plannedWorkouts, setPlannedWorkouts] = useState([]);
+    const [notesHistory, setNotesHistory] = useState([]);
+    const [mobilityLogs, setMobilityLogs] = useState([]);
 
     // Sync Status Tracking
     const [syncStatus, setSyncStatus] = useState(navigator.onLine ? 'online' : 'offline');
@@ -29,7 +26,7 @@ export const DataProvider = ({ children }) => {
     const [syncError, setSyncError] = useState(null);
 
     // Status - Don't show global loader if we have cached data to show
-    const [isLoading, setIsLoading] = useState(!cachedData);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         const handleOnline = () => setSyncStatus('online');
@@ -44,14 +41,44 @@ export const DataProvider = ({ children }) => {
         window.addEventListener('offline', handleOffline);
 
         if (!user) {
-            setIsLoading(false);
-            return;
+            const resetTimer = window.setTimeout(() => {
+                setWorkouts([]);
+                setWeights([]);
+                setRecovery([]);
+                setGoals([]);
+                setProfile(null);
+                setCustomExercises([]);
+                setCoaching({ program: null, questionnaire: null });
+                setPlannedWorkouts([]);
+                setNotesHistory([]);
+                setMobilityLogs([]);
+                setIsLoading(false);
+            }, 0);
+
+            return () => {
+                window.clearTimeout(resetTimer);
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
+            };
         }
 
-        // Only show loading if we have absolutely nothing (no cache, no previous fetch)
-        if (!cachedData && workouts.length === 0) {
-            setIsLoading(true);
-        }
+        const cachedData = firestoreService.getCachedBootstrapData(user.id);
+        const cacheTimer = window.setTimeout(() => {
+            if (cachedData) {
+                setWorkouts(cachedData.workouts || []);
+                setWeights(cachedData.weights || []);
+                setRecovery(cachedData.recovery || []);
+                setGoals(cachedData.goals || []);
+                setProfile(cachedData.profile || null);
+                setCoaching(cachedData.coaching || { program: null, questionnaire: null });
+                setPlannedWorkouts(cachedData.plannedWorkouts || []);
+                setNotesHistory(cachedData.notesHistory || []);
+                setMobilityLogs(cachedData.mobilityLogs || []);
+            }
+
+            // Only show loading if we have absolutely nothing (no cache, no previous fetch)
+            setIsLoading(!cachedData);
+        }, 0);
 
         // Start all real-time listeners in parallel
         const unsubWorkouts = firestoreService.subscribeToWorkouts(user.id, (data) => {
@@ -110,6 +137,7 @@ export const DataProvider = ({ children }) => {
         }, handleError('Mobility'));
 
         return () => {
+            window.clearTimeout(cacheTimer);
             unsubWorkouts();
             unsubWeights();
             unsubRecovery();
@@ -145,11 +173,11 @@ export const DataProvider = ({ children }) => {
         };
 
         const timer = setTimeout(() => {
-            localStorage.setItem('ironlogic_bootstrap_cache', JSON.stringify(dataToCache));
+            firestoreService.setCachedBootstrapData(user.id, dataToCache);
         }, 2000);
 
         return () => clearTimeout(timer);
-    }, [user, workouts, weights, recovery, goals, profile, coaching, mobilityLogs]);
+    }, [user, workouts, weights, recovery, goals, profile, coaching, plannedWorkouts, notesHistory, mobilityLogs]);
 
     const value = useMemo(() => ({
         workouts,

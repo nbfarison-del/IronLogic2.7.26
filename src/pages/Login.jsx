@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { getFriendlyErrorMessage } from '../utils/errorMessages';
 
 
 const Login = () => {
@@ -26,7 +27,7 @@ const Login = () => {
             navigate('/');
         } catch (err) {
             console.error(err);
-            setError(err.message || 'Failed to login.');
+            setError(getFriendlyErrorMessage(err, 'Failed to login. Please try again.'));
         } finally {
             setLoading(false);
         }

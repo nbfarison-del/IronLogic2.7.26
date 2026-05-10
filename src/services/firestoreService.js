@@ -897,14 +897,24 @@ export const updateSettings = async (userId, settings) => {
 
 const BOOTSTRAP_CACHE_KEY = 'ironlogic_bootstrap_cache';
 
-export const getCachedBootstrapData = () => {
+const getBootstrapCacheKey = (userId) => userId ? `${BOOTSTRAP_CACHE_KEY}_${userId}` : BOOTSTRAP_CACHE_KEY;
+
+export const getCachedBootstrapData = (userId = null) => {
     try {
-        const cached = localStorage.getItem(BOOTSTRAP_CACHE_KEY);
+        const cached = localStorage.getItem(getBootstrapCacheKey(userId));
         return cached ? JSON.parse(cached) : null;
     } catch (e) {
         console.error('Error reading bootstrap cache:', e);
         return null;
     }
+};
+
+export const setCachedBootstrapData = (userId, data) => {
+    if (!userId) return;
+    localStorage.setItem(getBootstrapCacheKey(userId), JSON.stringify({
+        ...data,
+        userId
+    }));
 };
 
 export const getBootstrapData = async (userId) => {

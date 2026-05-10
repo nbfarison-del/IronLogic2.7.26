@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { getAllRegisteredUsers, updateUserRole, assignAthleteToCoach, updateUserRole as syncRole, addProgramTemplate } from '../services/firestoreService';
+import { getAllRegisteredUsers, updateUserRole, assignAthleteToCoach, updateUserRole as syncRole } from '../services/firestoreService';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
-import { advancedTemplates } from '../data/advancedTemplates';
 
 
 
@@ -33,6 +32,7 @@ const Admin = () => {
         if (!user?.id) return;
         try {
             await syncRole(user.id, 'admin');
+            setSyncDone(true);
             await fetchUsers(); // Refresh list
             showToast('Done! Account synchronized successfully.', 'success');
         } catch (err) {
@@ -218,7 +218,7 @@ const Admin = () => {
             </div>
 
             {error && (
-                <div style={{ marginTop: '1rem', color: 'var(--danger)', textAlign: 'center' }}>
+                <div style={{ marginTop: '1rem', color: 'var(--accent-error)', textAlign: 'center' }}>
                     {error}
                 </div>
             )}
