@@ -4,7 +4,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { recordUserSignup } from '../services/firestoreService';
 import { getFriendlyErrorMessage } from '../utils/errorMessages';
 
-
 const Register = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -17,7 +16,6 @@ const Register = () => {
         if (user) navigate('/');
     }, [user, navigate]);
 
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
@@ -25,12 +23,8 @@ const Register = () => {
 
         try {
             const result = await register(email, password);
-            // Record signup for admin tracking
             if (result && result.user) {
                 await recordUserSignup(result.user.uid, email);
-            } else if (result === true) {
-                // If register just returns true, we might need a different way to get the user
-                // but usually register (from AuthContext) should return something or we can get it from auth
             }
             navigate('/');
         } catch (err) {
@@ -42,35 +36,41 @@ const Register = () => {
     };
 
     return (
-        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
-            <h1>Create Account</h1>
-            <form onSubmit={handleSubmit}>
-                <div className="input-group">
-                    <label>Email</label>
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
-                </div>
-                <div className="input-group">
-                    <label>Password</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
-                </div>
-                {error && <p style={{ color: 'var(--accent-error)', marginTop: '0.5rem' }}>{error}</p>}
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={loading}>
-                    {loading ? 'Creating Account...' : 'Sign Up'}
-                </button>
-            </form>
-            <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>
-                Already have an account? <Link to="/login" style={{ color: 'var(--primary)' }}>Login</Link>
-            </p>
+        <div className="auth-shell">
+            <div className="card auth-card">
+                <p className="page-kicker">Start Training</p>
+                <h1>Create account</h1>
+                <p className="auth-subtitle">Build your profile, log sessions, and keep your training history in one place.</p>
+                <form onSubmit={handleSubmit}>
+                    <div className="input-group">
+                        <label>Email</label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            placeholder="you@example.com"
+                        />
+                    </div>
+                    <div className="input-group">
+                        <label>Password</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            placeholder="Minimum 6 characters"
+                        />
+                    </div>
+                    {error && <div className="empty-state" style={{ color: 'var(--accent-error)', marginBottom: '1rem' }}>{error}</div>}
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+                        {loading ? 'Creating account...' : 'Create Account'}
+                    </button>
+                </form>
+                <p style={{ margin: '1.25rem 0 0', color: 'var(--text-muted)', textAlign: 'center', fontSize: '0.92rem' }}>
+                    Already have an account? <Link to="/login" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 700 }}>Sign in</Link>
+                </p>
+            </div>
         </div>
     );
 };

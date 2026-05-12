@@ -96,19 +96,21 @@ const ResetPassword = () => {
     };
 
     return (
-        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
-            <h1>Set New Password</h1>
+        <div className="auth-shell">
+            <div className="card auth-card">
+            <p className="page-kicker">Account Recovery</p>
+            <h1>Set new password</h1>
 
             {linkError && (
                 <div style={{ textAlign: 'center' }}>
-                    <p style={{ color: 'var(--accent-error)', marginBottom: '1rem' }}>{linkError}</p>
+                    <div className="empty-state" style={{ color: 'var(--accent-error)', marginBottom: '1rem' }}>{linkError}</div>
                     <Link to="/forgot-password" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Resend Reset Link</Link>
                 </div>
             )}
 
             {message && (
                 <div style={{ textAlign: 'center' }}>
-                    <p style={{ color: 'var(--accent-success)', marginBottom: '1.5rem' }}>{message}</p>
+                    <div className="empty-state" style={{ color: 'var(--accent-success)', marginBottom: '1rem' }}>{message}</div>
                     <Link to="/login" className="btn btn-primary" style={{ width: '100%', textDecoration: 'none' }}>Back to Login</Link>
                 </div>
             )}
@@ -141,12 +143,13 @@ const ResetPassword = () => {
                             minLength={6}
                         />
                     </div>
-                    {error && <p style={{ color: 'var(--accent-error)', marginTop: '0.5rem', fontSize: '0.9rem' }}>{error}</p>}
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={loading}>
+                    {error && <div className="empty-state" style={{ color: 'var(--accent-error)', marginBottom: '1rem' }}>{error}</div>}
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
                         {loading ? 'Updating...' : 'Update Password'}
                     </button>
                 </form>
             )}
+            </div>
         </div>
     );
 };

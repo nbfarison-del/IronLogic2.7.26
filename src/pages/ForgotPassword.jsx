@@ -44,37 +44,38 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
-            <h1>Reset Password</h1>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                Enter your email address and we'll send you a link to reset your password.
-            </p>
-            {message ? (
-                <div style={{ textAlign: 'center' }}>
-                    <p style={{ color: 'var(--accent-success)', marginBottom: '1.5rem' }}>{message}</p>
-                    <Link to="/login" className="btn btn-primary" style={{ width: '100%', textDecoration: 'none' }}>Back to Login</Link>
-                </div>
-            ) : (
-                <form onSubmit={handleSubmit}>
-                    <div className="input-group">
-                        <label>Email Address</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                            placeholder="you@example.com"
-                        />
+        <div className="auth-shell">
+            <div className="card auth-card">
+                <p className="page-kicker">Account Recovery</p>
+                <h1>Reset password</h1>
+                <p className="auth-subtitle">Enter your account email and we will send a secure reset link.</p>
+                {message ? (
+                    <div style={{ textAlign: 'center' }}>
+                        <div className="empty-state" style={{ color: 'var(--accent-success)', marginBottom: '1rem' }}>{message}</div>
+                        <Link to="/login" className="btn btn-primary" style={{ width: '100%', textDecoration: 'none' }}>Back to Login</Link>
                     </div>
-                    {error && <p style={{ color: 'var(--accent-error)', marginTop: '0.5rem', fontSize: '0.9rem' }}>{error}</p>}
-                    <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={loading}>
-                        {loading ? 'Sending...' : 'Send Reset Link'}
-                    </button>
-                    <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem' }}>
-                        <Link to="/login" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Back to Login</Link>
-                    </div>
-                </form>
-            )}
+                ) : (
+                    <form onSubmit={handleSubmit}>
+                        <div className="input-group">
+                            <label>Email Address</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                placeholder="you@example.com"
+                            />
+                        </div>
+                        {error && <div className="empty-state" style={{ color: 'var(--accent-error)', marginBottom: '1rem' }}>{error}</div>}
+                        <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+                            {loading ? 'Sending...' : 'Send Reset Link'}
+                        </button>
+                        <div style={{ marginTop: '1.25rem', textAlign: 'center', fontSize: '0.92rem' }}>
+                            <Link to="/login" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 700 }}>Back to login</Link>
+                        </div>
+                    </form>
+                )}
+            </div>
         </div>
     );
 };

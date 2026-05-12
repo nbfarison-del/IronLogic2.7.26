@@ -5,108 +5,96 @@ import { useData } from '../context/DataContext';
 import { useTimer } from '../context/TimerContext';
 import logo from '../assets/logo.png';
 
+const primaryLinks = [
+    { to: '/', label: 'Dashboard' },
+    { to: '/calendar', label: 'Calendar' },
+    { to: '/programs', label: 'Programs' },
+    { to: '/hyrox', label: 'Hyrox' },
+    { to: '/progress', label: 'Analytics' },
+    { to: '/profile', label: 'Profile' }
+];
+
 const Navbar = () => {
     const { user, logout } = useAuth();
     const { syncStatus } = useData();
     const { toggleTimer, isActive, timePassed, formatTime } = useTimer();
     const navigate = useNavigate();
     const location = useLocation();
-
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         setIsMenuOpen(false);
-        logout();
+        await logout();
         navigate('/');
     };
 
-
     const handleClose = () => setIsMenuOpen(false);
-
     const isActivePath = (path) => location.pathname === path ? 'active' : '';
+    const initials = (user?.name || user?.email || 'IL')
+        .split(/[\s@.]+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part[0]?.toUpperCase())
+        .join('');
 
     return (
         <>
             <div className={`nav-overlay ${isMenuOpen ? 'open' : ''}`} onClick={handleClose}></div>
-            <nav className="glass">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Link to="/" className="nav-brand" style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
-                        <img src={logo} alt="IronLogic" style={{ height: '28px', marginRight: '8px' }} />
-                        <span className="nav-brand" style={{ fontSize: '1.25rem' }}>IRONLOGIC</span>
+            <nav>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', minWidth: 0 }}>
+                    <Link to="/" className="nav-brand" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }} onClick={handleClose}>
+                        <img src={logo} alt="IronLogic" style={{ height: 30, width: 30, objectFit: 'contain' }} />
+                        <span>IRONLOGIC</span>
                     </Link>
-                    {user && (
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                            fontSize: '0.6rem',
-                            color: syncStatus === 'online' ? 'var(--accent-success)' : 'var(--accent-error)',
-                            background: 'rgba(255,255,255,0.05)',
-                            padding: '3px 8px',
-                            borderRadius: '20px',
-                            textTransform: 'uppercase',
-                            fontWeight: '800',
-                            letterSpacing: '0.05em',
-                            border: `1px solid ${syncStatus === 'online' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
-                        }}>
-                            <div style={{
-                                width: '6px',
-                                height: '6px',
-                                borderRadius: '50%',
-                                background: syncStatus === 'online' ? 'var(--accent-success)' : 'var(--accent-error)',
-                                boxShadow: syncStatus === 'online' ? '0 0 8px var(--accent-success)' : 'none'
-                            }}></div>
-                            {syncStatus}
-                        </div>
-                    )}
+                    <div className={`status-pill ${syncStatus === 'online' ? '' : 'offline'}`} title={`Sync status: ${syncStatus}`}>
+                        <span className="status-dot"></span>
+                        {syncStatus}
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
                     <div className={`nav-links ${isMenuOpen ? 'open' : ''}`}>
-                        {user ? (
-                            <>
-                                <Link to="/" className={isActivePath('/')} onClick={handleClose}>Dashboard</Link>
-                                <Link to="/calendar" className={isActivePath('/calendar')} onClick={handleClose}>Calendar</Link>
-                                <Link to="/programs" className={isActivePath('/programs')} onClick={handleClose}>Programs</Link>
-                                <Link to="/hyrox" className={isActivePath('/hyrox')} onClick={handleClose} style={{ color: location.pathname === '/hyrox' ? '#00bcd4' : undefined }}>🏁 Hyrox</Link>
+                        {primaryLinks.map(link => (
+                            <Link key={link.to} to={link.to} className={isActivePath(link.to)} onClick={handleClose}>
+                                {link.label}
+                            </Link>
+                        ))}
 
-                                
-                                <button 
-                                    onClick={() => { toggleTimer(); handleClose(); }} 
-                                    className="btn"
-                                    style={{ 
-                                        background: isActive ? 'rgba(16, 185, 129, 0.1)' : 'transparent', 
-                                        border: isActive ? '1px solid var(--accent-success)' : '1px solid var(--border-glass)', 
-                                        color: isActive ? 'var(--accent-success)' : 'white', 
-                                        borderRadius: '10px',
-                                        padding: '0.5rem 1rem',
-                                        fontSize: '0.85rem',
-                                        fontWeight: '700'
-                                    }}
-                                >
-                                    {isActive ? `🕒 ${formatTime(timePassed)}` : '⏱️ Timer'}
-                                </button>
-
-                                {(user.role === 'coach' || user.role === 'admin') && (
-                                    <Link to="/coach" className={isActivePath('/coach')} onClick={handleClose}>Coaching</Link>
-                                )}
-                                <Link to="/progress" className={isActivePath('/progress')} onClick={handleClose}>Analytics</Link>
-                                <Link to="/profile" className={isActivePath('/profile')} onClick={handleClose}>Athlete Profile</Link>
-                                
-                                <button onClick={handleLogout} className="btn" style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-error)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>Exit</button>
-                            </>
-                        ) : (
-                            <>
-                                <Link to="/login" className={isActivePath('/login')} onClick={handleClose}>Login</Link>
-                                <Link to="/register" className={isActivePath('/register', 'btn-primary')} onClick={handleClose}>Join Team</Link>
-                            </>
+                        {(user.role === 'coach' || user.role === 'admin') && (
+                            <Link to="/coach" className={isActivePath('/coach')} onClick={handleClose}>Coaching</Link>
                         )}
-                    </div>
-                    {user && (
-                        <button className="hamburger btn" onClick={() => setIsMenuOpen(!isMenuOpen)} style={{ padding: '0.50rem' }}>
-                            {isMenuOpen ? '✕' : '☰'}
+
+                        <button
+                            onClick={() => { toggleTimer(); handleClose(); }}
+                            className="btn nav-timer"
+                            style={{
+                                background: isActive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.04)',
+                                borderColor: isActive ? 'rgba(16, 185, 129, 0.35)' : undefined,
+                                color: isActive ? 'var(--accent-success)' : 'var(--text-main)'
+                            }}
+                            aria-label={isActive ? `Timer running: ${formatTime(timePassed)}` : 'Open timer'}
+                        >
+                            {isActive ? formatTime(timePassed) : 'Timer'}
                         </button>
-                    )}
+
+                        <button onClick={handleLogout} className="btn nav-timer" style={{ color: 'var(--accent-error)' }}>
+                            Sign Out
+                        </button>
+                    </div>
+
+                    <Link to="/profile" className="nav-profile-chip" title={user?.email || 'Profile'} onClick={handleClose}>
+                        {initials}
+                    </Link>
+
+                    <button
+                        className="hamburger btn"
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        style={{ padding: '0.48rem 0.62rem' }}
+                        aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+                        aria-expanded={isMenuOpen}
+                    >
+                        {isMenuOpen ? 'Close' : 'Menu'}
+                    </button>
                 </div>
             </nav>
         </>

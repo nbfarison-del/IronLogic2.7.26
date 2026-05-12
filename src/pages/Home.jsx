@@ -10,10 +10,16 @@ import MobilityTab from '../components/MobilityTab';
 import IronLogicTab from '../components/IronLogicTab';
 import HyroxTracker from './HyroxTracker';
 
-// Browser-robust YYYY-MM-DD helper
 const getDateStr = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
+
+const tabs = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'hyrox', label: 'Hyrox' },
+    { id: 'mobility', label: 'Mobility' },
+    { id: 'ironlogic-method', label: 'Method' }
+];
 
 const Home = () => {
     const { user } = useAuth();
@@ -24,9 +30,6 @@ const Home = () => {
         trainingMaxes,
         isLoading: loading
     } = useData();
-
-
-
 
     const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -56,12 +59,13 @@ const Home = () => {
         });
         return prList.reverse().slice(0, 10);
     }, [workouts]);
+
     const weeklySummary = useMemo(() => {
         const now = new Date();
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
-        startOfWeek.setHours(0,0,0,0);
-        
+        startOfWeek.setHours(0, 0, 0, 0);
+
         const thisWeekWorkouts = workouts.filter(w => {
             const d = new Date(w.date);
             return d >= startOfWeek;
@@ -75,10 +79,11 @@ const Home = () => {
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
-                <div style={{ textAlign: 'center' }}>
+            <div className="app-state">
+                <div className="app-state-panel">
                     <div className="spinner" style={{ border: '4px solid #333', borderTop: '4px solid var(--primary)', borderRadius: '50%', width: '30px', height: '30px', animation: 'spin 1s linear infinite', margin: '0 auto 1rem' }}></div>
-                    <p style={{ fontWeight: '600', letterSpacing: '0.05em' }}>SYNCING PERFORMANCE DATA...</p>
+                    <p className="app-state-eyebrow">Syncing</p>
+                    <p>Loading your training workspace.</p>
                     <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
                 </div>
             </div>
@@ -86,133 +91,139 @@ const Home = () => {
     }
 
     return (
-        <div className="animate-in" style={{ paddingBottom: '2rem', textAlign: 'left' }}>
-            <div style={{ marginBottom: '2rem' }}>
-                <h1 style={{ marginBottom: '0.25rem' }}>Welcome, {user?.name || 'Athlete'}</h1>
-                <p style={{ opacity: 0.6, fontSize: '1.1rem' }}>Your performance journey continues today.</p>
+        <div className="page-shell animate-in">
+            <div className="page-header">
+                <div>
+                    <p className="page-kicker">Training Command Center</p>
+                    <h1 className="page-title">Welcome, {user?.name || 'Athlete'}</h1>
+                    <p className="page-subtitle">Review today's work, track the week, and keep momentum visible.</p>
+                </div>
+                <Link to="/log" className="btn btn-primary">Log Workout</Link>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem', borderRadius: '16px', border: '1px solid var(--border-glass)' }}>
-                {['dashboard', 'hyrox', 'mobility', 'ironlogic-method'].map(tab => (
+            <div className="segmented-control" style={{ marginBottom: '1.25rem' }}>
+                {tabs.map(tab => (
                     <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        style={{
-                            flex: 1,
-                            background: activeTab === tab ? 'rgba(255,255,255,0.07)' : 'transparent',
-                            border: 'none',
-                            color: activeTab === tab ? (tab === 'hyrox' ? '#00bcd4' : 'var(--primary)') : '#888',
-                            padding: '0.75rem',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            fontWeight: '700',
-                            fontSize: '0.85rem',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            transition: 'all 0.2s ease'
-                        }}
+                        key={tab.id}
+                        type="button"
+                        className={activeTab === tab.id ? 'active' : ''}
+                        onClick={() => setActiveTab(tab.id)}
                     >
-                        {tab === 'hyrox' ? '🏁 Hyrox' : tab.replace('-', ' ')}
+                        {tab.label}
                     </button>
                 ))}
             </div>
 
             {activeTab === 'dashboard' ? (
                 <>
-                    {/* Onboarding Flow for New Athletes */}
                     {(workouts.length === 0 || !trainingMaxes?.squat) && (
-
-
-                        <div className="glass-card animate-in" style={{ 
-                            marginBottom: '2.5rem', 
-                            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(251, 191, 36, 0.1))',
-                            border: '1px solid var(--primary)',
-                            padding: '2rem'
-                        }}>
-                            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                                <div style={{ fontSize: '3rem' }}>🚀</div>
-                                <div style={{ flex: 1, minWidth: '250px' }}>
-                                    <h2 style={{ margin: '0 0 0.5rem 0' }}>Welcome to the Platform</h2>
-                                    <p style={{ opacity: 0.8, fontSize: '0.95rem', margin: 0 }}>
-                                        To get the most out of IronLogic, please complete your setup to enable performance tracking.
+                        <div className="glass-card" style={{ marginBottom: '1.25rem', borderColor: 'rgba(var(--primary-rgb), 0.28)' }}>
+                            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                <div style={{ flex: 1, minWidth: 260 }}>
+                                    <p className="page-kicker">Setup Needed</p>
+                                    <h2 style={{ margin: '0 0 0.45rem' }}>Complete your athlete profile</h2>
+                                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>
+                                        Add maxes and context so the app can personalize analytics, programming, and recovery decisions.
                                     </p>
                                 </div>
-                                <div style={{ display: 'flex', gap: '1rem' }}>
-                                    <Link to="/profile" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>Set Your Maxes</Link>
-                                    <Link to="/questionnaire" className="btn" style={{ padding: '0.75rem 1.5rem', background: 'var(--primary)', color: '#000' }}>Setup AI Coach</Link>
-                                    <Link to="/log" className="btn" style={{ padding: '0.75rem 1.5rem', background: 'rgba(255,255,255,0.05)' }}>Log First Session</Link>
+                                <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                                    <Link to="/profile" className="btn btn-primary">Set Maxes</Link>
+                                    <Link to="/questionnaire" className="btn">AI Setup</Link>
+                                    <Link to="/log" className="btn">First Session</Link>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    <div className="action-grid" style={{ marginBottom: '2.5rem' }}>
+                    <div className="dashboard-hero">
+                        <section className="glass-card hero-panel">
+                            <div>
+                                <p className="page-kicker">This Week</p>
+                                <h2 style={{ fontSize: '2rem', margin: '0 0 0.75rem' }}>
+                                    {weeklySummary.sessions > 0 ? `${weeklySummary.sessions} sessions logged` : 'No sessions logged yet'}
+                                </h2>
+                                <p style={{ color: 'var(--text-muted)', maxWidth: 620, margin: 0 }}>
+                                    Keep the record simple: log the work, review the trend, and let the data guide the next adjustment.
+                                </p>
+                            </div>
+                            <div className="metric-grid" style={{ marginTop: '1.25rem' }}>
+                                <div className="metric-card card">
+                                    <small>Weekly Volume</small>
+                                    <div className="metric-value">{Math.round(weeklySummary.totalWeight).toLocaleString()} {appUnit}</div>
+                                    <div className="metric-note">Across tracked work sets</div>
+                                </div>
+                                <div className="metric-card card">
+                                    <small>Peak Intensity</small>
+                                    <div className="metric-value">{recentPRs[0]?.estimated1RM || 0} {appUnit}</div>
+                                    <div className="metric-note">{recentPRs[0]?.exerciseName || 'Awaiting logged data'}</div>
+                                </div>
+                            </div>
+                        </section>
 
-                        <Link to="/log" style={{ textDecoration: 'none' }}>
-                            <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', border: '1px solid var(--border-glass)' }}>
-                                <span style={{ fontSize: '2rem' }}>🏋️</span>
-                                <span style={{ fontWeight: '700' }}>Free Session</span>
+                        <aside className="glass-card today-panel">
+                            <p className="page-kicker">Today</p>
+                            <h2 style={{ margin: '0 0 0.6rem' }}>{todayPlan ? 'Program ready' : 'No program planned'}</h2>
+                            <p style={{ color: 'var(--text-muted)', margin: '0 0 1rem' }}>
+                                {todayPlan ? (todayPlan.planName || todayPlan.name || 'Scheduled training session') : 'Create a session or apply a template to the calendar.'}
+                            </p>
+                            <div style={{ display: 'grid', gap: '0.65rem' }}>
+                                <Link to={todayPlan ? `/log?planId=${todayPlan.id}` : '/calendar?plan=true'} className="btn btn-primary">
+                                    {todayPlan ? 'Start Planned Session' : 'Plan Today'}
+                                </Link>
+                                <Link to="/programs" className="btn">Browse Templates</Link>
                             </div>
+                        </aside>
+                    </div>
+
+                    <div className="quick-action-grid">
+                        <Link to="/log" className="glass-card action-tile">
+                            <small>Capture</small>
+                            <strong>Free Session</strong>
+                            <span>Log strength, conditioning, or accessory work.</span>
                         </Link>
-                        <Link to={todayPlan ? `/log?planId=${todayPlan.id}` : "/calendar?plan=true"} style={{ textDecoration: 'none' }}>
-                            <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: todayPlan ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.2), transparent)' : 'rgba(255,255,255,0.03)', border: todayPlan ? '1px solid var(--primary)' : '1px solid var(--border-glass)' }}>
-                                <span style={{ fontSize: '2rem' }}>{todayPlan ? '🔥' : '📅'}</span>
-                                <span style={{ fontWeight: '700', color: todayPlan ? 'var(--primary)' : 'inherit' }}>{todayPlan ? 'Start Program' : 'Plan Program'}</span>
-                            </div>
+                        <Link to="/calendar" className="glass-card action-tile">
+                            <small>Schedule</small>
+                            <strong>Calendar</strong>
+                            <span>Review planned work and historical training.</span>
                         </Link>
-                        <Link to="/calendar" style={{ textDecoration: 'none' }}>
-                            <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                                <span style={{ fontSize: '2rem' }}>⏪</span>
-                                <span style={{ fontWeight: '700' }}>History</span>
-                            </div>
+                        <Link to="/progress" className="glass-card action-tile">
+                            <small>Analyze</small>
+                            <strong>Performance Trends</strong>
+                            <span>See PRs, volume, and consistency over time.</span>
                         </Link>
                     </div>
 
-                    <div className="stats-grid" style={{ marginBottom: '2.5rem' }}>
-                        <div className="glass-card" style={{ textAlign: 'left', borderTop: '4px solid var(--secondary)' }}>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Weekly Volume</div>
-                            <div style={{ fontSize: '2rem', fontWeight: '800', margin: '0.5rem 0' }}>{Math.round(weeklySummary.totalWeight).toLocaleString()} {appUnit}</div>
-                            <div style={{ fontSize: '0.9rem', color: 'var(--accent-success)' }}>Across {weeklySummary.sessions} sessions this week</div>
-                        </div>
-                        <div className="glass-card" style={{ textAlign: 'left', borderTop: '4px solid var(--primary)' }}>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Peak Intensity</div>
-                            <div style={{ fontSize: '2rem', fontWeight: '800', margin: '0.5rem 0' }}>{recentPRs[0]?.estimated1RM || 0} {appUnit}</div>
-                            <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>Last set on {recentPRs[0]?.exerciseName || 'N/A'}</div>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '2.5rem' }}>
+                    <div className="content-grid">
                         <RecoveryTracker />
                         <WeightTracker />
                     </div>
 
-                    <div className="glass-card" style={{ marginBottom: '2.5rem', textAlign: 'left' }}>
-                        <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}><span style={{ fontSize: '1.2rem' }}>🏆</span> Recent Milestones</h2>
+                    <section className="glass-card" style={{ marginBottom: '1.25rem' }}>
+                        <h2 style={{ marginTop: 0 }}>Recent Milestones</h2>
                         {recentPRs.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1.5rem' }}>
+                            <div style={{ display: 'grid', gap: '0.65rem' }}>
                                 {recentPRs.slice(0, 5).map(pr => (
-                                    <div key={`${pr.date}-${pr.exerciseId}`} className="glass" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem' }}>
-
+                                    <div key={`${pr.date}-${pr.exerciseId}`} className="list-row">
                                         <div>
-                                            <div style={{ fontWeight: '700', fontSize: '1.05rem' }}>{pr.exerciseName}</div>
-                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{pr.date}</div>
+                                            <strong>{pr.exerciseName}</strong>
+                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.84rem' }}>{pr.date}</div>
                                         </div>
                                         <div style={{ textAlign: 'right' }}>
-                                            <div style={{ fontSize: '1.25rem', fontWeight: '800', color: 'var(--primary)' }}>{pr.estimated1RM} <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{appUnit} e1RM</span></div>
-                                            {!pr.isFirst && <div style={{ fontSize: '0.8rem', color: 'var(--accent-success)', fontWeight: '700' }}>↑ {pr.increase.toFixed(1)}</div>}
+                                            <strong style={{ color: 'var(--primary)' }}>{pr.estimated1RM} {appUnit} e1RM</strong>
+                                            {!pr.isFirst && <div style={{ color: 'var(--accent-success)', fontSize: '0.84rem' }}>+{pr.increase.toFixed(1)}</div>}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <p style={{ opacity: 0.5, fontStyle: 'italic', marginTop: '1rem' }}>Your records will appear here as you log sessions.</p>
+                            <div className="empty-state">Milestones will appear here after you log sessions.</div>
                         )}
-                    </div>
+                    </section>
 
                     <GoalTracker />
 
-                    <div style={{ marginTop: '3rem', textAlign: 'center', opacity: 0.4, fontSize: '0.9rem' }}>
-                        IronLogic v2.7.26 • Built for Performance
+                    <div style={{ marginTop: '2rem', color: 'var(--text-subtle)', fontSize: '0.85rem', textAlign: 'center' }}>
+                        IronLogic v2.7.26 - Built for performance.
                     </div>
                 </>
             ) : activeTab === 'hyrox' ? (

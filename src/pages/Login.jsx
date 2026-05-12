@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { getFriendlyErrorMessage } from '../utils/errorMessages';
 
-
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -15,7 +14,6 @@ const Login = () => {
     useEffect(() => {
         if (user) navigate('/');
     }, [user, navigate]);
-
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -34,39 +32,43 @@ const Login = () => {
     };
 
     return (
-        <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
-            <h1>Welcome Back</h1>
-            <form onSubmit={handleSubmit}>
-                <div className="input-group">
-                    <label>Email</label>
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        placeholder="demo@example.com"
-                    />
+        <div className="auth-shell">
+            <div className="card auth-card">
+                <p className="page-kicker">IronLogic</p>
+                <h1>Welcome back</h1>
+                <p className="auth-subtitle">Sign in to continue training, planning, and reviewing performance.</p>
+                <form onSubmit={handleSubmit}>
+                    <div className="input-group">
+                        <label>Email</label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            placeholder="you@example.com"
+                        />
+                    </div>
+                    <div className="input-group">
+                        <label>Password</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            placeholder="******"
+                        />
+                    </div>
+                    {error && <div className="empty-state" style={{ color: 'var(--accent-error)', marginBottom: '1rem' }}>{error}</div>}
+                    <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
+                        {loading ? 'Signing in...' : 'Sign In'}
+                    </button>
+                </form>
+                <div style={{ marginTop: '1.25rem', display: 'grid', gap: '0.7rem', fontSize: '0.92rem', textAlign: 'center' }}>
+                    <Link to="/forgot-password" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 700 }}>Forgot password?</Link>
+                    <p style={{ margin: 0, color: 'var(--text-muted)' }}>
+                        New to IronLogic? <Link to="/register" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: 700 }}>Create an account</Link>
+                    </p>
                 </div>
-                <div className="input-group">
-                    <label>Password</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        placeholder="••••••"
-                    />
-                </div>
-                {error && <p style={{ color: 'var(--accent-error)', marginTop: '0.5rem' }}>{error}</p>}
-                <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={loading}>
-                    {loading ? 'Logging in...' : 'Login'}
-                </button>
-            </form>
-            <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem' }}>
-                <Link to="/forgot-password" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Forgot Password?</Link>
-                <p style={{ margin: 0, color: 'var(--text-muted)' }}>
-                    Don't have an account? <Link to="/register" style={{ color: 'var(--primary)', textDecoration: 'none' }}>Register</Link>
-                </p>
             </div>
         </div>
     );
