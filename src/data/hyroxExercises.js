@@ -114,15 +114,15 @@ export const HYROX_STATIONS = [
  * These integrate directly into the existing WorkoutLog exercise list.
  */
 export const HYROX_TRAINING_EXERCISES = [
-    { id: 'hyrox_skierg_training', name: 'SkiErg Intervals', category: HYROX_CATEGORY },
-    { id: 'hyrox_sled_push_training', name: 'Sled Push (Training)', category: HYROX_CATEGORY },
-    { id: 'hyrox_sled_pull_training', name: 'Sled Pull (Training)', category: HYROX_CATEGORY },
-    { id: 'hyrox_burpee_bj_training', name: 'Burpee Broad Jump (Training)', category: HYROX_CATEGORY },
-    { id: 'hyrox_rowing_training', name: 'Row Intervals', category: HYROX_CATEGORY },
-    { id: 'hyrox_farmers_carry_training', name: 'Farmers Carry (Training)', category: HYROX_CATEGORY },
-    { id: 'hyrox_sandbag_lunge_training', name: 'Sandbag Lunges (Training)', category: HYROX_CATEGORY },
+    { id: 'hyrox_skierg_training', name: 'SkiErg Intervals', category: HYROX_CATEGORY, metricType: 'meters', unit: 'm' },
+    { id: 'hyrox_sled_push_training', name: 'Sled Push (Training)', category: HYROX_CATEGORY, metricType: 'meters', unit: 'm' },
+    { id: 'hyrox_sled_pull_training', name: 'Sled Pull (Training)', category: HYROX_CATEGORY, metricType: 'meters', unit: 'm' },
+    { id: 'hyrox_burpee_bj_training', name: 'Burpee Broad Jump (Training)', category: HYROX_CATEGORY, metricType: 'meters', unit: 'm' },
+    { id: 'hyrox_rowing_training', name: 'Row Intervals', category: HYROX_CATEGORY, metricType: 'meters', unit: 'm' },
+    { id: 'hyrox_farmers_carry_training', name: 'Farmers Carry (Training)', category: HYROX_CATEGORY, metricType: 'meters', unit: 'm' },
+    { id: 'hyrox_sandbag_lunge_training', name: 'Sandbag Lunges (Training)', category: HYROX_CATEGORY, metricType: 'meters', unit: 'm' },
     { id: 'hyrox_wall_balls_training', name: 'Wall Balls (Training)', category: HYROX_CATEGORY },
-    { id: 'hyrox_run_training', name: 'Running (Hyrox Pace)', category: HYROX_CATEGORY },
+    { id: 'hyrox_run_training', name: 'Running (Hyrox Pace)', category: HYROX_CATEGORY, metricType: 'meters', unit: 'm' },
     { id: 'hyrox_devils_press', name: "Devil's Press", category: HYROX_CATEGORY },
 ];
 
