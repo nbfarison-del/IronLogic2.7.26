@@ -15,12 +15,17 @@ import { useRef } from 'react';
 
 // Exercises where distance is captured as whole meters rather than a decimal distance.
 const METER_BASED_EXERCISE_IDS = new Set([
-    'run_outdoor', 'treadmill', 'rowing_machine',
+    'run_outdoor', 'treadmill', 'cycling', 'rowing_machine',
     // Hyrox training variants
-    'hyrox_skierg_training', 'hyrox_rowing_training', 'hyrox_run_training',
+    'hyrox_skierg_training', 'hyrox_sled_push_training', 'hyrox_sled_pull_training',
+    'hyrox_burpee_bj_training', 'hyrox_rowing_training', 'hyrox_farmers_carry_training',
+    'hyrox_sandbag_lunge_training', 'hyrox_run_training',
     // Hyrox stations
-    'hyrox_skierg', 'hyrox_rowing', 'hyrox_run',
+    'hyrox_skierg', 'hyrox_sled_push', 'hyrox_sled_pull', 'hyrox_burpee_broad_jump',
+    'hyrox_rowing', 'hyrox_farmers_carry', 'hyrox_sandbag_lunges', 'hyrox_run',
 ]);
+
+const isMeterBasedExercise = (exerciseId) => METER_BASED_EXERCISE_IDS.has(exerciseId);
 
 const useWakeLock = () => {
     const [isWakeLockActive, setIsWakeLockActive] = useState(false);
@@ -224,9 +229,10 @@ const WorkoutLog = () => {
         const exMatch = allExercisesList.find(e => e.id === plannedEx.exerciseId || e.name === plannedEx.exerciseName);
         if (exMatch) {
             setSelectedExerciseId(exMatch.id);
-            setWorkoutType(exMatch.category === EXERCISE_CATEGORIES.CARDIO ? 'cardio' : 'strength');
+            setWorkoutType(exMatch.category === EXERCISE_CATEGORIES.CARDIO || isMeterBasedExercise(exMatch.id) ? 'cardio' : 'strength');
         } else {
             setSelectedExerciseId(plannedEx.exerciseId);
+            setWorkoutType(isMeterBasedExercise(plannedEx.exerciseId) ? 'cardio' : 'strength');
         }
         if (plannedEx.sets && Array.isArray(plannedEx.sets)) {
             setSetRows(plannedEx.sets.map(s => ({
@@ -370,8 +376,8 @@ const WorkoutLog = () => {
                     category: exercise.category,
                     type: workoutType,
                     duration,
-                    distance: METER_BASED_EXERCISE_IDS.has(exercise.id) ? undefined : distance,
-                    meters: METER_BASED_EXERCISE_IDS.has(exercise.id) ? meters : undefined,
+                    distance: isMeterBasedExercise(exercise.id) ? undefined : distance,
+                    meters: isMeterBasedExercise(exercise.id) ? meters : undefined,
                     notes,
                     video_url: videoUrl
                 }];
@@ -413,16 +419,22 @@ const WorkoutLog = () => {
         }
         setSelectedExerciseId(id);
         const exercise = allExercisesList.find(ex => ex.id === id);
-        setWorkoutType(exercise?.category === EXERCISE_CATEGORIES.CARDIO ? 'cardio' : 'strength');
+        const nextWorkoutType = exercise?.category === EXERCISE_CATEGORIES.CARDIO || isMeterBasedExercise(id) ? 'cardio' : 'strength';
+        setWorkoutType(nextWorkoutType);
         const lastEntry = workouts.find(w => w.exerciseId === id);
-        if (lastEntry && workoutType === 'strength' && lastEntry.weight) {
+        if (lastEntry && nextWorkoutType === 'strength' && lastEntry.weight) {
              setSetRows([{ 
                  id: Date.now(), 
                  weight: lastEntry.weight, 
                  reps: lastEntry.reps, 
                  targetRpe: lastEntry.targetRpe || '', 
                  actualRpe: '' 
-             }]);
+              }]);
+        }
+        if (lastEntry && nextWorkoutType === 'cardio') {
+            setDuration(lastEntry.duration || '');
+            setDistance(lastEntry.distance || '');
+            setMeters(lastEntry.meters || '');
         }
     };
 
@@ -692,7 +704,7 @@ const WorkoutLog = () => {
                                         <label>Duration (min)</label>
                                         <input type="number" value={duration} onChange={e => setDuration(e.target.value)} required />
                                     </div>
-                                    {METER_BASED_EXERCISE_IDS.has(selectedExerciseId) ? (
+                                    {isMeterBasedExercise(selectedExerciseId) ? (
                                         <div className="input-group" style={{ flex: 1, minWidth: '100px' }}>
                                             <label>Meters (m)</label>
                                             <input
