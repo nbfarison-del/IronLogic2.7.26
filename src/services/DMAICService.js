@@ -191,3 +191,41 @@ const logDMAICSnapshot = async (athleteId, data) => {
     const docRef = doc(db, 'users', athleteId, 'dmaic_logs', dateStr);
     await setDoc(docRef, data, { merge: true });
 };
+
+// --- LEGACY EXPORTS FOR COMPATIBILITY ---
+
+export const getRecommendationForInsight = (classification) => {
+    const rec = getFallbackRecommendation(classification);
+    return {
+        label: rec.title,
+        description: rec.description,
+        ...rec.specifics
+    };
+};
+
+export const analyzePerformance = (metrics, readiness) => {
+    const analysis = analyzeAdaptationState(metrics, { ...readiness });
+    return analysis.classification;
+};
+
+export const runWeeklyCheckIn = async (athleteId, currentReadiness = {}) => {
+    // Wrapper for runDMAICCycle but returning the format expected by old components
+    const result = await runDMAICCycle(athleteId);
+    return {
+        ...result,
+        recommendation: result.recommendation.description,
+        coachInsight: result.recommendation.description // or generate a specific insight
+    };
+};
+
+export const generateCoachInsight = async (insights, metrics) => {
+    const rec = getFallbackRecommendation(insights);
+    return rec.description;
+};
+
+export default {
+    runDMAICCycle,
+    analyzePerformance,
+    getRecommendationForInsight,
+    runWeeklyCheckIn
+};
