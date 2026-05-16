@@ -402,11 +402,20 @@ const WorkoutLog = () => {
 
     const handleAddSet = async (e) => {
         e.preventDefault();
-        if (!selectedExerciseId || !user) return;
+        if (!user) {
+            showToast("You must be logged in to save workouts.", "error");
+            return;
+        }
+        if (!selectedExerciseId) {
+            showToast("Please select an exercise first.", "warn");
+            return;
+        }
+
         setSaving(true);
         const d = selectedDate;
         const todayStr = getDateStr(d);
         try {
+            logger.info('Attempting to log set', { targetUserId, selectedExerciseId, workoutType });
             const exercise = allExercisesList.find(ex => ex.id === selectedExerciseId) || {
                 id: selectedExerciseId,
                 name: activePlannedWorkout?.exercises.find(ex => ex.exerciseId === selectedExerciseId)?.exerciseName || selectedExerciseId,
@@ -445,8 +454,14 @@ const WorkoutLog = () => {
 
             setPendingSaves(prev => prev + 1);
             try {
+                logger.info('Executing Firestore writes', { entriesCount: newEntries.length });
                 await Promise.all(newEntries.map(entry => firestoreService.addWorkout(targetUserId, entry)));
                 logger.info('Sets logged successfully', { count: newEntries.length, exerciseId: exercise.id });
+                showToast("Record logged successfully!", "success");
+            } catch (err) {
+                logger.error('Firestore write failed in handleAddSet', { error: err.message });
+                showToast("Failed to save. Please check your connection.", "error");
+                throw err;
             } finally {
                 setPendingSaves(prev => Math.max(0, prev - 1));
             }
