@@ -8,6 +8,7 @@ import WeightTracker from '../components/WeightTracker';
 import GoalTracker from '../components/GoalTracker';
 import MobilityTab from '../components/MobilityTab';
 import IronLogicTab from '../components/IronLogicTab';
+import ActivityFeed from '../components/ActivityFeed';
 import HyroxTracker from './HyroxTracker';
 
 const getDateStr = (date) => {
@@ -197,6 +198,8 @@ const Home = () => {
                         <RecoveryTracker />
                         <WeightTracker />
                     </div>
+
+                    <ActivityFeed />
 
                     <section className="glass-card" style={{ marginBottom: '1.25rem' }}>
                         <h2 style={{ marginTop: 0 }}>Recent Milestones</h2>

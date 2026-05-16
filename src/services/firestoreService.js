@@ -31,6 +31,7 @@ export {
 };
 
 import { db } from '../config/firebaseConfig';
+import { logger } from '../utils/logger';
 export { db };
 
 // ==================== ADMIN & TRACKING ====================
@@ -202,12 +203,19 @@ export const getWorkouts = async (userId, limitCount = null) => {
 };
 
 export const addWorkout = async (userId, workoutData) => {
-    const workoutsRef = collection(db, 'users', userId, 'workouts');
-    const docRef = await addDoc(workoutsRef, {
-        ...workoutData,
-        createdAt: new Date().toISOString()
-    });
-    return docRef.id;
+    logger.info('Adding workout set', { userId, exerciseId: workoutData.exerciseId, date: workoutData.date });
+    try {
+        const workoutsRef = collection(db, 'users', userId, 'workouts');
+        const docRef = await addDoc(workoutsRef, {
+            ...workoutData,
+            createdAt: new Date().toISOString()
+        });
+        logger.info('Workout set added successfully', { userId, docId: docRef.id });
+        return docRef.id;
+    } catch (error) {
+        logger.error('Failed to add workout set', { userId, error: error.message, workoutData });
+        throw error;
+    }
 };
 
 export const deleteWorkout = async (userId, workoutId) => {
@@ -230,12 +238,56 @@ export const subscribeToWorkouts = (userId, callback, errorCallback, limitCount 
 // ==================== SESSIONS ====================
 
 export const markSessionComplete = async (userId, dateStr, isComplete, metadata = {}) => {
-    const sessionRef = doc(db, 'users', userId, 'sessions', dateStr);
-    await setDoc(sessionRef, {
-        isComplete,
-        ...metadata,
-        updatedAt: new Date().toISOString()
-    }, { merge: true });
+    logger.info('Marking session status', { userId, dateStr, isComplete });
+    try {
+        const sessionRef = doc(db, 'users', userId, 'sessions', dateStr);
+        await setDoc(sessionRef, {
+            isComplete,
+            ...metadata,
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+        logger.info('Session status updated successfully', { userId, dateStr, isComplete });
+    } catch (error) {
+        logger.error('Failed to mark session complete', { userId, dateStr, error: error.message });
+        throw error;
+    }
+};
+
+/**
+ * Atomic finalization of a workout session.
+ * Ensures session metadata and any last-minute state are saved together.
+ */
+export const finalizeWorkoutSession = async (userId, dateStr, metadata) => {
+    logger.info('Starting atomic session finalization', { userId, dateStr });
+    
+    // Using a batch to ensure metadata and completion are saved together
+    // Note: We don't batch sets here because they are usually saved incrementally to avoid data loss.
+    // However, this ensures the "Completion" status is solid.
+    try {
+        const { writeBatch } = await import('firebase/firestore');
+        const batch = writeBatch(db);
+        
+        const sessionRef = doc(db, 'users', userId, 'sessions', dateStr);
+        batch.set(sessionRef, {
+            isComplete: true,
+            ...metadata,
+            updatedAt: new Date().toISOString(),
+            finalizedAt: new Date().toISOString()
+        }, { merge: true });
+
+        // Update user profile "lastWorkout" for Home Screen activity feed optimization
+        const profileRef = doc(db, 'users', userId, 'profile', 'data');
+        batch.set(profileRef, {
+            lastWorkoutDate: dateStr,
+            lastWorkoutFinalized: new Date().toISOString()
+        }, { merge: true });
+
+        await batch.commit();
+        logger.info('Atomic session finalization successful', { userId, dateStr });
+    } catch (error) {
+        logger.error('Atomic session finalization failed', { userId, dateStr, error: error.message });
+        throw error;
+    }
 };
 
 export const subscribeToSessionStatus = (userId, dateStr, callback) => {
@@ -247,6 +299,28 @@ export const subscribeToSessionStatus = (userId, dateStr, callback) => {
             callback(false);
         }
     });
+};
+
+export const getSessions = async (userId, limitCount = 50) => {
+    const sessionsRef = collection(db, 'users', userId, 'sessions');
+    const q = query(sessionsRef, orderBy('updatedAt', 'desc'), limit(limitCount));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+};
+
+export const subscribeToSessions = (userId, callback, errorCallback, limitCount = 50) => {
+    const sessionsRef = collection(db, 'users', userId, 'sessions');
+    const q = query(sessionsRef, orderBy('updatedAt', 'desc'), limit(limitCount));
+    return onSnapshot(q, (snapshot) => {
+        const sessions = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        callback(sessions);
+    }, errorCallback);
 };
 
 // ==================== GOALS ====================

@@ -14,11 +14,12 @@ export const DataProvider = ({ children }) => {
     const [recovery, setRecovery] = useState([]);
     const [goals, setGoals] = useState([]);
     const [profile, setProfile] = useState(null);
-    const [customExercises, setCustomExercises] = useState([]); // Custom exercises don't change often, fetch OK
+    const [customExercises, setCustomExercises] = useState([]); 
     const [coaching, setCoaching] = useState({ program: null, questionnaire: null });
     const [plannedWorkouts, setPlannedWorkouts] = useState([]);
     const [notesHistory, setNotesHistory] = useState([]);
     const [mobilityLogs, setMobilityLogs] = useState([]);
+    const [sessions, setSessions] = useState([]);
 
     // Sync Status Tracking
     const [syncStatus, setSyncStatus] = useState(navigator.onLine ? 'online' : 'offline');
@@ -52,6 +53,7 @@ export const DataProvider = ({ children }) => {
                 setPlannedWorkouts([]);
                 setNotesHistory([]);
                 setMobilityLogs([]);
+                setSessions([]);
                 setIsLoading(false);
             }, 0);
 
@@ -74,6 +76,7 @@ export const DataProvider = ({ children }) => {
                 setPlannedWorkouts(cachedData.plannedWorkouts || []);
                 setNotesHistory(cachedData.notesHistory || []);
                 setMobilityLogs(cachedData.mobilityLogs || []);
+                setSessions(cachedData.sessions || []);
             }
 
             // Only show loading if we have absolutely nothing (no cache, no previous fetch)
@@ -136,6 +139,11 @@ export const DataProvider = ({ children }) => {
             setSyncTimestamps(prev => ({ ...prev, mobilityLogs: new Date().toLocaleTimeString() }));
         }, handleError('Mobility'));
 
+        const unsubSessions = firestoreService.subscribeToSessions(user.id, (data) => {
+            setSessions(data);
+            setSyncTimestamps(prev => ({ ...prev, sessions: new Date().toLocaleTimeString() }));
+        }, handleError('Sessions'));
+
         return () => {
             window.clearTimeout(cacheTimer);
             unsubWorkouts();
@@ -148,13 +156,13 @@ export const DataProvider = ({ children }) => {
             unsubNotes();
             unsubCoaching();
             unsubMobility();
+            unsubSessions();
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
     }, [user]);
 
     // --- SHADOW CACHE (Debounced Persistence) ---
-    // Writes to localStorage 2 seconds after the last update to avoid blocking the UI thread during interaction.
     useEffect(() => {
         if (!user) return;
 
@@ -162,14 +170,15 @@ export const DataProvider = ({ children }) => {
             profile,
             settings: profile?.settings || { unit: 'kg' },
             maxes: profile?.maxes || {},
-            workouts: (workouts || []).slice(0, 50), // Only cache the "Head"
+            workouts: (workouts || []).slice(0, 50),
             weights: (weights || []).slice(0, 90),
             recovery: (recovery || []).slice(0, 90),
             coaching,
             goals,
             plannedWorkouts: plannedWorkouts || [],
             notesHistory: notesHistory || [],
-            mobilityLogs: mobilityLogs || []
+            mobilityLogs: mobilityLogs || [],
+            sessions: sessions || []
         };
 
         const timer = setTimeout(() => {
@@ -177,7 +186,7 @@ export const DataProvider = ({ children }) => {
         }, 2000);
 
         return () => clearTimeout(timer);
-    }, [user, workouts, weights, recovery, goals, profile, coaching, plannedWorkouts, notesHistory, mobilityLogs]);
+    }, [user, workouts, weights, recovery, goals, profile, coaching, plannedWorkouts, notesHistory, mobilityLogs, sessions]);
 
     const value = useMemo(() => ({
         workouts,
@@ -190,14 +199,14 @@ export const DataProvider = ({ children }) => {
         plannedWorkouts,
         notesHistory,
         mobilityLogs,
+        sessions,
         isLoading,
         syncStatus,
         syncTimestamps,
         syncError,
         settings: profile?.settings || { unit: 'kg' },
         trainingMaxes: profile?.trainingMaxes || profile?.maxes || {}
-    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, mobilityLogs, isLoading, syncStatus, syncTimestamps, syncError]);
-
+    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, mobilityLogs, sessions, isLoading, syncStatus, syncTimestamps, syncError]);
 
     return (
         <DataContext.Provider value={value}>

@@ -12,6 +12,7 @@ import ExerciseTools from '../components/ExerciseTools';
 import * as firestoreService from '../services/firestoreService';
 import { runDMAICCycle } from '../services/DMAICService';
 import { useRef } from 'react';
+import { logger } from '../utils/logger';
 
 // Exercises where distance is captured as whole meters rather than a decimal distance.
 const METER_BASED_EXERCISE_IDS = new Set([
@@ -96,7 +97,8 @@ const WorkoutLog = () => {
         customExercises: syncedCustom,
         plannedWorkouts,
         isLoading: dataLoading,
-        trainingMaxes
+        trainingMaxes,
+        syncStatus
     } = useData();
 
 
@@ -181,6 +183,8 @@ const WorkoutLog = () => {
     const [autoRest, setAutoRest] = useState(true);
     const [showRpeModal, setShowRpeModal] = useState(false);
     const [sessionRpe, setSessionRpe] = useState(7);
+    const [pendingSaves, setPendingSaves] = useState(0);
+    const [finalizeError, setFinalizeError] = useState(null);
 
 
     
@@ -213,21 +217,44 @@ const WorkoutLog = () => {
     };
 
     const confirmFinalize = async () => {
+        if (pendingSaves > 0) {
+            showToast("Please wait for all sets to finish saving.", "warn");
+            return;
+        }
+
+        setSaving(true);
+        setFinalizeError(null);
+        const dateStr = getDateStr(selectedDate);
+        
+        logger.info('User confirmed session finalization', { 
+            targetUserId, 
+            dateStr, 
+            sessionRpe,
+            loggedSetsCount: loggedSets.length 
+        });
+
         try {
-            const dateStr = getDateStr(selectedDate);
-            await firestoreService.markSessionComplete(targetUserId, dateStr, true, {
+            await firestoreService.finalizeWorkoutSession(targetUserId, dateStr, {
                 sessionRpe,
-                completedAt: new Date().toISOString()
+                loggedSetsCount: loggedSets.length,
+                workoutType: workoutType // primary type
             });
+
             if (isCoachViewing) {
+                logger.info('Triggering DMAIC cycle analysis', { targetUserId });
                 await runDMAICCycle(targetUserId);
             }
+
             setIsSessionComplete(true);
             setShowRpeModal(false);
             showToast("Session complete. Great work!", "success");
+            logger.info('Session finalized successfully', { targetUserId, dateStr });
         } catch (error) {
-            console.error('Error finalizing session:', error);
-            showToast("Failed to finalize session.", "error");
+            logger.error('Error in confirmFinalize', { targetUserId, dateStr, error: error.message });
+            setFinalizeError("Persistence failed. Please try again.");
+            showToast("Failed to finalize session. Please check your connection and retry.", "error");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -399,7 +426,13 @@ const WorkoutLog = () => {
                     video_url: videoUrl
                 }];
 
-            await Promise.all(newEntries.map(entry => firestoreService.addWorkout(targetUserId, entry)));
+            setPendingSaves(prev => prev + 1);
+            try {
+                await Promise.all(newEntries.map(entry => firestoreService.addWorkout(targetUserId, entry)));
+                logger.info('Sets logged successfully', { count: newEntries.length, exerciseId: exercise.id });
+            } finally {
+                setPendingSaves(prev => Math.max(0, prev - 1));
+            }
             
             if (autoRest && workoutType === 'strength' && !isViewingOther) {
                 resetTimer();
@@ -503,6 +536,12 @@ const WorkoutLog = () => {
                     )}
                 </div>
             </div>
+
+            {syncStatus === 'offline' && (
+                <div className="glass-card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-error)', background: 'rgba(239, 68, 68, 0.1)' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem' }}>📴 You are currently offline. Your logs will sync once you reconnect.</p>
+                </div>
+            )}
 
             {isSessionComplete && (
                 <div className="glass-card" style={{ marginBottom: '2rem', borderLeft: '4px solid var(--accent-success)', background: 'rgba(16, 185, 129, 0.1)' }}>
@@ -765,7 +804,21 @@ const WorkoutLog = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <h2 style={{ margin: 0 }}>📊 Performance History</h2>
                     {!isSessionComplete && !isViewingOther && loggedSets.length > 0 && (
-                        <button className="btn btn-primary" onClick={handleFinalizeWorkout} style={{ background: 'var(--accent-success)', color: '#fff' }}>Finalize Session</button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            {pendingSaves > 0 && <span style={{ fontSize: '0.8rem', color: 'var(--primary)', animation: 'pulse 1.5s infinite' }}>Saving {pendingSaves} set(s)...</span>}
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={handleFinalizeWorkout} 
+                                disabled={pendingSaves > 0}
+                                style={{ 
+                                    background: pendingSaves > 0 ? '#444' : 'var(--accent-success)', 
+                                    color: '#fff',
+                                    opacity: pendingSaves > 0 ? 0.6 : 1
+                                }}
+                            >
+                                Finalize Session
+                            </button>
+                        </div>
                     )}
                 </div>
                 {loggedSets.length > 0 ? (
@@ -829,8 +882,13 @@ const WorkoutLog = () => {
             {showRpeModal && (
                 <div className="nav-overlay open" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000 }}>
                     <div className="glass-card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center' }}>
-                        <h2 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>Session Feedback</h2>
-                        <p style={{ opacity: 0.8, marginBottom: '2rem' }}>How difficult was today's overall workout?</p>
+                        <h2 style={{ marginTop: 0 }}>Finalize Session</h2>
+                        {finalizeError && (
+                            <div className="card" style={{ background: 'rgba(255, 82, 82, 0.1)', border: '1px solid var(--accent-error)', color: 'var(--accent-error)', padding: '1rem', marginBottom: '1.5rem', borderRadius: '8px' }}>
+                                <p style={{ margin: 0 }}>⚠️ {finalizeError}</p>
+                            </div>
+                        )}
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Great work! How was the overall intensity of today's session?</p>
                         
                         <div style={{ fontSize: '3rem', fontWeight: '900', color: 'var(--primary)', marginBottom: '1rem' }}>
                             {sessionRpe}
@@ -853,7 +911,14 @@ const WorkoutLog = () => {
 
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <button className="btn" style={{ flex: 1 }} onClick={() => setShowRpeModal(false)}>Cancel</button>
-                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={confirmFinalize}>Finish</button>
+                            <button 
+                                className="btn btn-primary" 
+                                style={{ flex: 1, background: 'var(--accent-success)' }} 
+                                onClick={confirmFinalize}
+                                disabled={saving}
+                            >
+                                {saving ? 'Finalizing...' : 'Complete Workout'}
+                            </button>
                         </div>
                     </div>
                 </div>
