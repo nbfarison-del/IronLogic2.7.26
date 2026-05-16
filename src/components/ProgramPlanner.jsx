@@ -22,6 +22,9 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
     const [myAthletes, setMyAthletes] = useState([]);
     const [templates, setTemplates] = useState([]);
     const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+    const [isCreatingCustom, setIsCreatingCustom] = useState(false);
+    const [newExName, setNewExName] = useState('');
+    const [activeExIdForCustom, setActiveExIdForCustom] = useState(null);
     
     const [plannedExercises, setPlannedExercises] = useState(() => {
         const exercisesInPlan = initialData?.exercises || [];
@@ -95,10 +98,39 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
     };
 
     const handleExerciseChange = (id, exerciseId) => {
+        if (exerciseId === 'CREATE_NEW') {
+            setActiveExIdForCustom(id);
+            setIsCreatingCustom(true);
+            return;
+        }
         const exercise = allExercises.find(ex => ex.id === exerciseId);
         setPlannedExercises(plannedExercises.map(ex =>
             ex.id === id ? { ...ex, exerciseId, exerciseName: exercise?.name || '' } : ex
         ));
+    };
+
+    const handleSaveCustomExercise = async () => {
+        if (!newExName.trim()) return;
+        const newEx = {
+            id: 'custom_' + Date.now(),
+            name: newExName.trim(),
+            category: EXERCISE_CATEGORIES.CUSTOM,
+            isCustom: true
+        };
+
+        try {
+            await firestoreService.addCustomExercise(user.id, newEx);
+            setAllExercises([...allExercises, newEx]);
+            setPlannedExercises(plannedExercises.map(ex =>
+                ex.id === activeExIdForCustom ? { ...ex, exerciseId: newEx.id, exerciseName: newEx.name } : ex
+            ));
+            setNewExName('');
+            setIsCreatingCustom(false);
+            setActiveExIdForCustom(null);
+        } catch (error) {
+            console.error('Error saving custom exercise:', error);
+            alert('Failed to save exercise');
+        }
     };
 
     const addSet = (exerciseId) => {
@@ -292,6 +324,7 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
                         <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
                             <select value={ex.exerciseId} onChange={e => handleExerciseChange(ex.id, e.target.value)} style={{ flex: 1 }}>
                                 <option value="">-- Select Exercise --</option>
+                                <option value="CREATE_NEW">+ Create New Exercise</option>
                                 {Object.values(EXERCISE_CATEGORIES).map(cat => (
                                     <optgroup label={cat} key={cat}>
                                         {allExercises.filter(e => e.category === cat).map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
@@ -322,6 +355,27 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
                     </div>
                 ))}
             </div>
+
+            {isCreatingCustom && (
+                <div className="nav-overlay open" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5000 }}>
+                    <div className="glass-card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center' }}>
+                        <h3>Add New Exercise</h3>
+                        <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>This will be added to your custom movement library.</p>
+                        <input 
+                            type="text" 
+                            value={newExName} 
+                            onChange={e => setNewExName(e.target.value)} 
+                            placeholder="Exercise Name (e.g. Pause Squat)" 
+                            autoFocus
+                            style={{ width: '100%', marginBottom: '1.5rem', padding: '0.8rem' }}
+                        />
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            <button className="btn" style={{ flex: 1 }} onClick={() => { setIsCreatingCustom(false); setNewExName(''); }}>Cancel</button>
+                            <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSaveCustomExercise}>Add Exercise</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <button className="btn" style={{ width: '100%', marginTop: '1rem' }} onClick={addExercise}>+ Add Movement</button>
 
