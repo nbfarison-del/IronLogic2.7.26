@@ -13,6 +13,7 @@ import * as firestoreService from '../services/firestoreService';
 import { runDMAICCycle } from '../services/DMAICService';
 import { useRef } from 'react';
 import { logger } from '../utils/logger';
+import { syncService } from '../services/SyncService';
 
 // Exercises where distance is captured as whole meters rather than a decimal distance.
 const METER_BASED_EXERCISE_IDS = new Set([
@@ -98,7 +99,9 @@ const WorkoutLog = () => {
         plannedWorkouts,
         isLoading: dataLoading,
         trainingMaxes,
-        syncStatus
+        syncStatus,
+        pendingSyncCount,
+        updateSessionOptimistically
     } = useData();
 
 
@@ -234,21 +237,35 @@ const WorkoutLog = () => {
         });
 
         try {
-            await firestoreService.finalizeWorkoutSession(targetUserId, dateStr, {
+            // Instead of direct call, we use SyncService
+            syncService.enqueueSessionFinalization(targetUserId, dateStr, {
                 sessionRpe,
                 loggedSetsCount: loggedSets.length,
-                workoutType: workoutType // primary type
+                workoutType: workoutType
             });
 
-            if (isCoachViewing) {
-                logger.info('Triggering DMAIC cycle analysis', { targetUserId });
-                await runDMAICCycle(targetUserId);
-            }
+            // Optimistic UI update: Trigger global state change immediately
+            updateSessionOptimistically(dateStr, {
+                sessionRpe,
+                loggedSetsCount: loggedSets.length,
+                workoutType: workoutType
+            });
 
+            // Optimistic UI update: Trigger local state change immediately
             setIsSessionComplete(true);
             setShowRpeModal(false);
-            showToast("Session complete. Great work!", "success");
-            logger.info('Session finalized successfully', { targetUserId, dateStr });
+            
+            if (syncStatus === 'online') {
+                showToast("Session complete. Syncing with server...", "success");
+            } else {
+                showToast("Session saved locally. Will sync when online.", "info");
+            }
+
+            if (isCoachViewing) {
+                await runDMAICCycle(targetUserId);
+            }
+            
+            logger.info('Session finalization enqueued', { targetUserId, dateStr });
         } catch (error) {
             logger.error('Error in confirmFinalize', { targetUserId, dateStr, error: error.message });
             setFinalizeError("Persistence failed. Please try again.");
@@ -538,8 +555,14 @@ const WorkoutLog = () => {
             </div>
 
             {syncStatus === 'offline' && (
-                <div className="glass-card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-error)', background: 'rgba(239, 68, 68, 0.1)' }}>
-                    <p style={{ margin: 0, fontSize: '0.9rem' }}>📴 You are currently offline. Your logs will sync once you reconnect.</p>
+                <div className="glass-card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--accent-error)', background: 'rgba(239, 68, 68, 0.1)', animation: 'pulse 2s infinite' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem' }}>📴 Offline Mode: Logs will sync once you reconnect.</p>
+                </div>
+            )}
+
+            {pendingSyncCount > 0 && (
+                <div className="glass-card" style={{ marginBottom: '1.5rem', borderLeft: '4px solid var(--primary)', background: 'rgba(var(--primary-rgb), 0.1)' }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem' }}>🔄 Syncing {pendingSyncCount} session(s) in background...</p>
                 </div>
             )}
 

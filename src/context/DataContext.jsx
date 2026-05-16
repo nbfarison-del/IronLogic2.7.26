@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import * as firestoreService from '../services/firestoreService';
+import { syncService } from '../services/SyncService';
 
 const DataContext = createContext();
 
@@ -25,12 +26,16 @@ export const DataProvider = ({ children }) => {
     const [syncStatus, setSyncStatus] = useState(navigator.onLine ? 'online' : 'offline');
     const [syncTimestamps, setSyncTimestamps] = useState({});
     const [syncError, setSyncError] = useState(null);
+    const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
     // Status - Don't show global loader if we have cached data to show
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        const handleOnline = () => setSyncStatus('online');
+        const handleOnline = () => {
+            setSyncStatus('online');
+            syncService.processQueue();
+        };
         const handleOffline = () => setSyncStatus('offline');
 
         const handleError = (source) => (err) => {
@@ -40,6 +45,14 @@ export const DataProvider = ({ children }) => {
 
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
+
+        // Process any leftover tasks from previous session
+        syncService.processQueue();
+
+        // Update pending count periodically or on changes
+        const pendingInterval = setInterval(() => {
+            setPendingSyncCount(syncService.getQueueStatus().pendingCount);
+        }, 2000);
 
         if (!user) {
             const resetTimer = window.setTimeout(() => {
@@ -159,6 +172,7 @@ export const DataProvider = ({ children }) => {
             unsubSessions();
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
+            clearInterval(pendingInterval);
         };
     }, [user]);
 
@@ -188,6 +202,23 @@ export const DataProvider = ({ children }) => {
         return () => clearTimeout(timer);
     }, [user, workouts, weights, recovery, goals, profile, coaching, plannedWorkouts, notesHistory, mobilityLogs, sessions]);
 
+    const updateSessionOptimistically = (dateStr, metadata) => {
+        setSessions(prev => {
+            const existing = prev.find(s => s.id === dateStr);
+            const updated = {
+                id: dateStr,
+                isComplete: true,
+                ...metadata,
+                updatedAt: new Date().toISOString(),
+                finalizedAt: new Date().toISOString()
+            };
+            if (existing) {
+                return prev.map(s => s.id === dateStr ? updated : s);
+            }
+            return [updated, ...prev];
+        });
+    };
+
     const value = useMemo(() => ({
         workouts,
         weights,
@@ -204,9 +235,11 @@ export const DataProvider = ({ children }) => {
         syncStatus,
         syncTimestamps,
         syncError,
+        pendingSyncCount,
         settings: profile?.settings || { unit: 'kg' },
-        trainingMaxes: profile?.trainingMaxes || profile?.maxes || {}
-    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, mobilityLogs, sessions, isLoading, syncStatus, syncTimestamps, syncError]);
+        trainingMaxes: profile?.trainingMaxes || profile?.maxes || {},
+        updateSessionOptimistically
+    }), [workouts, weights, recovery, goals, profile, customExercises, coaching, plannedWorkouts, notesHistory, mobilityLogs, sessions, isLoading, syncStatus, syncTimestamps, syncError, pendingSyncCount]);
 
     return (
         <DataContext.Provider value={value}>
