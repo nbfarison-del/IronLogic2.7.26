@@ -59,12 +59,42 @@ export const calculateFatigueIndex = (sessions, days = 14, readiness = null) => 
     return averageRPE;
 };
 
+export const calculateACWR = (sessions) => {
+    if (!sessions || sessions.length === 0) return 1.0;
+
+    const now = new Date();
+    const acuteRange = 7;
+    const chronicRange = 28;
+
+    const getWorkloadForRange = (days) => {
+        const rangeSessions = sessions.filter(s => {
+            const diff = (now - new Date(s.date)) / (1000 * 60 * 60 * 24);
+            return diff <= days;
+        });
+        return rangeSessions.reduce((total, s) => {
+            const vol = (s.exercises || []).reduce((exTotal, ex) => {
+                return exTotal + (ex.sets || []).reduce((setTotal, set) => {
+                    return setTotal + (parseFloat(set.load || set.weight || 0) * parseFloat(set.reps || 0));
+                }, 0);
+            }, 0);
+            return total + vol;
+        }, 0);
+    };
+
+    const acuteWorkload = getWorkloadForRange(acuteRange);
+    const chronicWorkload = getWorkloadForRange(chronicRange) / (chronicRange / acuteRange);
+
+    if (chronicWorkload === 0) return acuteWorkload > 0 ? 1.5 : 1.0;
+    return Math.round((acuteWorkload / chronicWorkload) * 100) / 100;
+};
+
 export const calculateMetrics = (sessions, readiness = null, fatigueDays = 7) => {
     if (!sessions || sessions.length === 0) return { e1rm: {}, fatigue_index: readiness?.fatigue ? parseFloat(readiness.fatigue) : 0, trend: {} };
 
     const metrics = {
         e1rm: {},
         fatigue_index: calculateFatigueIndex(sessions, fatigueDays, readiness),
+        acwr: calculateACWR(sessions),
         trend: {} // 'up', 'down', or 'flat'
     };
 

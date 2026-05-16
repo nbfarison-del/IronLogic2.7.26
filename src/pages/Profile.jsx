@@ -40,6 +40,15 @@ const Profile = () => {
         deadlift: '',
         ohp: ''
     });
+    const [defineData, setDefineData] = useState({
+        age: '',
+        sex: '',
+        sport: '',
+        trainingAge: '',
+        primaryGoal: '',
+        occupationStress: 'low',
+        equipment: 'full_gym'
+    });
     const [confirmRefresh, setConfirmRefresh] = useState(false);
 
 
@@ -47,7 +56,18 @@ const Profile = () => {
         if (syncedMaxes) {
             setMaxes(syncedMaxes);
         }
-    }, [syncedMaxes]);
+        if (profile) {
+            setDefineData({
+                age: profile.age || '',
+                sex: profile.sex || '',
+                sport: profile.sport || '',
+                trainingAge: profile.trainingAge || '',
+                primaryGoal: profile.primaryGoal || '',
+                occupationStress: profile.occupationStress || 'low',
+                equipment: profile.equipment || 'full_gym'
+            });
+        }
+    }, [syncedMaxes, profile]);
 
     // Browser-robust YYYY-MM-DD
     const getTodayStr = () => {
@@ -85,8 +105,12 @@ const Profile = () => {
         if (!user) return;
 
         try {
-            await firestoreService.updateUserProfile(user.id, { trainingMaxes: maxes, maxes });
-            showToast('Profile maxes saved successfully!', 'success');
+            await firestoreService.updateUserProfile(user.id, { 
+                trainingMaxes: maxes, 
+                maxes,
+                ...defineData
+            });
+            showToast('Profile saved successfully!', 'success');
         } catch (error) {
             console.error('Error saving profile:', error);
             showToast('Failed to save. Please try again.', 'error');
@@ -106,6 +130,69 @@ const Profile = () => {
             </p>
 
 
+
+            <div className="card" style={{ marginBottom: '2rem' }}>
+                <form onSubmit={handleSave}>
+                    <h2>Phase 1: Define (Context & Goals)</h2>
+                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="input-group">
+                            <label>Age</label>
+                            <input type="number" value={defineData.age} onChange={e => setDefineData({...defineData, age: e.target.value})} />
+                        </div>
+                        <div className="input-group">
+                            <label>Sex</label>
+                            <select value={defineData.sex} onChange={e => setDefineData({...defineData, sex: e.target.value})}>
+                                <option value="">Select...</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="input-group">
+                        <label>Sport / Discipline</label>
+                        <input type="text" value={defineData.sport} onChange={e => setDefineData({...defineData, sport: e.target.value})} placeholder="e.g. Powerlifting, Hyrox" />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Training Age</label>
+                        <select value={defineData.trainingAge} onChange={e => setDefineData({...defineData, trainingAge: e.target.value})}>
+                            <option value="novice">Novice (&lt;1 year)</option>
+                            <option value="intermediate">Intermediate (1-3 years)</option>
+                            <option value="advanced">Advanced (3-5 years)</option>
+                            <option value="elite">Elite (5+ years)</option>
+                        </select>
+                    </div>
+
+                    <div className="input-group">
+                        <label>Primary Goal</label>
+                        <input type="text" value={defineData.primaryGoal} onChange={e => setDefineData({...defineData, primaryGoal: e.target.value})} placeholder="e.g. Max Squat Strength" />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Occupational Fatigue</label>
+                        <select value={defineData.occupationStress} onChange={e => setDefineData({...defineData, occupationStress: e.target.value})}>
+                            <option value="low">Low (Sedentary/Low Stress)</option>
+                            <option value="moderate">Moderate (Active/Moderate Stress)</option>
+                            <option value="high">High (Manual Labor/High Stress)</option>
+                        </select>
+                    </div>
+
+                    <div className="input-group">
+                        <label>Equipment Access</label>
+                        <select value={defineData.equipment} onChange={e => setDefineData({...defineData, equipment: e.target.value})}>
+                            <option value="full_gym">Full Commercial Gym</option>
+                            <option value="garage_gym">Garage Gym (Rack/Barbell)</option>
+                            <option value="minimal">Minimal (Dumbbells/Kettlebells)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" className="btn btn-primary" style={{ marginTop: '1rem', width: '100%' }}>
+                        Save Context
+                    </button>
+                </form>
+            </div>
 
             <div className="card" style={{ marginBottom: '2rem' }}>
                 <h2>App Settings</h2>
