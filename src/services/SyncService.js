@@ -138,17 +138,33 @@ class SyncService {
 
     async executeTask(task) {
         const { type, payload } = task;
+        
+        // Defensive: Remove any undefined values that would cause Firestore to throw
+        const sanitizedPayload = this.sanitize(payload);
 
         switch (type) {
             case 'finalize_session':
-                return await firestoreService.finalizeWorkoutSession(payload.userId, payload.dateStr, payload.metadata);
+                return await firestoreService.finalizeWorkoutSession(sanitizedPayload.userId, sanitizedPayload.dateStr, sanitizedPayload.metadata);
             
             case 'add_set':
-                return await firestoreService.addWorkout(payload.userId, payload.set);
+                return await firestoreService.addWorkout(sanitizedPayload.userId, sanitizedPayload.set);
                 
             default:
                 throw new Error(`Unknown task type: ${type}`);
         }
+    }
+
+    sanitize(obj) {
+        if (Array.isArray(obj)) {
+            return obj.map(v => this.sanitize(v));
+        } else if (obj !== null && typeof obj === 'object') {
+            return Object.fromEntries(
+                Object.entries(obj)
+                    .filter(([_, v]) => v !== undefined)
+                    .map(([k, v]) => [k, this.sanitize(v)])
+            );
+        }
+        return obj;
     }
 
     getPendingCount() {

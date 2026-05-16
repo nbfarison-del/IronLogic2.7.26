@@ -446,8 +446,7 @@ const WorkoutLog = () => {
                     category: exercise.category,
                     type: workoutType,
                     duration,
-                    distance: isMeterBasedExercise(exercise) ? undefined : distance,
-                    meters: isMeterBasedExercise(exercise) ? meters : undefined,
+                    ...(isMeterBasedExercise(exercise) ? { meters } : { distance }),
                     notes,
                     video_url: videoUrl
                 }];
