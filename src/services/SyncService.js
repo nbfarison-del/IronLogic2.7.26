@@ -1,31 +1,32 @@
+/**
+ * SyncService.js - General Purpose Offline Sync Engine
+ * Handles background persistence with retries, idempotency, and local-first reliability.
+ */
+
 import * as firestoreService from './firestoreService';
 import { logger } from '../utils/logger';
 
 const QUEUE_STORAGE_KEY = 'ironlogic_sync_queue';
 const RETRY_CONFIG = {
     maxAttempts: 5,
-    baseDelay: 1000, // 1 second
+    baseDelay: 1000 // 1s
 };
 
 class SyncService {
     constructor() {
         this.queue = this.loadQueue();
         this.isProcessing = false;
-        this.retryCounts = {};
-
-        // Listen for online status
+        
+        // Listen for online status to trigger processing
         if (typeof window !== 'undefined') {
-            window.addEventListener('online', () => {
-                logger.info('Device online, processing sync queue');
-                this.processQueue();
-            });
+            window.addEventListener('online', () => this.processQueue());
         }
     }
 
     loadQueue() {
         try {
-            const stored = localStorage.getItem(QUEUE_STORAGE_KEY);
-            return stored ? JSON.parse(stored) : [];
+            const saved = localStorage.getItem(QUEUE_STORAGE_KEY);
+            return saved ? JSON.parse(saved) : [];
         } catch (e) {
             logger.error('Failed to load sync queue', { error: e.message });
             return [];
@@ -41,95 +42,118 @@ class SyncService {
     }
 
     /**
-     * Enqueue a session finalization task.
-     * @param {string} userId 
-     * @param {string} dateStr 
-     * @param {object} metadata 
+     * Enqueue a new task.
+     * @param {string} type - 'finalize_session' | 'add_set'
+     * @param {object} payload - Task data
+     * @param {string} taskId - Optional unique ID for idempotency
      */
-    enqueueSessionFinalization(userId, dateStr, metadata) {
-        const taskId = `finalize_${userId}_${dateStr}`;
+    enqueue(type, payload, taskId = null) {
+        const id = taskId || `${type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        // Prevent duplicate tasks for the same session (Idempotency)
-        if (this.queue.some(task => task.id === taskId)) {
-            logger.warn('Task already in queue, skipping enqueue', { taskId });
-            return;
+        // Prevent duplicates
+        if (this.queue.some(t => t.id === id)) {
+            logger.info('Task already in queue, skipping enqueue', { id });
+            return id;
         }
 
         const task = {
-            id: taskId,
-            type: 'FINALIZE_SESSION',
-            payload: { userId, dateStr, metadata },
+            id,
+            type,
+            payload,
             attempts: 0,
-            enqueuedAt: new Date().toISOString()
+            enqueuedAt: new Date().toISOString(),
+            lastAttemptAt: null,
+            error: null
         };
 
         this.queue.push(task);
         this.saveQueue();
-        logger.info('Task enqueued', { taskId });
+        
+        logger.info('Task enqueued', { id, type });
+        
+        // Try processing immediately if online
+        if (navigator.onLine) {
+            this.processQueue();
+        }
 
-        // Trigger processing immediately
-        this.processQueue();
+        return id;
+    }
+
+    // Specific helper for Session Finalization
+    enqueueSessionFinalization(userId, dateStr, metadata) {
+        const taskId = `finalize_${userId}_${dateStr}`;
+        return this.enqueue('finalize_session', { userId, dateStr, metadata }, taskId);
+    }
+
+    // Specific helper for Adding Sets
+    enqueueWorkoutSets(userId, sets) {
+        // Enqueue each set as an individual task to ensure each one persists
+        sets.forEach((set, index) => {
+            const taskId = `set_${userId}_${set.date}_${set.exerciseId}_${Date.now()}_${index}`;
+            this.enqueue('add_set', { userId, set }, taskId);
+        });
     }
 
     async processQueue() {
-        if (this.isProcessing || this.queue.length === 0 || !navigator.onLine) {
-            return;
-        }
+        if (this.isProcessing || this.queue.length === 0 || !navigator.onLine) return;
 
         this.isProcessing = true;
-        logger.info('Processing sync queue', { size: this.queue.length });
+        logger.info('Starting sync queue processing', { count: this.queue.length });
 
-        const remainingTasks = [];
-
-        for (const task of this.queue) {
+        const tasksToProcess = [...this.queue];
+        
+        for (const task of tasksToProcess) {
             try {
                 await this.executeTask(task);
-                logger.info('Task completed successfully', { taskId: task.id });
+                // Success! Remove from queue
+                this.queue = this.queue.filter(t => t.id !== task.id);
+                this.saveQueue();
+                logger.info('Task sync successful', { id: task.id });
             } catch (error) {
-                task.attempts += 1;
-                logger.error('Task failed', { taskId: task.id, attempts: task.attempts, error: error.message });
+                task.attempts++;
+                task.lastAttemptAt = new Date().toISOString();
+                task.error = error.message;
+                
+                logger.warn('Task sync failed, scheduled for retry', { 
+                    id: task.id, 
+                    attempt: task.attempts, 
+                    error: error.message 
+                });
 
-                if (task.attempts < RETRY_CONFIG.maxAttempts) {
-                    remainingTasks.push(task);
-                    this.scheduleRetry(task);
+                if (task.attempts >= RETRY_CONFIG.maxAttempts) {
+                    logger.error('Task reached max retries, dropping from queue', { id: task.id });
+                    this.queue = this.queue.filter(t => t.id !== task.id);
+                    this.saveQueue();
                 } else {
-                    logger.error('Task abandoned after max attempts', { taskId: task.id });
-                    // Here we could notify the user or move to a "dead letter" queue
+                    // Stop processing for now, wait for next attempt (exponential backoff handled by outer retry logic if added)
+                    // For now we just wait for the next periodic check or online event
+                    break; 
                 }
             }
         }
 
-        this.queue = remainingTasks;
-        this.saveQueue();
         this.isProcessing = false;
-        
-        // If we still have tasks, they are scheduled for retry
+        this.saveQueue();
     }
 
     async executeTask(task) {
-        if (task.type === 'FINALIZE_SESSION') {
-            const { userId, dateStr, metadata } = task.payload;
-            await firestoreService.finalizeWorkoutSession(userId, dateStr, metadata);
+        const { type, payload } = task;
+
+        switch (type) {
+            case 'finalize_session':
+                return await firestoreService.finalizeWorkoutSession(payload.userId, payload.dateStr, payload.metadata);
+            
+            case 'add_set':
+                return await firestoreService.addWorkout(payload.userId, payload.set);
+                
+            default:
+                throw new Error(`Unknown task type: ${type}`);
         }
     }
 
-    scheduleRetry(task) {
-        const delay = RETRY_CONFIG.baseDelay * Math.pow(2, task.attempts - 1);
-        logger.info('Scheduling retry', { taskId: task.id, delay });
-        
-        setTimeout(() => {
-            this.processQueue();
-        }, delay);
-    }
-
-    getQueueStatus() {
-        return {
-            pendingCount: this.queue.length,
-            isProcessing: this.isProcessing,
-            isOnline: navigator.onLine
-        };
+    getPendingCount() {
+        return this.queue.length;
     }
 }
 
-// Singleton instance
 export const syncService = new SyncService();

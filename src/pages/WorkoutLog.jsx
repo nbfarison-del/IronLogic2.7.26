@@ -454,15 +454,20 @@ const WorkoutLog = () => {
 
             setPendingSaves(prev => prev + 1);
             try {
-                logger.info('Executing Firestore writes', { entriesCount: newEntries.length });
-                await Promise.all(newEntries.map(entry => firestoreService.addWorkout(targetUserId, entry)));
-                logger.info('Sets logged successfully', { count: newEntries.length, exerciseId: exercise.id });
-                showToast("Record logged successfully!", "success");
+                logger.info('Enqueueing sets for sync', { entriesCount: newEntries.length });
+                
+                // Use SyncService for fault-tolerant background persistence
+                syncService.enqueueWorkoutSets(targetUserId, newEntries);
+                
+                logger.info('Sets enqueued successfully', { count: newEntries.length, exerciseId: exercise.id });
+                showToast("Record saved locally!", "success");
             } catch (err) {
-                logger.error('Firestore write failed in handleAddSet', { error: err.message });
-                showToast("Failed to save. Please check your connection.", "error");
+                logger.error('Failed to enqueue sets', { error: err.message });
+                showToast("Failed to save. Please refresh.", "error");
                 throw err;
             } finally {
+                // Since enqueueing is fast, we decrement immediately, 
+                // but SyncService will handle the actual background write.
                 setPendingSaves(prev => Math.max(0, prev - 1));
             }
             
