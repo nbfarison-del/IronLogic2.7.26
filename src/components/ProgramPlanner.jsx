@@ -3,11 +3,14 @@ import { exercises as defaultExercises, EXERCISE_CATEGORIES, EXERCISE_CONFIG } f
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 import ExerciseTools from './ExerciseTools';
+import { calculateEstimated1RM } from '../utils/calculator';
+import { useSettings } from '../context/SettingsContext';
 
 const ADMIN_EMAIL = 'nbfarison@gmail.com';
 
 const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'assign' }) => {
     const { user } = useAuth();
+    const { unit } = useSettings();
     const [allExercises, setAllExercises] = useState(defaultExercises);
     const [programName, setProgramName] = useState(initialData?.name || 'New Program');
     const [isTemplate, setIsTemplate] = useState(initialData?.isTemplate || mode === 'template');
@@ -174,6 +177,12 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
         }));
     };
 
+    const handleExerciseNoteChange = (exerciseId, value) => {
+        setPlannedExercises(plannedExercises.map(ex =>
+            ex.id === exerciseId ? { ...ex, notes: value } : ex
+        ));
+    };
+
     const applyCalculatedTarget = (exerciseId, target) => {
         setPlannedExercises(plannedExercises.map(ex => {
             if (ex.id !== exerciseId) return ex;
@@ -336,14 +345,29 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                             {ex.sets.map((s) => (
-                                <div key={s.id} style={{ display: 'flex', gap: '0.5rem' }}>
+                                <div key={s.id} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr)) minmax(86px, auto) auto', gap: '0.5rem', alignItems: 'center' }}>
                                     <input type="number" placeholder="Weight" value={s.weight} onChange={e => handleSetChange(ex.id, s.id, 'weight', e.target.value)} style={{ flex: 1 }} disabled={isTemplate} />
                                     <input type="text" placeholder="Reps" value={s.reps} onChange={e => handleSetChange(ex.id, s.id, 'reps', e.target.value)} style={{ flex: 1 }} />
                                     <input type="text" placeholder="RPE" value={s.targetRpe} onChange={e => handleSetChange(ex.id, s.id, 'targetRpe', e.target.value)} style={{ flex: 1 }} />
+                                    <div style={{ fontSize: '0.75rem', color: 'gold', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                        {calculateEstimated1RM(s.weight, s.reps, s.targetRpe) > 0
+                                            ? `e1RM ${calculateEstimated1RM(s.weight, s.reps, s.targetRpe)} ${unit}`
+                                            : 'e1RM --'}
+                                    </div>
                                     <button className="btn" onClick={() => removeSet(ex.id, s.id)}>✕</button>
                                 </div>
                             ))}
                             <button className="btn" onClick={() => addSet(ex.id)}>+ Add Set</button>
+                        </div>
+
+                        <div className="input-group" style={{ marginTop: '1rem' }}>
+                            <label>Movement Notes</label>
+                            <textarea
+                                value={ex.notes || ''}
+                                onChange={e => handleExerciseNoteChange(ex.id, e.target.value)}
+                                placeholder="Cues, substitutions, tempo, warm-up notes..."
+                                style={{ minHeight: '70px', resize: 'vertical' }}
+                            />
                         </div>
 
                         <ExerciseTools

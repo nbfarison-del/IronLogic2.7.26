@@ -25,7 +25,7 @@ const ExerciseTools = ({ exerciseId, exerciseName, athleteId, onApplyTarget }) =
                 try {
                     const allWorkouts = await firestoreService.getWorkouts(historyUserId);
                     const exerciseHistory = allWorkouts
-                        .filter(w => w.exerciseId === exerciseId)
+                        .filter(w => w.exerciseId === exerciseId || (exerciseName && w.exerciseName === exerciseName))
                         .sort((a, b) => new Date(b.date) - new Date(a.date));
                     setHistory(exerciseHistory);
                 } catch (error) {
@@ -37,7 +37,7 @@ const ExerciseTools = ({ exerciseId, exerciseName, athleteId, onApplyTarget }) =
         };
 
         loadHistory();
-    }, [activeTool, exerciseId, athleteId, user]);
+    }, [activeTool, exerciseId, exerciseName, athleteId, user]);
 
     const e1rm = calculateEstimated1RM(calcWeight, calcReps, calcRpe);
     const projectedWeight = calculateWeightFrom1RM(e1rm, targetReps, targetRpe);
@@ -48,6 +48,7 @@ const ExerciseTools = ({ exerciseId, exerciseName, athleteId, onApplyTarget }) =
         <div style={{ marginTop: '1rem', borderTop: '1px solid #444', paddingTop: '1rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                 <button
+                    type="button"
                     className={`btn ${activeTool === 'calc' ? 'btn-primary' : ''}`}
                     onClick={() => setActiveTool(activeTool === 'calc' ? null : 'calc')}
                     style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
@@ -55,6 +56,7 @@ const ExerciseTools = ({ exerciseId, exerciseName, athleteId, onApplyTarget }) =
                     RPE Calculator
                 </button>
                 <button
+                    type="button"
                     className={`btn ${activeTool === 'history' ? 'btn-primary' : ''}`}
                     onClick={() => setActiveTool(activeTool === 'history' ? null : 'history')}
                     style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}
@@ -116,6 +118,7 @@ const ExerciseTools = ({ exerciseId, exerciseName, athleteId, onApplyTarget }) =
                                         </div>
                                         {onApplyTarget && (
                                             <button
+                                                type="button"
                                                 className="btn btn-primary"
                                                 style={{ fontSize: '0.8rem', padding: '0.35rem 0.7rem' }}
                                                 onClick={() => onApplyTarget({
@@ -151,7 +154,9 @@ const ExerciseTools = ({ exerciseId, exerciseName, athleteId, onApplyTarget }) =
                                         {entry.estimated1RM && <span style={{ color: 'gold' }}>e1RM: {entry.estimated1RM}</span>}
                                     </div>
                                     <div style={{ fontWeight: 'bold' }}>
-                                        {entry.weight} {unit} x {entry.reps} @ RPE {entry.actualRpe || entry.targetRpe || '-'}
+                                        {entry.type === 'cardio' || entry.type === 'hyrox'
+                                            ? `${entry.meters ? `${entry.meters} m` : entry.distance || '-'}${entry.duration ? ` in ${entry.duration} min` : ''}`
+                                            : `${entry.weight} ${unit} x ${entry.reps} @ RPE ${entry.actualRpe || entry.targetRpe || '-'}`}
                                     </div>
                                     {entry.notes && <div style={{ fontSize: '0.75rem', color: '#666', fontStyle: 'italic' }}>{entry.notes}</div>}
                                 </div>

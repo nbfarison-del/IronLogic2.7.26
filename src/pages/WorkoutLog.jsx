@@ -673,6 +673,25 @@ const WorkoutLog = () => {
 
                     {selectedExerciseId && !isCreatingExercise && (
                         <form onSubmit={handleAddSet}>
+                            <ExerciseTools
+                                exerciseId={selectedExerciseId}
+                                exerciseName={selectedExercise?.name || selectedExerciseId}
+                                athleteId={targetUserId}
+                                onApplyTarget={workoutType === 'strength' ? (target) => {
+                                    const targetRowId = setRows.find(row => !row.weight && !row.reps)?.id || setRows[0]?.id;
+                                    if (!targetRowId) return;
+                                    setSetRows(setRows.map(row => row.id === targetRowId
+                                        ? {
+                                            ...row,
+                                            weight: String(target.weight || ''),
+                                            reps: String(target.reps || row.reps || ''),
+                                            targetRpe: String(target.targetRpe || row.targetRpe || '')
+                                        }
+                                        : row
+                                    ));
+                                } : undefined}
+                            />
+
                             {workoutType === 'strength' ? (
                                 <div className="strength-entry-form">
                                     {/* HEADERS - Strictly Aligned */}
@@ -770,6 +789,9 @@ const WorkoutLog = () => {
                                                         }}
                                                         required
                                                     />
+                                                    <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'gold', textAlign: isFocusMode ? 'left' : 'center' }}>
+                                                        e1RM {calculateEstimated1RM(row.weight, row.reps, row.actualRpe || row.targetRpe) || '--'}{calculateEstimated1RM(row.weight, row.reps, row.actualRpe || row.targetRpe) ? unit : ''}
+                                                    </div>
                                                 </div>
 
                                                 {/* ACTIONS */}
@@ -824,12 +846,12 @@ const WorkoutLog = () => {
                                 </div>
                             )}
 
-                            <details style={{ marginTop: '1.5rem', fontSize: '0.9rem' }}>
-                                <summary style={{ cursor: 'pointer', opacity: 0.6 }}>Technical Notes / Video Link</summary>
+                            <details open style={{ marginTop: '1.5rem', fontSize: '0.9rem' }}>
+                                <summary style={{ cursor: 'pointer', opacity: 0.75 }}>Notes / Video Link</summary>
                                 <div style={{ paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                     <div className="input-group">
-                                        <label>Session Notes</label>
-                                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Technique cues, subjective feel..." style={{ height: '80px' }} />
+                                        <label>Movement Notes</label>
+                                        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Technique cues, subjective feel, pain, setup changes..." style={{ height: '80px' }} />
                                     </div>
                                     <div className="input-group">
                                         <label>Form Check Video (URL)</label>
