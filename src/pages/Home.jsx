@@ -15,6 +15,22 @@ const getDateStr = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
+const parseWorkoutDate = (value) => {
+    if (!value) return null;
+    const dateStr = String(value).includes('T') ? String(value).split('T')[0] : String(value);
+    const parsed = new Date(`${dateStr}T12:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const getSetVolume = (workout) => {
+    if (workout?.type === 'cardio' || workout?.type === 'hyrox') return 0;
+    const weight = parseFloat(workout?.weight || 0);
+    const reps = parseInt(workout?.reps || 0, 10);
+    const sets = parseInt(workout?.sets || 1, 10);
+    if (!Number.isFinite(weight) || !Number.isFinite(reps) || !Number.isFinite(sets)) return 0;
+    return weight * reps * Math.max(sets, 1);
+};
+
 const tabs = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'hyrox', label: 'Hyrox' },
@@ -63,19 +79,32 @@ const Home = () => {
 
     const weeklySummary = useMemo(() => {
         const now = new Date();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
+        const sevenDaysAgo = new Date(now);
+        sevenDaysAgo.setDate(now.getDate() - 6);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
 
-        const thisWeekWorkouts = workouts.filter(w => {
-            const d = new Date(w.date);
-            return d >= startOfWeek;
+        const lastWeekWorkouts = workouts.filter(w => {
+            const d = parseWorkoutDate(w.date);
+            return d && d >= sevenDaysAgo && d <= now;
         });
 
-        const totalWeight = thisWeekWorkouts.reduce((sum, w) => sum + (parseFloat(w.weight || 0) * parseInt(w.reps || 0)), 0);
-        const sessions = new Set(thisWeekWorkouts.map(w => w.date.split('T')[0])).size;
+        const totalWeight = lastWeekWorkouts.reduce((sum, w) => sum + getSetVolume(w), 0);
+        const sessions = new Set(lastWeekWorkouts.map(w => String(w.date).split('T')[0])).size;
+        const peakIntensity = lastWeekWorkouts
+            .filter(w => w.type === 'strength' && Number(w.estimated1RM) > 0)
+            .reduce((best, w) => {
+                if (!best || Number(w.estimated1RM) > Number(best.estimated1RM)) return w;
+                return best;
+            }, null);
 
-        return { totalWeight, sessions };
+        const rpeEntries = lastWeekWorkouts
+            .map(w => parseFloat(w.actualRpe || w.targetRpe))
+            .filter(value => Number.isFinite(value));
+        const averageRpe = rpeEntries.length
+            ? rpeEntries.reduce((sum, value) => sum + value, 0) / rpeEntries.length
+            : 0;
+
+        return { totalWeight, sessions, peakIntensity, averageRpe };
     }, [workouts]);
 
     if (loading) {
@@ -155,8 +184,13 @@ const Home = () => {
                                 </div>
                                 <div className="metric-card card">
                                     <small>Peak Intensity</small>
-                                    <div className="metric-value">{recentPRs[0]?.estimated1RM || 0} {appUnit}</div>
-                                    <div className="metric-note">{recentPRs[0]?.exerciseName || 'Awaiting logged data'}</div>
+                                    <div className="metric-value">{weeklySummary.peakIntensity?.estimated1RM || 0} {appUnit}</div>
+                                    <div className="metric-note">
+                                        {weeklySummary.peakIntensity
+                                            ? `${weeklySummary.peakIntensity.exerciseName} e1RM`
+                                            : 'Awaiting logged data'}
+                                        {weeklySummary.averageRpe > 0 ? ` • Avg RPE ${weeklySummary.averageRpe.toFixed(1)}` : ''}
+                                    </div>
                                 </div>
                             </div>
                         </section>
