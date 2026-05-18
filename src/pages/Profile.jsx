@@ -17,6 +17,7 @@ const Profile = () => {
         goals,
         plannedWorkouts,
         notesHistory,
+        profile,
         trainingMaxes: syncedMaxes,
         isLoading,
         syncStatus,
@@ -53,27 +54,25 @@ const Profile = () => {
 
 
     useEffect(() => {
-        if (syncedMaxes) {
-            setMaxes(syncedMaxes);
-        }
-        if (profile) {
-            setDefineData({
-                age: profile.age || '',
-                sex: profile.sex || '',
-                sport: profile.sport || '',
-                trainingAge: profile.trainingAge || '',
-                primaryGoal: profile.primaryGoal || '',
-                occupationStress: profile.occupationStress || 'low',
-                equipment: profile.equipment || 'full_gym'
-            });
-        }
-    }, [syncedMaxes, profile]);
+        const timer = window.setTimeout(() => {
+            if (syncedMaxes) {
+                setMaxes(syncedMaxes);
+            }
+            if (profile) {
+                setDefineData({
+                    age: profile.age || '',
+                    sex: profile.sex || '',
+                    sport: profile.sport || '',
+                    trainingAge: profile.trainingAge || '',
+                    primaryGoal: profile.primaryGoal || '',
+                    occupationStress: profile.occupationStress || 'low',
+                    equipment: profile.equipment || 'full_gym'
+                });
+            }
+        }, 0);
 
-    // Browser-robust YYYY-MM-DD
-    const getTodayStr = () => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    };
+        return () => window.clearTimeout(timer);
+    }, [syncedMaxes, profile]);
 
     const handleForceRefresh = async () => {
         if (!confirmRefresh) {

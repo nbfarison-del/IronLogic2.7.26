@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { useData } from './DataContext';
 import * as firestoreService from '../services/firestoreService';
@@ -13,7 +13,7 @@ export const SettingsProvider = ({ children }) => {
 
     const unit = settings?.unit || 'kg';
 
-    const toggleUnit = async () => {
+    const toggleUnit = useCallback(async () => {
         const newUnit = unit === 'kg' ? 'lbs' : 'kg';
         if (user) {
             try {
@@ -22,12 +22,12 @@ export const SettingsProvider = ({ children }) => {
                 console.error('Error saving settings:', error);
             }
         }
-    };
+    }, [unit, user]);
 
     const value = useMemo(() => ({
         unit,
         toggleUnit
-    }), [unit, user]);
+    }), [unit, toggleUnit]);
 
     return (
         <SettingsContext.Provider value={value}>

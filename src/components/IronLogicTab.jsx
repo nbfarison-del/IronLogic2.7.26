@@ -1,33 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { runDMAICCycle } from '../services/DMAICService';
 import { useToast } from '../context/ToastContext';
 
 const IronLogicTab = () => {
-    const { profile, workouts, sessions } = useData();
+    const { user } = useAuth();
+    const { profile, workouts } = useData();
     const { showToast } = useToast();
     const [dmaicState, setDmaicState] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    const refreshAnalysis = async () => {
-        if (!profile?.id) return;
+    const refreshAnalysis = useCallback(async () => {
+        const athleteId = profile?.id || user?.id;
+        if (!athleteId) return;
         setLoading(true);
         try {
-            const result = await runDMAICCycle(profile.id);
+            const result = await runDMAICCycle(athleteId);
             setDmaicState(result);
             showToast("DMAIC analysis synchronized.", "success");
-        } catch (error) {
+        } catch {
             showToast("Analysis failed. Check connection.", "error");
         } finally {
             setLoading(false);
         }
-    };
+    }, [profile?.id, showToast, user?.id]);
 
     useEffect(() => {
-        if (profile?.id && !dmaicState) {
+        if ((profile?.id || user?.id) && !dmaicState) {
             refreshAnalysis();
         }
-    }, [profile?.id]);
+    }, [profile?.id, user?.id, dmaicState, refreshAnalysis]);
 
     const phases = [
         { id: 'define', label: 'Define', icon: '🎯' },

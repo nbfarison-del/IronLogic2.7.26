@@ -70,7 +70,6 @@ const WeightTracker = () => {
         const padding = 20;
 
         // Scales
-        const minDate = 0;
         const maxDate = data.length - 1;
 
         // Find min and max weight for scaling, adding some buffer

@@ -158,7 +158,6 @@ const RecoveryTracker = () => {
         const padding = 20;
 
         // Scales
-        const minDate = 0;
         const maxDate = data.length - 1;
         const minScore = 1;
         const maxScore = 10;
