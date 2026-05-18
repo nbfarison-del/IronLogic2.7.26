@@ -118,7 +118,16 @@ const RecoveryTracker = () => {
         // Optimistic UI handled by DataContext subscription
         const d = new Date();
         const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const newEntry = { date: todayStr, score: score };
+        const newEntry = {
+            date: todayStr,
+            score,
+            legSoreness: metrics.legSoreness,
+            chestSoreness: metrics.chestSoreness,
+            backSoreness: metrics.backSoreness,
+            fatigue: metrics.fatigue,
+            rhr: metrics.rhr,
+            sleep: metrics.sleep
+        };
         const existingIdx = history.findIndex(h => h.date.startsWith(todayStr));
 
         try {

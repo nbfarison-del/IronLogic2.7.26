@@ -47,6 +47,17 @@ const Profile = () => {
         sport: '',
         trainingAge: '',
         primaryGoal: '',
+        secondaryGoals: '',
+        trainingPhase: 'general',
+        daysAvailable: '',
+        sessionLength: '',
+        injuryHistory: '',
+        movementLimitations: '',
+        travelSchedule: '',
+        priorityStrength: '',
+        priorityPower: '',
+        priorityEndurance: '',
+        priorityHypertrophy: '',
         occupationStress: 'low',
         equipment: 'full_gym'
     });
@@ -65,6 +76,17 @@ const Profile = () => {
                     sport: profile.sport || '',
                     trainingAge: profile.trainingAge || '',
                     primaryGoal: profile.primaryGoal || '',
+                    secondaryGoals: profile.secondaryGoals || '',
+                    trainingPhase: profile.trainingPhase || 'general',
+                    daysAvailable: profile.daysAvailable || '',
+                    sessionLength: profile.sessionLength || '',
+                    injuryHistory: profile.injuryHistory || '',
+                    movementLimitations: profile.movementLimitations || '',
+                    travelSchedule: profile.travelSchedule || '',
+                    priorityStrength: profile.priorityStrength || '',
+                    priorityPower: profile.priorityPower || '',
+                    priorityEndurance: profile.priorityEndurance || '',
+                    priorityHypertrophy: profile.priorityHypertrophy || '',
                     occupationStress: profile.occupationStress || 'low',
                     equipment: profile.equipment || 'full_gym'
                 });
@@ -167,6 +189,70 @@ const Profile = () => {
                     <div className="input-group">
                         <label>Primary Goal</label>
                         <input type="text" value={defineData.primaryGoal} onChange={e => setDefineData({...defineData, primaryGoal: e.target.value})} placeholder="e.g. Max Squat Strength" />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Secondary Goals</label>
+                        <textarea value={defineData.secondaryGoals} onChange={e => setDefineData({...defineData, secondaryGoals: e.target.value})} placeholder="e.g. Maintain aerobic fitness, improve vertical jump" style={{ minHeight: '70px' }} />
+                    </div>
+
+                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div className="input-group">
+                            <label>Current Training Phase</label>
+                            <select value={defineData.trainingPhase} onChange={e => setDefineData({...defineData, trainingPhase: e.target.value})}>
+                                <option value="general">General Preparation</option>
+                                <option value="strength">Strength Emphasis</option>
+                                <option value="power">Power / Explosive Emphasis</option>
+                                <option value="hypertrophy">Hypertrophy Emphasis</option>
+                                <option value="endurance">Endurance Emphasis</option>
+                                <option value="hybrid">Hybrid / Concurrent</option>
+                                <option value="deload">Deload / Restoration</option>
+                            </select>
+                        </div>
+                        <div className="input-group">
+                            <label>Training Days Available</label>
+                            <input type="number" min="1" max="7" value={defineData.daysAvailable} onChange={e => setDefineData({...defineData, daysAvailable: e.target.value})} placeholder="e.g. 4" />
+                        </div>
+                    </div>
+
+                    <div className="input-group">
+                        <label>Typical Session Length</label>
+                        <input type="text" value={defineData.sessionLength} onChange={e => setDefineData({...defineData, sessionLength: e.target.value})} placeholder="e.g. 60 minutes" />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Injury History / Pain Considerations</label>
+                        <textarea value={defineData.injuryHistory} onChange={e => setDefineData({...defineData, injuryHistory: e.target.value})} placeholder="Relevant injuries, pain triggers, or medical restrictions" style={{ minHeight: '70px' }} />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Movement Limitations</label>
+                        <textarea value={defineData.movementLimitations} onChange={e => setDefineData({...defineData, movementLimitations: e.target.value})} placeholder="Mobility limits, technique constraints, unavailable movements" style={{ minHeight: '70px' }} />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Travel / Schedule Constraints</label>
+                        <input type="text" value={defineData.travelSchedule} onChange={e => setDefineData({...defineData, travelSchedule: e.target.value})} placeholder="e.g. travel every other week, rotating shifts" />
+                    </div>
+
+                    <h3>Priority Domains</h3>
+                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        {[
+                            ['priorityStrength', 'Strength'],
+                            ['priorityPower', 'Power'],
+                            ['priorityEndurance', 'Endurance'],
+                            ['priorityHypertrophy', 'Hypertrophy']
+                        ].map(([key, label]) => (
+                            <div className="input-group" key={key}>
+                                <label>{label}</label>
+                                <select value={defineData[key]} onChange={e => setDefineData({...defineData, [key]: e.target.value})}>
+                                    <option value="">Not prioritized</option>
+                                    <option value="primary">Primary</option>
+                                    <option value="secondary">Secondary</option>
+                                    <option value="maintenance">Maintenance</option>
+                                </select>
+                            </div>
+                        ))}
                     </div>
 
                     <div className="input-group">

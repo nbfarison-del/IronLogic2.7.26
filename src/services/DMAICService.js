@@ -1,189 +1,317 @@
 /**
- * DMAICService.js - Advanced Edition
- * Operationalizes the IronLogic manuscript into adaptive coaching logic.
+ * DMAICService.js
+ * Operationalizes the IronLogic manuscript as a transparent adaptive loop.
  */
 
-import { getUserProfile, getWorkouts, setDoc, doc } from './firestoreService';
+import {
+    getBodyWeightHistory,
+    getDMAICLogs,
+    getPlannedWorkouts,
+    getRecoveryHistory,
+    getUserProfile,
+    getWorkouts,
+    setDoc,
+    doc
+} from './firestoreService';
 import { calculateMetrics } from './MetricsService';
 import { chatWithAI } from './GeminiService';
 import { db } from '../config/firebaseConfig';
 import { logger } from '../utils/logger';
 
+const createDefinePhase = (profile = {}) => ({
+    primaryGoal: profile?.primaryGoal || 'General Strength',
+    secondaryGoals: profile?.secondaryGoals || '',
+    sport: profile?.sport || 'General Fitness',
+    trainingAge: profile?.trainingAge || 'unspecified',
+    trainingPhase: profile?.trainingPhase || 'general',
+    constraints: {
+        occupationStress: profile?.occupationStress || 'low',
+        equipment: profile?.equipment || 'full_gym',
+        daysAvailable: profile?.daysAvailable || '',
+        sessionLength: profile?.sessionLength || '',
+        injuryHistory: profile?.injuryHistory || '',
+        movementLimitations: profile?.movementLimitations || '',
+        travelSchedule: profile?.travelSchedule || ''
+    },
+    priorities: {
+        strength: profile?.priorityStrength || '',
+        power: profile?.priorityPower || '',
+        endurance: profile?.priorityEndurance || '',
+        hypertrophy: profile?.priorityHypertrophy || ''
+    }
+});
+
+const createMeasurementSummary = (metrics) => ({
+    acuteVolume: Math.round(metrics.acuteVolume || 0),
+    chronicWeeklyVolume: Math.round(metrics.chronicWeeklyVolume || 0),
+    acwr: metrics.acwr,
+    averageRpe: metrics.averageRpe,
+    recoveryScore: metrics.recoveryScore,
+    sorenessAverage: metrics.sorenessAverage,
+    fatigueIndex: metrics.fatigue_index,
+    adherence: metrics.adherence,
+    e1rm: metrics.e1rm,
+    dataQuality: metrics.dataQuality
+});
+
 /**
  * Executes a full DMAIC cycle for an athlete.
- * This should be triggered after a session is finalized or weekly.
  */
 export const runDMAICCycle = async (athleteId) => {
     logger.info('Starting DMAIC Cycle', { athleteId });
     try {
-        // 1. DEFINE
-        // Establishing athlete context, goals, and constraints.
-        const profile = await getUserProfile(athleteId);
-        const goals = {
-            primary: profile?.primaryGoal || 'General Strength',
-            constraints: profile?.constraints || {}
-        };
-        
-        // 2. MEASURE
-        // Gathering objective performance and subjective readiness data.
-        const recentWorkouts = await getWorkouts(athleteId, 28); // 4 weeks for ACWR
-        const metrics = calculateMetrics(recentWorkouts);
-        
-        // 3. ANALYZE
-        // Transforming raw data into adaptation status classification.
-        const status = analyzeAdaptationState(metrics, profile);
-        
-        // 4. IMPROVE
-        // Converting analysis into intelligent programming adjustments.
-        const recommendation = await generatePrescription(profile, status, metrics);
-        
-        // 5. CONTROL
-        // Logging for longitudinal optimization and intervention tracking.
-        await logDMAICSnapshot(athleteId, {
-            goals,
+        const [profile, workouts, recovery, plannedWorkouts, bodyWeight, previousDmaicLogs] = await Promise.all([
+            getUserProfile(athleteId),
+            getWorkouts(athleteId, 120),
+            getRecoveryHistory(athleteId, 28),
+            getPlannedWorkouts(athleteId),
+            getBodyWeightHistory(athleteId, 28),
+            getDMAICLogs(athleteId, 8)
+        ]);
+
+        const define = createDefinePhase(profile);
+        const metrics = calculateMetrics({
+            workouts,
+            recovery,
+            plannedWorkouts,
+            bodyWeight,
+            previousDmaicLogs
+        });
+        const measure = createMeasurementSummary(metrics);
+        const status = analyzeAdaptationState(metrics, define);
+        const recommendation = await generatePrescription(define, status, metrics, previousDmaicLogs);
+        const control = createControlPlan(status, recommendation, metrics, previousDmaicLogs);
+
+        const snapshot = {
+            define,
+            measure,
             metrics,
             status,
             recommendation,
+            control,
             timestamp: new Date().toISOString()
-        });
+        };
+
+        await logDMAICSnapshot(athleteId, snapshot);
 
         logger.info('DMAIC Cycle completed', { athleteId, status: status.classification });
 
-        return {
-            status,
-            recommendation,
-            metrics
-        };
+        return snapshot;
     } catch (error) {
         logger.error('Error in DMAIC Cycle', { athleteId, error: error.message });
         throw error;
     }
 };
 
-/**
- * Advanced Adaptation Analysis
- * Classifies athlete state according to the IronLogic Master Framework.
- */
-export const analyzeAdaptationState = (metrics, profile) => {
-    const { fatigue_index = 0, trend = {}, volume_load_avg = 0 } = metrics || {};
-    
-    // Simple ACWR (Acute:Chronic Workload Ratio) estimation
-    // In a real app, calculate this more precisely over 7 vs 28 days
-    const acwr = metrics.acwr || 1.0; 
-
-    // Classification Logic
+export const analyzeAdaptationState = (metrics = {}, define = {}) => {
+    const flags = metrics.flags || {};
+    const reasoning = [];
+    const decisionRules = [];
     let classification = 'Stable';
-    let reasoning = [];
 
-    // Detection: High Fatigue / Overreaching
-    if (fatigue_index > 8.5 || acwr > 1.5) {
+    if (flags.volumeSpike && (flags.highRpe || flags.lowRecovery)) {
         classification = 'Overreached';
-        reasoning.push('Acute workload spikes detected relative to chronic capacity.');
-    } else if (fatigue_index > 7.5) {
+        reasoning.push('Acute workload is high relative to chronic workload while recovery or RPE indicators are stressed.');
+        decisionRules.push('If ACWR >= 1.5 and RPE is high or recovery is low, reduce volume and cap intensity.');
+    } else if (metrics.fatigue_index >= 7.5 || (metrics.rpeTrend === 'up' && metrics.recoveryTrend === 'down')) {
         classification = 'Fatigued';
-        reasoning.push('Elevated session RPE trends suggesting fatigue accumulation.');
+        reasoning.push('Fatigue markers are elevated or RPE is rising while recovery is falling.');
+        decisionRules.push('If RPE rises and recovery falls across the monitoring window, reduce accessory volume 10-20%.');
     }
 
-    // Detection: Progress / Stagnation
-    const trendValues = Object.values(trend);
-    const progressCount = trendValues.filter(v => v === 'up').length;
-    const stagnantCount = trendValues.filter(v => v === 'flat').length;
+    if (flags.performanceDown > 0 && classification === 'Stable') {
+        classification = 'Maladapted';
+        reasoning.push('One or more movement trends are declining despite continued training exposure.');
+        decisionRules.push('If performance trends down, reassess stimulus and reduce intensity or change exercise selection.');
+    }
 
-    if (progressCount > (trendValues.length / 2)) {
-        classification = 'Advancing';
-        reasoning.push('Consistently improving performance metrics across major movements.');
-    } else if (stagnantCount > (trendValues.length / 2) && classification === 'Stable') {
+    if (flags.performanceFlat > 0 && metrics.fatigue_index < 6 && classification === 'Stable') {
         classification = 'Understimulated';
-        reasoning.push('Plateaued performance despite low fatigue levels.');
+        reasoning.push('Performance is flat while fatigue is manageable, suggesting insufficient overload or stimulus mismatch.');
+        decisionRules.push('If performance plateaus with low fatigue, increase overload or shift exercise stimulus.');
     }
 
-    // Recovery check (if available in metrics)
-    if (metrics.recovery_score < 40) {
-        classification = 'Recovery Compromised';
-        reasoning.push('Persistent low readiness and recovery scores.');
+    if (flags.performanceUp > flags.performanceFlat + flags.performanceDown && metrics.fatigue_index < 7.5) {
+        classification = 'Advancing';
+        reasoning.push('Performance is improving without excessive fatigue accumulation.');
+        decisionRules.push('If performance improves and readiness remains acceptable, continue progression.');
+    }
+
+    if (define?.constraints?.injuryHistory || define?.constraints?.movementLimitations) {
+        reasoning.push('Defined injury or movement constraints should shape exercise selection and progression speed.');
+        decisionRules.push('If movement limitations are present, prioritize substitutions and conservative progression.');
+    }
+
+    if (reasoning.length === 0) {
+        reasoning.push('Current training, recovery, and performance signals are balanced.');
+        decisionRules.push('Maintain current plan while continuing weekly monitoring.');
     }
 
     return {
         classification,
         reasoning,
-        acwr,
-        fatigueIndex: fatigue_index
+        decisionRules,
+        acwr: metrics.acwr || 1,
+        fatigueIndex: metrics.fatigue_index || 0,
+        recoveryScore: metrics.recoveryScore || 0,
+        volumeTrend: metrics.volumeTrend || 'new',
+        rpeTrend: metrics.rpeTrend || 'new',
+        recoveryTrend: metrics.recoveryTrend || 'new'
     };
 };
 
-/**
- * Prescription Generation
- * Uses the Analyze phase results to modify training variables.
- */
-const generatePrescription = async (profile, status, metrics) => {
-    const systemPrompt = `
-        You are the IronLogic AI Coaching Engine. 
-        Follow the Master Framework logic based on the DMAIC manuscript.
-        
-        Athlete Profile: ${JSON.stringify(profile)}
-        Current State: ${status.classification}
-        Reasoning: ${status.reasoning.join(' ')}
-        Performance Metrics: ${JSON.stringify(metrics)}
+const getFallbackRecommendation = (classification, define = {}) => {
+    const constraintNote = define?.constraints?.injuryHistory || define?.constraints?.movementLimitations
+        ? 'Use pain-free variations and keep movement quality as the limiter.'
+        : 'Keep exercise selection stable unless execution quality changes.';
 
-        Output a specific "IMPROVE" phase prescription.
-        Follow these IronLogic rules:
-        1. Adaptation over rigid programming.
-        2. Progress aggressively when readiness permits.
-        3. Protect recovery when adaptation stalls.
-        4. Explain WHY the adjustment occurs (Master Framework style).
-        
-        Respond in JSON format:
-        {
-            "adjustmentType": "volume_reduction" | "intensity_increase" | "pivot" | "maintain",
-            "title": "Short title",
-            "description": "Clear explanation in the IronLogic style",
-            "specifics": {
-                "volume": "e.g. Reduce by 15%",
-                "intensity": "e.g. Cap at RPE 7",
-                "focus": "Focus of the week"
+    const fallbacks = {
+        Overreached: {
+            adjustmentType: 'volume_reduction',
+            title: 'Recovery Protection Block',
+            description: 'Training stress is outpacing recovery. Reduce workload now to preserve adaptation and lower injury risk.',
+            specifics: {
+                volume: 'Reduce total work sets 20-30% for 3-7 days',
+                intensity: 'Cap main lifts at RPE 6-7',
+                exerciseSelection: constraintNote,
+                recovery: 'Add one recovery or mobility emphasis day',
+                focus: 'Restore readiness before progressing'
+            }
+        },
+        Fatigued: {
+            adjustmentType: 'volume_reduction',
+            title: 'Fatigue Management Adjustment',
+            description: 'Fatigue is rising before a clear performance drop. Trim nonessential volume while preserving skill practice.',
+            specifics: {
+                volume: 'Reduce accessory volume 10-20%',
+                intensity: 'Maintain main work but avoid missed reps',
+                exerciseSelection: constraintNote,
+                recovery: 'Increase sleep/recovery emphasis and monitor soreness',
+                focus: 'Crisp reps and recoverability'
+            }
+        },
+        Maladapted: {
+            adjustmentType: 'pivot',
+            title: 'Stimulus Reassessment',
+            description: 'Performance is declining under the current stimulus. Shift the stressor instead of forcing the same progression.',
+            specifics: {
+                volume: 'Hold or reduce volume 10-15%',
+                intensity: 'Lower top set intensity by 5-10%',
+                exerciseSelection: 'Use variations that reduce joint stress and improve technical output',
+                recovery: 'Add readiness check before the next high-intensity exposure',
+                focus: 'Recover performance quality'
+            }
+        },
+        Advancing: {
+            adjustmentType: 'intensity_increase',
+            title: 'Controlled Progression',
+            description: 'Performance is improving and recovery is acceptable. Progress conservatively while preserving the feedback loop.',
+            specifics: {
+                volume: 'Keep volume stable',
+                intensity: 'Increase load 2-5% or add one RPE-appropriate top set',
+                exerciseSelection: constraintNote,
+                recovery: 'Maintain current recovery strategy',
+                focus: 'Progress without disrupting readiness'
+            }
+        },
+        Understimulated: {
+            adjustmentType: 'stimulus_increase',
+            title: 'Increase Training Stimulus',
+            description: 'Progress is flat without excessive fatigue. The athlete likely needs a clearer overload signal.',
+            specifics: {
+                volume: 'Increase targeted volume 5-10%',
+                intensity: 'Raise target RPE by 0.5 or add a heavier exposure',
+                exerciseSelection: 'Introduce a variation aligned with the primary goal',
+                recovery: 'Monitor recovery after the added stimulus',
+                focus: 'Specific overload'
+            }
+        },
+        Stable: {
+            adjustmentType: 'maintain',
+            title: 'Maintain and Monitor',
+            description: 'Training stress and recovery appear balanced. Keep the current plan while collecting enough data for the next cycle.',
+            specifics: {
+                volume: 'Stable',
+                intensity: 'Stable',
+                exerciseSelection: constraintNote,
+                recovery: 'Continue daily or weekly readiness tracking',
+                focus: 'Consistency'
             }
         }
-    `;
+    };
+
+    return fallbacks[classification] || fallbacks.Stable;
+};
+
+const generatePrescription = async (define, status, metrics, previousDmaicLogs) => {
+    const fallback = getFallbackRecommendation(status.classification, define);
+
+    const systemPrompt = `
+You are the IronLogic AI Coaching Engine. Align with the DMAIC exercise prescription manuscript.
+Use the provided structured decision rules as the primary source of truth. Do not invent unsupported metrics.
+
+DEFINE:
+${JSON.stringify(define)}
+
+MEASURE:
+${JSON.stringify(createMeasurementSummary(metrics))}
+
+ANALYZE:
+${JSON.stringify(status)}
+
+CONTROL HISTORY:
+${JSON.stringify(previousDmaicLogs?.slice(0, 3) || [])}
+
+Return valid JSON only:
+{
+  "adjustmentType": "volume_reduction" | "intensity_increase" | "stimulus_increase" | "pivot" | "maintain",
+  "title": "Short title",
+  "description": "Why this adjustment follows from the data",
+  "specifics": {
+    "volume": "specific set/load adjustment",
+    "intensity": "specific RPE/load cap or progression",
+    "exerciseSelection": "specific selection guidance",
+    "recovery": "specific recovery action",
+    "focus": "weekly coaching focus"
+  }
+}`;
 
     try {
         const response = await chatWithAI([{ role: 'system', content: systemPrompt }]);
-        // Note: In real app, ensure this is valid JSON
-        return JSON.parse(response);
-    } catch (e) {
-        // Fallback Logic
-        return getFallbackRecommendation(status.classification);
+        return { ...fallback, ...JSON.parse(response) };
+    } catch {
+        return fallback;
     }
 };
 
-const getFallbackRecommendation = (classification) => {
-    const fallbacks = {
-        'Overreached': {
-            title: 'Deload Required',
-            description: 'Workload spikes detected. Reducing volume to shed fatigue.',
-            specifics: { volume: 'Reduce 30%', intensity: 'Cap RPE 6', focus: 'Recovery' }
-        },
-        'Fatigued': {
-            title: 'Fatigue Management',
-            description: 'Fatigue is climbing. Holding intensity, reducing accessories.',
-            specifics: { volume: 'Reduce 15%', intensity: 'Maintain', focus: 'Crisp Reps' }
-        },
-        'Advancing': {
-            title: 'Continue Progression',
-            description: 'Performance is trending up. Continuing current load progression.',
-            specifics: { volume: 'Stable', intensity: 'Increase 2-5%', focus: 'Execution' }
-        },
-        'Understimulated': {
-            title: 'Introduce Stimulus',
-            description: 'Performance is flat despite low fatigue. Increasing overload.',
-            specifics: { volume: 'Increase 10%', intensity: 'Increase RPE target', focus: 'Overload' }
-        },
-        'Stable': {
-            title: 'Stay the Course',
-            description: 'Balanced adaptation and fatigue. Maintaining current plan.',
-            specifics: { volume: 'Stable', intensity: 'Stable', focus: 'Consistency' }
+const createControlPlan = (status, recommendation, metrics, previousDmaicLogs = []) => {
+    const lastSnapshot = previousDmaicLogs[0];
+    const lastClassification = lastSnapshot?.status?.classification;
+    const repeatedFlag = lastClassification && lastClassification === status.classification;
+
+    return {
+        monitoringFrequency: status.classification === 'Overreached' || status.classification === 'Maladapted'
+            ? 'Check recovery before every session this week'
+            : 'Review weekly after the next finalized session',
+        nextReviewTrigger: 'After 2 completed sessions or 7 days, whichever comes first',
+        successCriteria: [
+            'Recovery score stabilizes or improves',
+            'Average RPE does not continue rising',
+            'Target movement e1RM or execution quality stabilizes',
+            'Planned sessions are completed without excessive modification'
+        ],
+        escalationRule: repeatedFlag
+            ? `Classification repeated from prior cycle (${lastClassification}); increase monitoring frequency and consider stronger intervention.`
+            : 'If the same issue appears in the next cycle, escalate the adjustment.',
+        appliedRecommendation: false,
+        recommendationSummary: recommendation?.title || '',
+        baseline: {
+            acuteVolume: Math.round(metrics.acuteVolume || 0),
+            averageRpe: metrics.averageRpe || 0,
+            recoveryScore: metrics.recoveryScore || 0,
+            acwr: metrics.acwr || 1
         }
     };
-    return fallbacks[classification] || fallbacks['Stable'];
 };
 
 const logDMAICSnapshot = async (athleteId, data) => {
@@ -191,8 +319,6 @@ const logDMAICSnapshot = async (athleteId, data) => {
     const docRef = doc(db, 'users', athleteId, 'dmaic_logs', dateStr);
     await setDoc(docRef, data, { merge: true });
 };
-
-// --- LEGACY EXPORTS FOR COMPATIBILITY ---
 
 export const getRecommendationForInsight = (classification) => {
     const rec = getFallbackRecommendation(classification);
@@ -204,21 +330,20 @@ export const getRecommendationForInsight = (classification) => {
 };
 
 export const analyzePerformance = (metrics, readiness) => {
-    const analysis = analyzeAdaptationState(metrics, { ...readiness });
+    const analysis = analyzeAdaptationState(metrics, { constraints: readiness || {} });
     return analysis.classification;
 };
 
-export const runWeeklyCheckIn = async (athleteId, currentReadiness = {}) => {
-    // Wrapper for runDMAICCycle but returning the format expected by old components
+export const runWeeklyCheckIn = async (athleteId) => {
     const result = await runDMAICCycle(athleteId);
     return {
         ...result,
         recommendation: result.recommendation.description,
-        coachInsight: result.recommendation.description // or generate a specific insight
+        coachInsight: result.recommendation.description
     };
 };
 
-export const generateCoachInsight = async (insights, metrics) => {
+export const generateCoachInsight = async (insights) => {
     const rec = getFallbackRecommendation(insights);
     return rec.description;
 };

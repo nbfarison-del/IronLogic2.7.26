@@ -506,6 +506,18 @@ export const updateAthleteProgram = async (athleteId, programId, updates) => {
     await updateDoc(docRef, { ...updates, updatedAt: new Date().toISOString() });
 };
 
+// ==================== DMAIC LOGS ====================
+
+export const getDMAICLogs = async (userId, limitCount = 12) => {
+    const logsRef = collection(db, 'users', userId, 'dmaic_logs');
+    const q = query(logsRef, orderBy('timestamp', 'desc'), limit(limitCount));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+};
+
 // ==================== PROGRAM TEMPLATES ====================
 
 export const getProgramTemplates = async (includePrivate = false) => {

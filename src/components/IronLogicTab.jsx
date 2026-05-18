@@ -100,8 +100,18 @@ const IronLogicTab = () => {
                                 <small style={{ color: 'var(--primary)' }}>Athlete Context</small>
                                 <div style={{ fontSize: '0.9rem', marginTop: '0.5rem' }}>
                                     Training Age: {profile?.trainingAge || 'Advanced'}<br/>
-                                    Sport: {profile?.sport || 'Hybrid'}
+                                    Sport: {profile?.sport || 'Hybrid'}<br/>
+                                    Phase: {profile?.trainingPhase || 'general'}<br/>
+                                    Days Available: {profile?.daysAvailable || 'Not set'}
                                 </div>
+                            </div>
+                        </div>
+                        <div className="card" style={{ background: 'rgba(255,255,255,0.02)', marginTop: '1rem' }}>
+                            <small style={{ color: 'var(--primary)' }}>Constraints</small>
+                            <div style={{ fontSize: '0.9rem', marginTop: '0.5rem', color: 'var(--text-muted)' }}>
+                                {profile?.injuryHistory || profile?.movementLimitations || profile?.travelSchedule
+                                    ? [profile?.injuryHistory, profile?.movementLimitations, profile?.travelSchedule].filter(Boolean).join(' | ')
+                                    : 'No constraints defined yet.'}
                             </div>
                         </div>
                     </div>
@@ -121,8 +131,22 @@ const IronLogicTab = () => {
                                 <small style={{ color: 'var(--text-muted)' }}>ACWR</small>
                             </div>
                             <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: '1.5rem', fontWeight: '800' }}>{workouts?.length || 0}</div>
-                                <small style={{ color: 'var(--text-muted)' }}>Data Points</small>
+                                <div style={{ fontSize: '1.5rem', fontWeight: '800' }}>{dmaicState?.metrics?.recoveryScore || 'â€”'}</div>
+                                <small style={{ color: 'var(--text-muted)' }}>Recovery</small>
+                            </div>
+                        </div>
+                        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.25rem', fontWeight: '800' }}>{Math.round(dmaicState?.metrics?.acuteVolume || 0).toLocaleString()}</div>
+                                <small style={{ color: 'var(--text-muted)' }}>7-Day Volume</small>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.25rem', fontWeight: '800' }}>{dmaicState?.metrics?.averageRpe || 'â€”'}</div>
+                                <small style={{ color: 'var(--text-muted)' }}>Avg RPE</small>
+                            </div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.25rem', fontWeight: '800' }}>{dmaicState?.metrics?.dataQuality?.workoutSets28d || workouts?.length || 0}</div>
+                                <small style={{ color: 'var(--text-muted)' }}>28-Day Sets</small>
                             </div>
                         </div>
                     </div>
@@ -138,6 +162,10 @@ const IronLogicTab = () => {
                             <ul style={{ paddingLeft: '1.2rem', margin: 0, opacity: 0.8 }}>
                                 {dmaicState?.status?.reasoning.map((r, i) => <li key={i} style={{ marginBottom: '0.5rem' }}>{r}</li>)}
                                 {dmaicState?.status?.reasoning.length === 0 && <li>Maintaining consistent adaptation.</li>}
+                            </ul>
+                            <h4 style={{ marginBottom: '0.5rem' }}>Decision Rules</h4>
+                            <ul style={{ paddingLeft: '1.2rem', margin: 0, opacity: 0.8 }}>
+                                {dmaicState?.status?.decisionRules?.map((rule, i) => <li key={i} style={{ marginBottom: '0.5rem' }}>{rule}</li>)}
                             </ul>
                         </div>
                     </div>
@@ -160,6 +188,14 @@ const IronLogicTab = () => {
                                         <small>Intensity</small>
                                         <div>{dmaicState.recommendation.specifics.intensity}</div>
                                     </div>
+                                    <div className="card">
+                                        <small>Exercise Selection</small>
+                                        <div>{dmaicState.recommendation.specifics.exerciseSelection}</div>
+                                    </div>
+                                    <div className="card">
+                                        <small>Recovery</small>
+                                        <div>{dmaicState.recommendation.specifics.recovery}</div>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
@@ -173,13 +209,32 @@ const IronLogicTab = () => {
                         <h3>Phase 5: Control</h3>
                         <p style={{ opacity: 0.8 }}>Ensuring continuous optimization through feedback loops.</p>
                         <div style={{ marginTop: '1.5rem' }}>
-                            <div className="list-row" style={{ opacity: 0.6 }}>
-                                <div>Intervention History</div>
-                                <div>Effectiveness</div>
-                            </div>
-                            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
-                                Tracking longitudinal optimization...
-                            </div>
+                            {dmaicState?.control ? (
+                                <div style={{ display: 'grid', gap: '1rem' }}>
+                                    <div className="card">
+                                        <small>Monitoring Frequency</small>
+                                        <div>{dmaicState.control.monitoringFrequency}</div>
+                                    </div>
+                                    <div className="card">
+                                        <small>Next Review</small>
+                                        <div>{dmaicState.control.nextReviewTrigger}</div>
+                                    </div>
+                                    <div className="card">
+                                        <small>Escalation Rule</small>
+                                        <div>{dmaicState.control.escalationRule}</div>
+                                    </div>
+                                    <div className="card">
+                                        <small>Success Criteria</small>
+                                        <ul style={{ marginBottom: 0 }}>
+                                            {dmaicState.control.successCriteria?.map((item, idx) => <li key={idx}>{item}</li>)}
+                                        </ul>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                                    Run a cycle to create the next feedback loop.
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
