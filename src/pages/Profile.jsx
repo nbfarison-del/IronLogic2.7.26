@@ -39,7 +39,10 @@ const Profile = () => {
         squat: '',
         bench: '',
         deadlift: '',
-        ohp: ''
+        ohp: '',
+        clean: '',
+        snatch: '',
+        cleanAndJerk: ''
     });
     const [defineData, setDefineData] = useState({
         age: '',
@@ -334,6 +337,39 @@ const Profile = () => {
                             value={maxes.ohp || ''}
                             onChange={handleChange}
                             placeholder="e.g. 135"
+                        />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Clean</label>
+                        <input
+                            type="number"
+                            name="clean"
+                            value={maxes.clean || ''}
+                            onChange={handleChange}
+                            placeholder="e.g. 225"
+                        />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Snatch</label>
+                        <input
+                            type="number"
+                            name="snatch"
+                            value={maxes.snatch || ''}
+                            onChange={handleChange}
+                            placeholder="e.g. 175"
+                        />
+                    </div>
+
+                    <div className="input-group">
+                        <label>Clean and Jerk</label>
+                        <input
+                            type="number"
+                            name="cleanAndJerk"
+                            value={maxes.cleanAndJerk || ''}
+                            onChange={handleChange}
+                            placeholder="e.g. 205"
                         />
                     </div>
 
