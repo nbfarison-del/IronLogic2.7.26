@@ -8,7 +8,7 @@ import logo from '../assets/logo.png';
 const primaryLinks = [
     { to: '/', label: 'Home' },
     { to: '/log', label: 'Training' },
-    { to: '/olympic-lifting', label: 'Olympic Lifting' },
+    { to: '/calendar', label: 'Calendar' },
     { to: '/progress', label: 'Analytics' },
     { to: '/checkin', label: 'Readiness' },
     { to: '/profile', label: 'Profile' }
