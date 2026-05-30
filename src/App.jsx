@@ -30,7 +30,6 @@ const Programs = lazy(() => import('./pages/Programs'));
 const ProPlanner = lazy(() => import('./pages/ProPlanner'));
 const PartnerWorkout = lazy(() => import('./pages/PartnerWorkout'));
 const Questionnaire = lazy(() => import('./pages/Questionnaire'));
-const HyroxTracker = lazy(() => import('./pages/HyroxTracker'));
 
 
 const ProtectedRoute = ({ children }) => {
@@ -223,9 +222,9 @@ function AppContent() {
               <Questionnaire />
             </ProtectedRoute>
           } />
-          <Route path="/hyrox" element={
+          <Route path="/olympic-lifting" element={
             <ProtectedRoute>
-              <HyroxTracker />
+              <WorkoutLog />
             </ProtectedRoute>
           } />
 

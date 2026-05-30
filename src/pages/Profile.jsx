@@ -176,7 +176,7 @@ const Profile = () => {
 
                     <div className="input-group">
                         <label>Sport / Discipline</label>
-                        <input type="text" value={defineData.sport} onChange={e => setDefineData({...defineData, sport: e.target.value})} placeholder="e.g. Powerlifting, Hyrox" />
+                        <input type="text" value={defineData.sport} onChange={e => setDefineData({...defineData, sport: e.target.value})} placeholder="e.g. Powerlifting, Olympic weightlifting" />
                     </div>
 
                     <div className="input-group">

@@ -154,7 +154,7 @@ const ExerciseTools = ({ exerciseId, exerciseName, athleteId, onApplyTarget }) =
                                         {entry.estimated1RM && <span style={{ color: 'gold' }}>e1RM: {entry.estimated1RM}</span>}
                                     </div>
                                     <div style={{ fontWeight: 'bold' }}>
-                                        {entry.type === 'cardio' || entry.type === 'hyrox'
+                                        {entry.type === 'cardio'
                                             ? `${entry.meters ? `${entry.meters} m` : entry.distance || '-'}${entry.duration ? ` in ${entry.duration} min` : ''}`
                                             : `${entry.weight} ${unit} x ${entry.reps} @ RPE ${entry.actualRpe || entry.targetRpe || '-'}`}
                                     </div>

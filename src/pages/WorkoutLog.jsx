@@ -25,17 +25,9 @@ import {
 // Exercises where distance is captured as whole meters rather than a decimal distance.
 const METER_BASED_EXERCISE_IDS = new Set([
     'run_outdoor', 'treadmill', 'cycling', 'rowing_machine',
-    // Hyrox training variants
-    'hyrox_skierg_training', 'hyrox_sled_push_training', 'hyrox_sled_pull_training',
-    'hyrox_burpee_bj_training', 'hyrox_rowing_training', 'hyrox_farmers_carry_training',
-    'hyrox_sandbag_lunge_training', 'hyrox_run_training',
-    // Hyrox stations
-    'hyrox_skierg', 'hyrox_sled_push', 'hyrox_sled_pull', 'hyrox_burpee_broad_jump',
-    'hyrox_rowing', 'hyrox_farmers_carry', 'hyrox_sandbag_lunges', 'hyrox_run',
 ]);
 
-const METER_BASED_NAME_PATTERN = /\b(running|run|skierg|ski erg|row|rowing|sled push|sled pull|burpee broad jump|farmers carry|farmer's carry|sandbag lunge|sandbag lunges)\b/i;
-const REP_BASED_NAME_PATTERN = /\b(wall balls?|devil'?s press)\b/i;
+const METER_BASED_NAME_PATTERN = /\b(running|run|row|rowing)\b/i;
 
 const isMeterBasedExercise = (exerciseOrId) => {
     const id = typeof exerciseOrId === 'string' ? exerciseOrId : exerciseOrId?.id || exerciseOrId?.exerciseId;
@@ -45,7 +37,6 @@ const isMeterBasedExercise = (exerciseOrId) => {
 
     if (metricType === 'meters' || exerciseUnit === 'm') return true;
     if (id && METER_BASED_EXERCISE_IDS.has(id)) return true;
-    if (REP_BASED_NAME_PATTERN.test(name)) return false;
     return METER_BASED_NAME_PATTERN.test(name);
 };
 
@@ -1037,7 +1028,7 @@ const WorkoutLog = () => {
                                         {checkPR(entry) && <div style={{ color: 'var(--primary)', fontSize: '0.75rem', fontWeight: '800', marginTop: '0.25rem' }}>🔥 NEW PERSONAL RECORD</div>}
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                        {entry.type === 'cardio' || entry.type === 'hyrox' ? (
+                                        {entry.type === 'cardio' ? (
                                             <>
                                                 <div style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '1.1rem' }}>
                                                     {entry.meters ? `${entry.meters} m` : entry.distance ? `${entry.distance}` : '—'}
@@ -1060,7 +1051,7 @@ const WorkoutLog = () => {
                                     </div>
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.8rem', opacity: 0.7, borderTop: '1px solid var(--border-glass)', paddingTop: '0.5rem' }}>
-                                    {entry.type !== 'cardio' && entry.type !== 'hyrox' ? (
+                                    {entry.type !== 'cardio' ? (
                                         <>
                                             <span>
                                                 {entry.sport === 'olympic_weightlifting'

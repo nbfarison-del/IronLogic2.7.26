@@ -9,7 +9,6 @@ import GoalTracker from '../components/GoalTracker';
 import MobilityTab from '../components/MobilityTab';
 import IronLogicTab from '../components/IronLogicTab';
 import ActivityFeed from '../components/ActivityFeed';
-import HyroxTracker from './HyroxTracker';
 
 const getDateStr = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -23,7 +22,7 @@ const parseWorkoutDate = (value) => {
 };
 
 const getSetVolume = (workout) => {
-    if (workout?.type === 'cardio' || workout?.type === 'hyrox') return 0;
+    if (workout?.type === 'cardio') return 0;
     const weight = parseFloat(workout?.weight || 0);
     const reps = parseInt(workout?.reps || 0, 10);
     const sets = parseInt(workout?.sets || 1, 10);
@@ -33,7 +32,6 @@ const getSetVolume = (workout) => {
 
 const tabs = [
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'hyrox', label: 'Hyrox' },
     { id: 'mobility', label: 'Mobility' },
     { id: 'ironlogic-method', label: 'Method' }
 ];
@@ -263,8 +261,6 @@ const Home = () => {
                         IronLogic v2.7.26 - Built for performance.
                     </div>
                 </>
-            ) : activeTab === 'hyrox' ? (
-                <HyroxTracker />
             ) : activeTab === 'mobility' ? (
                 <MobilityTab />
             ) : (

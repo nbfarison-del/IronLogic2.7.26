@@ -34,7 +34,7 @@ export const calculateE1RM = (weight, reps, rpe = 10) => {
 };
 
 export const calculateSetVolume = (entry) => {
-    if (!entry || entry.type === 'cardio' || entry.type === 'hyrox') return 0;
+    if (!entry || entry.type === 'cardio') return 0;
     const weight = parseFloat(entry.weight || entry.load || 0);
     const reps = parseInt(entry.reps || 0, 10);
     if (!Number.isFinite(weight) || !Number.isFinite(reps)) return 0;
@@ -75,7 +75,7 @@ const buildE1RMTrends = (workouts) => {
     const liftGroups = {};
 
     workouts.forEach(entry => {
-        if (entry.type === 'cardio' || entry.type === 'hyrox') return;
+        if (entry.type === 'cardio') return;
         const name = entry.exerciseName || entry.name || entry.exerciseId || 'Unknown';
         const e1rm = parseFloat(entry.estimated1RM) || calculateE1RM(entry.weight, entry.reps, getRpe(entry) || 10);
         if (!e1rm) return;

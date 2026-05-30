@@ -6,11 +6,11 @@ import { useTimer } from '../context/TimerContext';
 import logo from '../assets/logo.png';
 
 const primaryLinks = [
-    { to: '/', label: 'Dashboard' },
-    { to: '/calendar', label: 'Calendar' },
-    { to: '/programs', label: 'Programs' },
-    { to: '/hyrox', label: 'Hyrox' },
+    { to: '/', label: 'Home' },
+    { to: '/log', label: 'Training' },
+    { to: '/olympic-lifting', label: 'Olympic Lifting' },
     { to: '/progress', label: 'Analytics' },
+    { to: '/checkin', label: 'Readiness' },
     { to: '/profile', label: 'Profile' }
 ];
 
