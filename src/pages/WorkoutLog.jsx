@@ -9,11 +9,18 @@ import { useToast } from '../context/ToastContext';
 
 import { exercises as defaultExercises, EXERCISE_CATEGORIES } from '../data/exercises';
 import ExerciseTools from '../components/ExerciseTools';
+import OlympicSetLogger from '../components/OlympicSetLogger';
 import * as firestoreService from '../services/firestoreService';
 import { runDMAICCycle } from '../services/DMAICService';
 import { useRef } from 'react';
 import { logger } from '../utils/logger';
 import { syncService } from '../services/SyncService';
+import {
+    buildOlympicSetMetadata,
+    createEmptyTechnicalNotes,
+    isOlympicExercise,
+    summarizeLiftSuccess
+} from '../utils/olympicWeightlifting';
 
 // Exercises where distance is captured as whole meters rather than a decimal distance.
 const METER_BASED_EXERCISE_IDS = new Set([
@@ -75,6 +82,19 @@ const useWakeLock = () => {
 const getDateStr = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
+
+const createSetRow = (overrides = {}) => ({
+    id: Date.now() + Math.random(),
+    weight: '',
+    reps: '',
+    targetRpe: '',
+    actualRpe: '',
+    percentageOf1RM: '',
+    technicalQualityScore: '',
+    barSpeedRating: '',
+    missedLift: false,
+    ...overrides
+});
 
 const WorkoutLog = () => {
     const { user } = useAuth();
@@ -157,6 +177,10 @@ const WorkoutLog = () => {
         return allExercisesList.find(ex => ex.id === selectedExerciseId);
     }, [allExercisesList, selectedExerciseId]);
 
+    const isSelectedOlympicExercise = useMemo(() => {
+        return isOlympicExercise(selectedExercise || selectedExerciseId);
+    }, [selectedExercise, selectedExerciseId]);
+
     const [selectedDate, setSelectedDate] = useState(() => {
         if (dateParam) return new Date(dateParam + 'T12:00:00');
         if (location.state?.plannedWorkout?.date) return new Date(location.state.plannedWorkout.date + 'T12:00:00');
@@ -165,8 +189,12 @@ const WorkoutLog = () => {
 
     const [selectedPlannedExId, setSelectedPlannedExId] = useState(null);
     const [workoutType, setWorkoutType] = useState('strength');
-    const [setRows, setSetRows] = useState([{ id: Date.now(), weight: '', reps: '', targetRpe: '', actualRpe: '' }]);
+    const [setRows, setSetRows] = useState([createSetRow()]);
     const [notes, setNotes] = useState('');
+    const [technicalNotes, setTechnicalNotes] = useState(createEmptyTechnicalNotes);
+    const [sessionReadiness, setSessionReadiness] = useState('');
+    const [mobilityReadiness, setMobilityReadiness] = useState('');
+    const [olympicOneRepMax, setOlympicOneRepMax] = useState('');
     const [duration, setDuration] = useState('');
     const [distance, setDistance] = useState('');
     const [meters, setMeters] = useState('');
@@ -296,12 +324,15 @@ const WorkoutLog = () => {
             setWorkoutType(isMeterBasedExercise(plannedEx) ? 'cardio' : 'strength');
         }
         if (plannedEx.sets && Array.isArray(plannedEx.sets)) {
-            setSetRows(plannedEx.sets.map(s => ({
-                id: Date.now() + Math.random(),
+            setSetRows(plannedEx.sets.map(s => createSetRow({
                 weight: s.weight || '',
                 reps: s.reps || '',
                 targetRpe: s.targetRpe || '',
-                actualRpe: ''
+                actualRpe: '',
+                percentageOf1RM: s.percentageOf1RM || '',
+                technicalQualityScore: s.technicalQualityScore || '',
+                barSpeedRating: s.barSpeedRating || '',
+                missedLift: false
             })));
         }
         setNotes(plannedEx.notes || '');
@@ -335,13 +366,16 @@ const WorkoutLog = () => {
 
     const handleAddRow = () => {
         const lastRow = setRows[setRows.length - 1];
-        setSetRows([...setRows, {
-            id: Date.now(),
+        setSetRows([...setRows, createSetRow({
             weight: lastRow?.weight || '',
             reps: lastRow?.reps || '',
             targetRpe: lastRow?.targetRpe || '',
-            actualRpe: ''
-        }]);
+            actualRpe: '',
+            percentageOf1RM: lastRow?.percentageOf1RM || '',
+            technicalQualityScore: '',
+            barSpeedRating: lastRow?.barSpeedRating || '',
+            missedLift: false
+        })]);
         setTimeout(() => {
             if (weightInputRef.current[setRows.length]) {
                 weightInputRef.current[setRows.length].focus();
@@ -352,13 +386,16 @@ const WorkoutLog = () => {
     const handleDuplicateRow = (id) => {
         const rowToDup = setRows.find(r => r.id === id) || setRows[setRows.length - 1];
         if (!rowToDup) return;
-        setSetRows([...setRows, {
-            id: Date.now(),
+        setSetRows([...setRows, createSetRow({
             weight: rowToDup.weight,
             reps: rowToDup.reps,
             targetRpe: rowToDup.targetRpe,
-            actualRpe: rowToDup.actualRpe
-        }]);
+            actualRpe: rowToDup.actualRpe,
+            percentageOf1RM: rowToDup.percentageOf1RM || '',
+            technicalQualityScore: rowToDup.technicalQualityScore || '',
+            barSpeedRating: rowToDup.barSpeedRating || '',
+            missedLift: rowToDup.missedLift || false
+        })]);
     };
 
     const handleRowChange = (id, field, value) => {
@@ -422,6 +459,13 @@ const WorkoutLog = () => {
                 category: EXERCISE_CATEGORIES.CUSTOM
             };
 
+            const olympicSummary = summarizeLiftSuccess(setRows);
+            const olympicSessionData = {
+                sessionReadiness,
+                mobilityReadiness,
+                ...olympicSummary
+            };
+
             const newEntries = workoutType === 'strength'
                 ? setRows.map(row => ({
                     date: todayStr,
@@ -437,7 +481,17 @@ const WorkoutLog = () => {
                     estimated1RM: calculateEstimated1RM(row.weight, row.reps, row.actualRpe || row.targetRpe),
                     modifiers: { ...modifiers },
                     notes: notes,
-                    video_url: videoUrl
+                    video_url: videoUrl,
+                    ...(isOlympicExercise(exercise) ? {
+                        ...buildOlympicSetMetadata({
+                            row,
+                            exercise,
+                            session: olympicSessionData,
+                            technicalNotes,
+                            videoUrl
+                        }),
+                        olympicSession: olympicSessionData
+                    } : {})
                 }))
                 : [{
                     date: todayStr,
@@ -483,13 +537,19 @@ const WorkoutLog = () => {
 
             if (workoutType === 'strength') {
                 const lastRow = setRows[setRows.length - 1];
-                setSetRows([{ id: Date.now(), weight: lastRow?.weight || '', reps: lastRow?.reps || '', targetRpe: '', actualRpe: '' }]);
+                setSetRows([createSetRow({
+                    weight: lastRow?.weight || '',
+                    reps: lastRow?.reps || '',
+                    percentageOf1RM: lastRow?.percentageOf1RM || '',
+                    barSpeedRating: lastRow?.barSpeedRating || ''
+                })]);
             } else {
                 setDuration('');
                 setDistance('');
                 setMeters('');
             }
             setNotes('');
+            setTechnicalNotes(createEmptyTechnicalNotes());
         } catch (error) {
             console.error('Error logging workout:', error);
         } finally {
@@ -509,13 +569,16 @@ const WorkoutLog = () => {
         setWorkoutType(nextWorkoutType);
         const lastEntry = workouts.find(w => w.exerciseId === id);
         if (lastEntry && nextWorkoutType === 'strength' && lastEntry.weight) {
-             setSetRows([{ 
-                 id: Date.now(), 
+             setSetRows([createSetRow({
                  weight: lastEntry.weight, 
                  reps: lastEntry.reps, 
                  targetRpe: lastEntry.targetRpe || '', 
-                 actualRpe: '' 
-              }]);
+                 actualRpe: '',
+                 percentageOf1RM: lastEntry.olympicSet?.percentageOf1RM || '',
+                 technicalQualityScore: '',
+                 barSpeedRating: lastEntry.olympicSet?.barSpeedRating || '',
+                 missedLift: false
+              })]);
         }
         if (lastEntry && nextWorkoutType === 'cardio') {
             setDuration(lastEntry.duration || '');
@@ -692,7 +755,64 @@ const WorkoutLog = () => {
                                 } : undefined}
                             />
 
+                            {isSelectedOlympicExercise && (
+                                <div className="glass" style={{ padding: '1rem', marginBottom: '1rem', border: '1px solid var(--border-glass)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 800 }}>{selectedExercise?.movementType?.replaceAll('_', ' ') || 'Olympic movement'}</div>
+                                            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                                                Complexity {selectedExercise?.technicalComplexity || '--'}/10 - {selectedExercise?.skillClassification?.replaceAll('_', ' ') || 'technical lift'}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                            {(selectedExercise?.technicalEmphasisTags || []).slice(0, 4).map(tag => (
+                                                <span key={tag} style={{ fontSize: '0.75rem', padding: '0.25rem 0.45rem', borderRadius: '999px', background: 'rgba(var(--primary-rgb), 0.12)', color: 'var(--primary)' }}>
+                                                    {tag.replaceAll('_', ' ')}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem' }}>
+                                        <div className="input-group" style={{ margin: 0 }}>
+                                            <label>Session Readiness</label>
+                                            <input type="number" min="1" max="10" value={sessionReadiness} onChange={e => setSessionReadiness(e.target.value)} placeholder="1-10" />
+                                        </div>
+                                        <div className="input-group" style={{ margin: 0 }}>
+                                            <label>Mobility Readiness</label>
+                                            <input type="number" min="1" max="10" value={mobilityReadiness} onChange={e => setMobilityReadiness(e.target.value)} placeholder="1-10" />
+                                        </div>
+                                        <div className="input-group" style={{ margin: 0 }}>
+                                            <label>1RM for %</label>
+                                            <input type="number" value={olympicOneRepMax} onChange={e => setOlympicOneRepMax(e.target.value)} placeholder={`Load (${unit})`} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {workoutType === 'strength' ? (
+                                isSelectedOlympicExercise ? (
+                                <div className="strength-entry-form" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {setRows.map(row => (
+                                        <OlympicSetLogger
+                                            key={row.id}
+                                            row={row}
+                                            oneRepMax={olympicOneRepMax}
+                                            isFocusMode={isFocusMode}
+                                            onChange={(field, value) => handleRowChange(row.id, field, value)}
+                                            onAdjustWeight={(amount) => adjustWeight(row.id, amount)}
+                                            onDuplicate={() => handleDuplicateRow(row.id)}
+                                            onRemove={() => handleRemoveRow(row.id)}
+                                            canRemove={setRows.length > 1}
+                                        />
+                                    ))}
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem' }}>
+                                        <button type="button" onClick={handleAddRow} className="btn" style={{ flex: 1, background: 'rgba(255,255,255,0.05)' }}>+ Add Set</button>
+                                        <button type="submit" disabled={saving} className="btn btn-primary" style={{ flex: 2 }}>
+                                            {saving ? 'Saving...' : 'Log Olympic Sets'}
+                                        </button>
+                                    </div>
+                                </div>
+                                ) : (
                                 <div className="strength-entry-form">
                                     {/* HEADERS - Strictly Aligned */}
                                     {!isFocusMode && (
@@ -816,6 +936,7 @@ const WorkoutLog = () => {
                                         </button>
                                     </div>
                                 </div>
+                                )
 
 
                             ) : (
@@ -853,6 +974,27 @@ const WorkoutLog = () => {
                                         <label>Movement Notes</label>
                                         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Technique cues, subjective feel, pain, setup changes..." style={{ height: '80px' }} />
                                     </div>
+                                    {isSelectedOlympicExercise && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem' }}>
+                                            {[
+                                                ['timingIssues', 'Timing Issues'],
+                                                ['catchPosition', 'Catch Position'],
+                                                ['pullMechanics', 'Pull Mechanics'],
+                                                ['balanceObservations', 'Balance'],
+                                                ['coachCues', 'Coach Cues'],
+                                                ['mobilityLimitations', 'Mobility Limits']
+                                            ].map(([field, label]) => (
+                                                <div className="input-group" style={{ margin: 0 }} key={field}>
+                                                    <label>{label}</label>
+                                                    <textarea
+                                                        value={technicalNotes[field]}
+                                                        onChange={e => setTechnicalNotes(prev => ({ ...prev, [field]: e.target.value }))}
+                                                        style={{ height: '64px' }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     <div className="input-group">
                                         <label>Form Check Video (URL)</label>
                                         <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://..." />
@@ -909,7 +1051,10 @@ const WorkoutLog = () => {
                                                 <div style={{ fontWeight: '800', color: 'var(--primary)', fontSize: '1.1rem' }}>
                                                     {entry.weight}{unit} x {entry.reps}
                                                 </div>
-                                                <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>RPE {entry.actualRpe || entry.targetRpe}</div>
+                                                <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>
+                                                    RPE {entry.actualRpe || entry.targetRpe}
+                                                    {entry.olympicSet?.technicalQualityScore ? ` - Quality ${entry.olympicSet.technicalQualityScore}/10` : ''}
+                                                </div>
                                             </>
                                         )}
                                     </div>
@@ -917,8 +1062,12 @@ const WorkoutLog = () => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.75rem', fontSize: '0.8rem', opacity: 0.7, borderTop: '1px solid var(--border-glass)', paddingTop: '0.5rem' }}>
                                     {entry.type !== 'cardio' && entry.type !== 'hyrox' ? (
                                         <>
-                                            <span>e1RM: {entry.estimated1RM}{unit}</span>
-                                            <span>{entry.modifiers?.bar && `[${entry.modifiers.bar}]`} {entry.modifiers?.grip}</span>
+                                            <span>
+                                                {entry.sport === 'olympic_weightlifting'
+                                                    ? `${entry.olympicSet?.percentageOf1RM || '--'}% - ${entry.olympicSet?.barSpeedRating || 'speed --'} - ${entry.olympicSet?.missedLift ? 'miss' : 'make'}`
+                                                    : `e1RM: ${entry.estimated1RM}${unit}`}
+                                            </span>
+                                            <span>{entry.movementType?.replaceAll('_', ' ') || `${entry.modifiers?.bar && `[${entry.modifiers.bar}]`} ${entry.modifiers?.grip}`}</span>
                                         </>
                                     ) : (
                                         <span style={{ color: '#888' }}>{entry.category}</span>

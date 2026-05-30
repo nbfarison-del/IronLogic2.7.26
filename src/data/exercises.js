@@ -1,3 +1,5 @@
+import { olympicWeightliftingExercises, OLYMPIC_EXERCISE_CATEGORIES } from './olympicWeightlifting';
+
 export const EXERCISE_CATEGORIES = {
     BARBELL: 'Barbell',
     DUMBBELL: 'Dumbbell',
@@ -7,6 +9,7 @@ export const EXERCISE_CATEGORIES = {
     CORE: 'Core',
     CARDIO: 'Cardio',
     HYROX: 'Hyrox',
+    ...OLYMPIC_EXERCISE_CATEGORIES,
     CUSTOM: 'Custom'
 };
 
@@ -68,6 +71,8 @@ export const exercises = [
     { id: 'hyrox_wall_balls_training', name: 'Wall Balls (Training)', category: EXERCISE_CATEGORIES.HYROX },
     { id: 'hyrox_run_training', name: 'Running (Hyrox Pace)', category: EXERCISE_CATEGORIES.HYROX, metricType: 'meters', unit: 'm' },
     { id: 'hyrox_devils_press', name: "Devil's Press", category: EXERCISE_CATEGORIES.HYROX },
+
+    ...olympicWeightliftingExercises
 ];
 
 export const EXERCISE_CONFIG = {

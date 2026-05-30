@@ -1,0 +1,301 @@
+export const OLYMPIC_MOVEMENT_TYPES = {
+    FULL_LIFT: 'full_lift',
+    POWER_VARIATION: 'power_variation',
+    HANG_VARIATION: 'hang_variation',
+    PULL_VARIATION: 'pull_variation',
+    SQUAT_VARIATION: 'squat_variation',
+    TECHNICAL_DRILL: 'technical_drill',
+    OVERHEAD_STABILITY: 'overhead_stability',
+    ACCESSORY: 'accessory'
+};
+
+export const OLYMPIC_EXERCISE_CATEGORIES = {
+    OLYMPIC_LIFTS: 'Olympic Lifts',
+    POWER_VARIATIONS: 'Power Variations',
+    HANG_VARIATIONS: 'Hang Variations',
+    PULL_VARIATIONS: 'Pull Variations',
+    SQUAT_VARIATIONS: 'Squat Variations',
+    TECHNICAL_DRILLS: 'Technical Drills',
+    OVERHEAD_STABILITY: 'Overhead Stability',
+    ACCESSORY_MOVEMENTS: 'Accessory Movements'
+};
+
+const commonVideoAnalysis = {
+    enabled: false,
+    videoUploads: [],
+    frameAnalysis: [],
+    poseEstimation: null,
+    barPath: null,
+    aiTechnicalScore: null
+};
+
+const buildOlympicExercise = ({
+    id,
+    name,
+    category,
+    movementType,
+    technicalComplexity,
+    primaryMuscleGroups,
+    skillClassification,
+    mobilityRequirements,
+    recommendedRepRange,
+    recommendedIntensityRange,
+    technicalEmphasisTags
+}) => ({
+    id,
+    name,
+    category,
+    sport: 'olympic_weightlifting',
+    movementType,
+    metricType: 'barbell_load',
+    technicalComplexity,
+    primaryMuscleGroups,
+    skillClassification,
+    mobilityRequirements,
+    recommendedRepRange,
+    recommendedIntensityRange,
+    technicalEmphasisTags,
+    trackingSchemaVersion: 1,
+    videoAnalysis: commonVideoAnalysis
+});
+
+export const olympicWeightliftingExercises = [
+    buildOlympicExercise({
+        id: 'oly_snatch',
+        name: 'Snatch',
+        category: OLYMPIC_EXERCISE_CATEGORIES.OLYMPIC_LIFTS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.FULL_LIFT,
+        technicalComplexity: 10,
+        primaryMuscleGroups: ['quads', 'glutes', 'hamstrings', 'traps', 'shoulders', 'core'],
+        skillClassification: 'competition_lift',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine', 'shoulders', 'wrists'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '70-100% 1RM',
+        technicalEmphasisTags: ['first_pull', 'turnover', 'pull_under', 'overhead_catch', 'bar_path']
+    }),
+    buildOlympicExercise({
+        id: 'oly_power_snatch',
+        name: 'Power Snatch',
+        category: OLYMPIC_EXERCISE_CATEGORIES.POWER_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.POWER_VARIATION,
+        technicalComplexity: 8,
+        primaryMuscleGroups: ['quads', 'glutes', 'traps', 'shoulders', 'core'],
+        skillClassification: 'derivative_lift',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine', 'shoulders'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '60-85% snatch 1RM',
+        technicalEmphasisTags: ['extension', 'turnover', 'high_catch', 'bar_proximity']
+    }),
+    buildOlympicExercise({
+        id: 'oly_hang_snatch',
+        name: 'Hang Snatch',
+        category: OLYMPIC_EXERCISE_CATEGORIES.HANG_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.HANG_VARIATION,
+        technicalComplexity: 9,
+        primaryMuscleGroups: ['glutes', 'hamstrings', 'traps', 'shoulders', 'core'],
+        skillClassification: 'technical_derivative',
+        mobilityRequirements: ['hips', 'thoracic_spine', 'shoulders', 'wrists'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '65-90% snatch 1RM',
+        technicalEmphasisTags: ['hang_position', 'vertical_drive', 'turnover', 'pull_under']
+    }),
+    buildOlympicExercise({
+        id: 'oly_muscle_snatch',
+        name: 'Muscle Snatch',
+        category: OLYMPIC_EXERCISE_CATEGORIES.TECHNICAL_DRILLS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.TECHNICAL_DRILL,
+        technicalComplexity: 6,
+        primaryMuscleGroups: ['shoulders', 'traps', 'upper_back', 'core'],
+        skillClassification: 'skill_drill',
+        mobilityRequirements: ['shoulders', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '2-5',
+        recommendedIntensityRange: '30-60% snatch 1RM',
+        technicalEmphasisTags: ['bar_proximity', 'elbows_high', 'turnover_timing', 'pressout_awareness']
+    }),
+    buildOlympicExercise({
+        id: 'oly_snatch_pull',
+        name: 'Snatch Pull',
+        category: OLYMPIC_EXERCISE_CATEGORIES.PULL_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.PULL_VARIATION,
+        technicalComplexity: 6,
+        primaryMuscleGroups: ['quads', 'glutes', 'hamstrings', 'traps', 'back'],
+        skillClassification: 'strength_derivative',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine'],
+        recommendedRepRange: '2-5',
+        recommendedIntensityRange: '85-115% snatch 1RM',
+        technicalEmphasisTags: ['first_pull', 'extension', 'bar_proximity', 'finish_position']
+    }),
+    buildOlympicExercise({
+        id: 'oly_snatch_balance',
+        name: 'Snatch Balance',
+        category: OLYMPIC_EXERCISE_CATEGORIES.OVERHEAD_STABILITY,
+        movementType: OLYMPIC_MOVEMENT_TYPES.OVERHEAD_STABILITY,
+        technicalComplexity: 8,
+        primaryMuscleGroups: ['quads', 'shoulders', 'upper_back', 'core'],
+        skillClassification: 'receiving_drill',
+        mobilityRequirements: ['ankles', 'hips', 'shoulders', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '60-100% snatch 1RM',
+        technicalEmphasisTags: ['footwork', 'speed_under', 'lockout', 'bottom_position']
+    }),
+    buildOlympicExercise({
+        id: 'oly_overhead_squat',
+        name: 'Overhead Squat',
+        category: OLYMPIC_EXERCISE_CATEGORIES.OVERHEAD_STABILITY,
+        movementType: OLYMPIC_MOVEMENT_TYPES.OVERHEAD_STABILITY,
+        technicalComplexity: 7,
+        primaryMuscleGroups: ['quads', 'glutes', 'shoulders', 'upper_back', 'core'],
+        skillClassification: 'positional_strength',
+        mobilityRequirements: ['ankles', 'hips', 'shoulders', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '2-5',
+        recommendedIntensityRange: '40-85% snatch 1RM',
+        technicalEmphasisTags: ['overhead_position', 'balance', 'depth', 'torso_angle']
+    }),
+    buildOlympicExercise({
+        id: 'oly_clean',
+        name: 'Clean',
+        category: OLYMPIC_EXERCISE_CATEGORIES.OLYMPIC_LIFTS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.FULL_LIFT,
+        technicalComplexity: 9,
+        primaryMuscleGroups: ['quads', 'glutes', 'hamstrings', 'traps', 'upper_back', 'core'],
+        skillClassification: 'competition_lift',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '70-100% 1RM',
+        technicalEmphasisTags: ['first_pull', 'extension', 'rack_position', 'catch_depth', 'bar_path']
+    }),
+    buildOlympicExercise({
+        id: 'oly_power_clean',
+        name: 'Power Clean',
+        category: OLYMPIC_EXERCISE_CATEGORIES.POWER_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.POWER_VARIATION,
+        technicalComplexity: 7,
+        primaryMuscleGroups: ['quads', 'glutes', 'hamstrings', 'traps', 'upper_back'],
+        skillClassification: 'derivative_lift',
+        mobilityRequirements: ['ankles', 'hips', 'wrists', 'thoracic_spine'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '60-85% clean 1RM',
+        technicalEmphasisTags: ['extension', 'fast_elbows', 'high_catch', 'bar_proximity']
+    }),
+    buildOlympicExercise({
+        id: 'oly_hang_clean',
+        name: 'Hang Clean',
+        category: OLYMPIC_EXERCISE_CATEGORIES.HANG_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.HANG_VARIATION,
+        technicalComplexity: 8,
+        primaryMuscleGroups: ['glutes', 'hamstrings', 'traps', 'quads', 'upper_back'],
+        skillClassification: 'technical_derivative',
+        mobilityRequirements: ['hips', 'wrists', 'thoracic_spine'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '65-90% clean 1RM',
+        technicalEmphasisTags: ['hang_position', 'leg_drive', 'fast_elbows', 'rack_position']
+    }),
+    buildOlympicExercise({
+        id: 'oly_clean_pull',
+        name: 'Clean Pull',
+        category: OLYMPIC_EXERCISE_CATEGORIES.PULL_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.PULL_VARIATION,
+        technicalComplexity: 5,
+        primaryMuscleGroups: ['quads', 'glutes', 'hamstrings', 'traps', 'back'],
+        skillClassification: 'strength_derivative',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine'],
+        recommendedRepRange: '2-5',
+        recommendedIntensityRange: '90-120% clean 1RM',
+        technicalEmphasisTags: ['first_pull', 'extension', 'bar_proximity', 'finish_position']
+    }),
+    buildOlympicExercise({
+        id: 'oly_front_squat',
+        name: 'Front Squat',
+        category: OLYMPIC_EXERCISE_CATEGORIES.SQUAT_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.SQUAT_VARIATION,
+        technicalComplexity: 5,
+        primaryMuscleGroups: ['quads', 'glutes', 'upper_back', 'core'],
+        skillClassification: 'strength_foundation',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '1-6',
+        recommendedIntensityRange: '70-100% front squat 1RM',
+        technicalEmphasisTags: ['upright_torso', 'rack_position', 'bracing', 'depth']
+    }),
+    buildOlympicExercise({
+        id: 'oly_jerk',
+        name: 'Jerk',
+        category: OLYMPIC_EXERCISE_CATEGORIES.OLYMPIC_LIFTS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.FULL_LIFT,
+        technicalComplexity: 9,
+        primaryMuscleGroups: ['quads', 'glutes', 'shoulders', 'triceps', 'upper_back', 'core'],
+        skillClassification: 'competition_lift',
+        mobilityRequirements: ['ankles', 'hips', 'shoulders', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '70-100% jerk 1RM',
+        technicalEmphasisTags: ['dip_drive', 'footwork', 'lockout', 'recovery', 'balance']
+    }),
+    buildOlympicExercise({
+        id: 'oly_push_jerk',
+        name: 'Push Jerk',
+        category: OLYMPIC_EXERCISE_CATEGORIES.POWER_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.POWER_VARIATION,
+        technicalComplexity: 6,
+        primaryMuscleGroups: ['quads', 'shoulders', 'triceps', 'core'],
+        skillClassification: 'jerk_derivative',
+        mobilityRequirements: ['ankles', 'shoulders', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '1-5',
+        recommendedIntensityRange: '60-85% jerk 1RM',
+        technicalEmphasisTags: ['vertical_dip', 'drive_timing', 'lockout', 'catch_balance']
+    }),
+    buildOlympicExercise({
+        id: 'oly_split_jerk',
+        name: 'Split Jerk',
+        category: OLYMPIC_EXERCISE_CATEGORIES.OLYMPIC_LIFTS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.FULL_LIFT,
+        technicalComplexity: 9,
+        primaryMuscleGroups: ['quads', 'glutes', 'shoulders', 'triceps', 'upper_back', 'core'],
+        skillClassification: 'competition_lift',
+        mobilityRequirements: ['ankles', 'hips', 'shoulders', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '70-100% jerk 1RM',
+        technicalEmphasisTags: ['dip_drive', 'split_footwork', 'lockout', 'front_foot', 'back_knee']
+    }),
+    buildOlympicExercise({
+        id: 'oly_power_jerk',
+        name: 'Power Jerk',
+        category: OLYMPIC_EXERCISE_CATEGORIES.POWER_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.POWER_VARIATION,
+        technicalComplexity: 7,
+        primaryMuscleGroups: ['quads', 'shoulders', 'triceps', 'upper_back', 'core'],
+        skillClassification: 'jerk_derivative',
+        mobilityRequirements: ['ankles', 'shoulders', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '1-3',
+        recommendedIntensityRange: '65-90% jerk 1RM',
+        technicalEmphasisTags: ['vertical_dip', 'drive', 'power_catch', 'lockout']
+    }),
+    buildOlympicExercise({
+        id: 'oly_push_press',
+        name: 'Push Press',
+        category: OLYMPIC_EXERCISE_CATEGORIES.ACCESSORY_MOVEMENTS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.ACCESSORY,
+        technicalComplexity: 4,
+        primaryMuscleGroups: ['shoulders', 'triceps', 'quads', 'core'],
+        skillClassification: 'strength_accessory',
+        mobilityRequirements: ['shoulders', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '2-6',
+        recommendedIntensityRange: '60-85% press/jerk 1RM',
+        technicalEmphasisTags: ['dip_timing', 'leg_drive', 'finish_lockout', 'vertical_bar']
+    }),
+    buildOlympicExercise({
+        id: 'oly_clean_and_jerk',
+        name: 'Clean and Jerk',
+        category: OLYMPIC_EXERCISE_CATEGORIES.OLYMPIC_LIFTS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.FULL_LIFT,
+        technicalComplexity: 10,
+        primaryMuscleGroups: ['quads', 'glutes', 'hamstrings', 'traps', 'shoulders', 'triceps', 'upper_back', 'core'],
+        skillClassification: 'competition_lift',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine', 'wrists', 'shoulders'],
+        recommendedRepRange: '1+1',
+        recommendedIntensityRange: '70-100% 1RM',
+        technicalEmphasisTags: ['clean_recovery', 'rack_breathing', 'dip_drive', 'footwork', 'lockout']
+    })
+];
+
+export const olympicExerciseById = Object.fromEntries(
+    olympicWeightliftingExercises.map(exercise => [exercise.id, exercise])
+);
