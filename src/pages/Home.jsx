@@ -9,6 +9,13 @@ import GoalTracker from '../components/GoalTracker';
 import MobilityTab from '../components/MobilityTab';
 import IronLogicTab from '../components/IronLogicTab';
 import ActivityFeed from '../components/ActivityFeed';
+import {
+    buildOlympicSession,
+    calculateCompetitionPhase,
+    getOlympicProfile,
+    getRecoveryAdjustment,
+    getSmartRecommendations
+} from '../services/OlympicWeightliftingEngine';
 
 const getDateStr = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -41,6 +48,9 @@ const Home = () => {
     const { unit: appUnit } = useSettings();
     const {
         workouts,
+        recovery,
+        sessions,
+        profile,
         plannedWorkouts,
         trainingMaxes,
         isLoading: loading
@@ -52,6 +62,12 @@ const Home = () => {
     const todayPlan = useMemo(() => {
         return plannedWorkouts.find(p => p.date === todayStr);
     }, [plannedWorkouts, todayStr]);
+
+    const olympicProfile = useMemo(() => getOlympicProfile(profile || {}), [profile]);
+    const competitionPhase = useMemo(() => calculateCompetitionPhase(profile || {}), [profile]);
+    const recoveryAdjustment = useMemo(() => getRecoveryAdjustment({}, recovery), [recovery]);
+    const smartRecommendations = useMemo(() => getSmartRecommendations({ profile, workouts, recovery }).slice(0, 3), [profile, workouts, recovery]);
+    const suggestedSession = useMemo(() => buildOlympicSession({ profile, workouts, recovery }), [profile, workouts, recovery]);
 
     const recentPRs = useMemo(() => {
         const prList = [];
@@ -104,6 +120,21 @@ const Home = () => {
 
         return { totalWeight, sessions, peakIntensity, averageRpe };
     }, [workouts]);
+
+    const recentPR = useMemo(() => recentPRs[0], [recentPRs]);
+
+    const trainingStreak = useMemo(() => {
+        const completedDates = new Set((sessions || []).filter(s => s.isComplete).map(s => s.id));
+        let streak = 0;
+        const cursor = new Date();
+        for (let i = 0; i < 30; i++) {
+            const key = getDateStr(cursor);
+            if (!completedDates.has(key)) break;
+            streak += 1;
+            cursor.setDate(cursor.getDate() - 1);
+        }
+        return streak;
+    }, [sessions]);
 
     if (loading) {
         return (
@@ -208,6 +239,57 @@ const Home = () => {
                         </aside>
                     </div>
 
+                    <div className="stats-grid" style={{ marginBottom: '1.25rem' }}>
+                        <div className="metric-card card">
+                            <small>Today's Training</small>
+                            <div className="metric-value" style={{ fontSize: '1.35rem' }}>{todayPlan ? 'Planned' : suggestedSession.phase.name}</div>
+                            <div className="metric-note">{todayPlan?.name || suggestedSession.exercises.slice(0, 3).map(ex => ex.exerciseName).join(', ')}</div>
+                            <Link to={todayPlan ? `/log?planId=${todayPlan.id}` : '/olympic-lifting'} className="btn btn-primary" style={{ marginTop: '0.9rem', width: '100%' }}>Start Training</Link>
+                        </div>
+                        <div className="metric-card card">
+                            <small>Upcoming Competition</small>
+                            <div className="metric-value" style={{ fontSize: '1.35rem' }}>{competitionPhase.daysUntilMeet ?? '--'} days</div>
+                            <div className="metric-note">{olympicProfile.upcomingMeetDate || 'Add meet date in onboarding'} - {competitionPhase.name}</div>
+                        </div>
+                        <div className="metric-card card">
+                            <small>Readiness Score</small>
+                            <div className="metric-value">{recoveryAdjustment.readinessScore}</div>
+                            <div className="metric-note">{recoveryAdjustment.note}</div>
+                        </div>
+                        <div className="metric-card card">
+                            <small>Recent PR</small>
+                            <div className="metric-value" style={{ fontSize: '1.35rem' }}>{recentPR ? `${recentPR.estimated1RM} ${appUnit}` : '--'}</div>
+                            <div className="metric-note">{recentPR?.exerciseName || 'Log a new best to populate this card'}</div>
+                        </div>
+                        <div className="metric-card card">
+                            <small>Training Streak</small>
+                            <div className="metric-value">{trainingStreak}</div>
+                            <div className="metric-note">Finalized sessions in a row</div>
+                        </div>
+                    </div>
+
+                    <section className="glass-card" style={{ marginBottom: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                            <div>
+                                <p className="page-kicker">Iron Logic Coach</p>
+                                <h2 style={{ marginTop: 0 }}>Adaptive Olympic Weightlifting Guidance</h2>
+                            </div>
+                            <Link to="/progress?tab=olympic" className="btn">Open Olympic Dashboard</Link>
+                        </div>
+                        <div style={{ display: 'grid', gap: '0.75rem' }}>
+                            {smartRecommendations.map((rec, index) => (
+                                <div key={index} className="list-row" style={{ alignItems: 'flex-start' }}>
+                                    <div>
+                                        <strong>{rec.text}</strong>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '0.35rem' }}>
+                                            DMAIC: Define {rec.dmaic.define} - Measure trends/readiness - Analyze {rec.dmaic.analyze} - Improve with the recommendation - Control next session.
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
                     <div className="quick-action-grid">
                         <Link to="/log" className="glass-card action-tile">
                             <small>Capture</small>
@@ -223,6 +305,11 @@ const Home = () => {
                             <small>Analyze</small>
                             <strong>Performance Trends</strong>
                             <span>See PRs, volume, and consistency over time.</span>
+                        </Link>
+                        <Link to="/olympic-lifting" className="glass-card action-tile">
+                            <small>Olympic</small>
+                            <strong>Weightlifting Mode</strong>
+                            <span>Generate and start a snatch, clean and jerk, squat, pull, press, accessory session.</span>
                         </Link>
                     </div>
 

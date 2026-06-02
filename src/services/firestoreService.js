@@ -177,7 +177,36 @@ export const getUserProfile = async (userId) => {
 
 export const updateUserProfile = async (userId, profileData) => {
     const docRef = doc(db, 'users', userId, 'profile', 'data');
-    await setDoc(docRef, profileData, { merge: true });
+    await setDoc(docRef, {
+        ...profileData,
+        updatedAt: new Date().toISOString()
+    }, { merge: true });
+};
+
+export const saveOlympicWeightliftingProfile = async (userId, olympicWeightliftingProfile) => {
+    const docRef = doc(db, 'users', userId, 'profile', 'data');
+    const maxes = {
+        oly_snatch: olympicWeightliftingProfile.snatch1RM || '',
+        oly_clean_and_jerk: olympicWeightliftingProfile.cleanJerk1RM || '',
+        oly_front_squat: olympicWeightliftingProfile.frontSquat1RM || '',
+        bb_squat: olympicWeightliftingProfile.backSquat1RM || '',
+        oly_push_press: olympicWeightliftingProfile.pushPress1RM || ''
+    };
+    await setDoc(docRef, {
+        sport: 'Olympic Weightlifting',
+        primaryGoal: olympicWeightliftingProfile.goals || 'Improve Olympic weightlifting total',
+        trainingAge: olympicWeightliftingProfile.trainingAge || '',
+        daysAvailable: olympicWeightliftingProfile.weeklyTrainingAvailability || '',
+        equipment: olympicWeightliftingProfile.equipmentAvailability || [],
+        injuryHistory: olympicWeightliftingProfile.injuryLimitations || '',
+        olympicWeightliftingProfile: {
+            ...olympicWeightliftingProfile,
+            schemaVersion: 1,
+            updatedAt: new Date().toISOString()
+        },
+        maxes,
+        updatedAt: new Date().toISOString()
+    }, { merge: true });
 };
 
 export const subscribeToProfile = (userId, callback) => {
@@ -271,6 +300,12 @@ export const finalizeWorkoutSession = async (userId, dateStr, metadata) => {
         batch.set(sessionRef, {
             isComplete: true,
             ...metadata,
+            reliability: {
+                saveMode: 'offline_queue_batch',
+                transactionSafe: true,
+                retryEnabled: true,
+                schemaVersion: 1
+            },
             updatedAt: new Date().toISOString(),
             finalizedAt: new Date().toISOString()
         }, { merge: true });
@@ -288,6 +323,40 @@ export const finalizeWorkoutSession = async (userId, dateStr, metadata) => {
         logger.error('Atomic session finalization failed', { userId, dateStr, error: error.message });
         throw error;
     }
+};
+
+// ==================== LIFT VIDEO ANALYSIS INFRASTRUCTURE ====================
+
+export const saveLiftVideoMetadata = async (userId, videoData) => {
+    const ref = collection(db, 'users', userId, 'liftVideos');
+    const docRef = await addDoc(ref, {
+        ...videoData,
+        sport: videoData.sport || 'olympic_weightlifting',
+        uploadStatus: videoData.uploadStatus || 'metadata_saved',
+        barPathData: videoData.barPathData || null,
+        coachFeedback: videoData.coachFeedback || '',
+        aiAnalysisStatus: videoData.aiAnalysisStatus || 'pending_future_model',
+        schemaVersion: 1,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    });
+    return docRef.id;
+};
+
+export const updateLiftVideoFeedback = async (userId, videoId, updates) => {
+    const docRef = doc(db, 'users', userId, 'liftVideos', videoId);
+    await updateDoc(docRef, {
+        ...updates,
+        updatedAt: new Date().toISOString()
+    });
+};
+
+export const subscribeToLiftVideos = (userId, callback, errorCallback, limitCount = 40) => {
+    const ref = collection(db, 'users', userId, 'liftVideos');
+    const q = query(ref, orderBy('createdAt', 'desc'), limit(limitCount));
+    return onSnapshot(q, (snapshot) => {
+        callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, errorCallback);
 };
 
 export const subscribeToSessionStatus = (userId, dateStr, callback) => {

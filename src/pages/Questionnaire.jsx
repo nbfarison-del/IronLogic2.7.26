@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as firestoreService from '../services/firestoreService';
 import * as ILMService from '../services/ILMService';
+import { OLYMPIC_PROFILE_DEFAULTS } from '../services/OlympicWeightliftingEngine';
 
 const Questionnaire = () => {
     const { user } = useAuth();
@@ -12,7 +13,7 @@ const Questionnaire = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const questions = [
+    const baseQuestions = [
         { id: 'age', type: 'number', label: 'What is your age?', required: true },
         {
             id: 'experience', type: 'select', label: 'Training experience?',
@@ -20,7 +21,7 @@ const Questionnaire = () => {
         },
         {
             id: 'goalType', type: 'select', label: 'What is your primary goal?',
-            options: ['Strength', 'Hypertrophy', 'Powerlifting', 'Conditioning', 'Rehab', 'General Fitness']
+            options: ['Olympic Weightlifting', 'Strength', 'Hypertrophy', 'Powerlifting', 'Conditioning', 'Rehab', 'General Fitness']
         },
         { id: 'daysPerWeek', type: 'number', label: 'Days per week available?', min: 1, max: 7 },
         { id: 'sessionDuration', type: 'number', label: 'Minutes per session?', min: 15, max: 180 },
@@ -31,6 +32,32 @@ const Questionnaire = () => {
         { id: 'injuries', type: 'textarea', label: 'Any injuries or limitations?', required: false },
         { id: 'preferences', type: 'textarea', label: 'Exercise preferences or dislikes?', required: false },
     ];
+
+    const olympicQuestions = [
+        { id: 'snatch1RM', type: 'number', label: 'Current Snatch 1RM' },
+        { id: 'cleanJerk1RM', type: 'number', label: 'Current Clean & Jerk 1RM' },
+        { id: 'frontSquat1RM', type: 'number', label: 'Front Squat 1RM' },
+        { id: 'backSquat1RM', type: 'number', label: 'Back Squat 1RM' },
+        { id: 'pushPress1RM', type: 'number', label: 'Push Press 1RM' },
+        { id: 'trainingAge', type: 'select', label: 'Olympic lifting training age', options: ['0-1 years', '1-3 years', '3-5 years', '5+ years'] },
+        { id: 'competitionExperience', type: 'select', label: 'Competition experience', options: ['None', 'Local meets', 'State/Regional', 'National or higher'] },
+        { id: 'weeklyTrainingAvailability', type: 'number', label: 'Weekly training availability', min: 1, max: 7 },
+        { id: 'upcomingMeetDate', type: 'date', label: 'Upcoming meet date' },
+        { id: 'mockMeetDate', type: 'date', label: 'Mock meet date' },
+        { id: 'testingDate', type: 'date', label: 'Testing date' },
+        {
+            id: 'equipmentAvailability',
+            type: 'multi-select',
+            label: 'Weightlifting equipment availability',
+            options: ['Platform', 'Bumper plates', 'Blocks', 'Squat rack', 'Pulling straps', 'Jerk blocks', 'Competition bar']
+        },
+        { id: 'injuryLimitations', type: 'textarea', label: 'Injury limitations for Olympic lifting', required: false },
+        { id: 'goals', type: 'textarea', label: 'Define your weightlifting goal', required: false }
+    ];
+
+    const questions = answers.goalType === 'Olympic Weightlifting'
+        ? [...baseQuestions, ...olympicQuestions]
+        : baseQuestions;
 
     const handleAnswer = (id, value) => {
         setAnswers({ ...answers, [id]: value });
@@ -58,6 +85,27 @@ const Questionnaire = () => {
         try {
             // Save to legacy questionnaire path for backward compatibility
             await firestoreService.saveQuestionnaire(user.id, answers);
+
+            if (answers.goalType === 'Olympic Weightlifting') {
+                const olympicProfile = {
+                    ...OLYMPIC_PROFILE_DEFAULTS,
+                    snatch1RM: answers.snatch1RM || '',
+                    cleanJerk1RM: answers.cleanJerk1RM || '',
+                    frontSquat1RM: answers.frontSquat1RM || '',
+                    backSquat1RM: answers.backSquat1RM || '',
+                    pushPress1RM: answers.pushPress1RM || '',
+                    trainingAge: answers.trainingAge || '',
+                    competitionExperience: answers.competitionExperience || '',
+                    weeklyTrainingAvailability: answers.weeklyTrainingAvailability || answers.daysPerWeek || '',
+                    upcomingMeetDate: answers.upcomingMeetDate || '',
+                    mockMeetDate: answers.mockMeetDate || '',
+                    testingDate: answers.testingDate || '',
+                    equipmentAvailability: answers.equipmentAvailability || answers.equipment || [],
+                    injuryLimitations: answers.injuryLimitations || answers.injuries || '',
+                    goals: answers.goals || 'Increase snatch, clean and jerk, and competition total'
+                };
+                await firestoreService.saveOlympicWeightliftingProfile(user.id, olympicProfile);
+            }
             
             // Save to formal ILM Training Intent Profile
             await ILMService.saveTrainingIntent(user.id, {
@@ -99,6 +147,15 @@ const Questionnaire = () => {
                             onChange={(e) => handleAnswer(currentQ.id, e.target.value)}
                             min={currentQ.min}
                             max={currentQ.max}
+                            autoFocus
+                        />
+                    )}
+
+                    {currentQ.type === 'date' && (
+                        <input
+                            type="date"
+                            value={answers[currentQ.id] || ''}
+                            onChange={(e) => handleAnswer(currentQ.id, e.target.value)}
                             autoFocus
                         />
                     )}
@@ -152,8 +209,8 @@ const Questionnaire = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
                     <button className="btn" onClick={handlePrev} disabled={step === 0}>Back</button>
-                    <button className="btn btn-primary" onClick={handleNext}>
-                        {step === questions.length - 1 ? 'Submit' : 'Next'}
+                    <button className="btn btn-primary" onClick={handleNext} disabled={loading}>
+                        {loading ? 'Saving...' : step === questions.length - 1 ? 'Submit' : 'Next'}
                     </button>
                 </div>
             </div>

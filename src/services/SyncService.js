@@ -121,14 +121,10 @@ class SyncService {
                 });
 
                 if (task.attempts >= RETRY_CONFIG.maxAttempts) {
-                    logger.error('Task reached max retries, dropping from queue', { id: task.id });
-                    this.queue = this.queue.filter(t => t.id !== task.id);
-                    this.saveQueue();
-                } else {
-                    // Stop processing for now, wait for next attempt (exponential backoff handled by outer retry logic if added)
-                    // For now we just wait for the next periodic check or online event
-                    break; 
+                    task.blocked = true;
+                    logger.error('Task reached max retries and remains queued for manual retry', { id: task.id });
                 }
+                break; 
             }
         }
 
@@ -160,7 +156,7 @@ class SyncService {
         } else if (obj !== null && typeof obj === 'object') {
             return Object.fromEntries(
                 Object.entries(obj)
-                    .filter(([_, v]) => v !== undefined)
+                    .filter((entry) => entry[1] !== undefined)
                     .map(([k, v]) => [k, this.sanitize(v)])
             );
         }
@@ -169,6 +165,14 @@ class SyncService {
 
     getPendingCount() {
         return this.queue.length;
+    }
+
+    getQueueStatus() {
+        return {
+            pendingCount: this.queue.length,
+            blockedCount: this.queue.filter(task => task.blocked).length,
+            lastError: this.queue.find(task => task.error)?.error || null
+        };
     }
 }
 

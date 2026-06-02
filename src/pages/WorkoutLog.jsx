@@ -21,6 +21,11 @@ import {
     isOlympicExercise,
     summarizeLiftSuccess
 } from '../utils/olympicWeightlifting';
+import {
+    buildOlympicSession,
+    getRecoveryAdjustment,
+    getSubstitutionOptions
+} from '../services/OlympicWeightliftingEngine';
 
 // Exercises where distance is captured as whole meters rather than a decimal distance.
 const METER_BASED_EXERCISE_IDS = new Set([
@@ -108,6 +113,8 @@ const WorkoutLog = () => {
         workouts: syncedWorkouts,
         customExercises: syncedCustom,
         plannedWorkouts,
+        recovery,
+        profile,
         isLoading: dataLoading,
         trainingMaxes,
         syncStatus,
@@ -146,6 +153,7 @@ const WorkoutLog = () => {
     const queryParams = new URLSearchParams(location.search);
     const dateParam = queryParams.get('date');
     const planIdParam = queryParams.get('planId');
+    const isOlympicMode = location.pathname.includes('olympic-lifting');
 
     const isCoachViewing = paramAthleteId && paramAthleteId !== user?.id;
 
@@ -158,6 +166,21 @@ const WorkoutLog = () => {
         const todayStr = getDateStr(new Date());
         return planned.find(p => p.date === todayStr);
     }, [location.state, planIdParam, planned]);
+
+    const generatedOlympicWorkout = useMemo(() => {
+        if (!isOlympicMode || activePlannedWorkout) return null;
+        return {
+            ...buildOlympicSession({ profile, workouts: syncedWorkouts, recovery }),
+            id: 'generated_olympic_today',
+            date: getDateStr(new Date()),
+            exercises: buildOlympicSession({ profile, workouts: syncedWorkouts, recovery }).exercises.map((exercise, index) => ({
+                ...exercise,
+                id: exercise.id || `${exercise.exerciseId}_${index}`
+            }))
+        };
+    }, [activePlannedWorkout, isOlympicMode, profile, recovery, syncedWorkouts]);
+
+    const activeWorkoutPlan = activePlannedWorkout || generatedOlympicWorkout;
 
     const allExercisesList = useMemo(() => [
         ...defaultExercises,
@@ -205,6 +228,12 @@ const WorkoutLog = () => {
     const [autoRest, setAutoRest] = useState(true);
     const [showRpeModal, setShowRpeModal] = useState(false);
     const [sessionRpe, setSessionRpe] = useState(7);
+    const [completionFeedback, setCompletionFeedback] = useState({
+        recoveryScore: 7,
+        sleepQuality: 7,
+        motivationLevel: 7,
+        painScore: 1
+    });
     const [pendingSaves, setPendingSaves] = useState(0);
     const [finalizeError, setFinalizeError] = useState(null);
 
@@ -259,13 +288,24 @@ const WorkoutLog = () => {
             // Instead of direct call, we use SyncService
             syncService.enqueueSessionFinalization(targetUserId, dateStr, {
                 sessionRpe,
+                ...completionFeedback,
+                recoveryAdjustment: getRecoveryAdjustment({ sessionRpe, ...completionFeedback }, recovery),
                 loggedSetsCount: loggedSets.length,
-                workoutType: workoutType
+                workoutType: workoutType,
+                trainingMode: isOlympicMode || loggedSets.some(set => set.sport === 'olympic_weightlifting') ? 'olympic_weightlifting' : workoutType,
+                dmaic: {
+                    define: profile?.olympicWeightliftingProfile?.goals || profile?.primaryGoal || 'Complete planned training',
+                    measure: 'Session RPE, recovery, sleep, motivation, pain, logged sets, volume, intensity, and readiness.',
+                    analyze: 'Session feedback updates recovery adjustment and weak point monitoring.',
+                    improve: 'Next session volume, intensity, and exercise selection adapt from these responses.',
+                    control: 'Persist session completion through offline queue and batched server finalization.'
+                }
             });
 
             // Optimistic UI update: Trigger global state change immediately
             updateSessionOptimistically(dateStr, {
                 sessionRpe,
+                ...completionFeedback,
                 loggedSetsCount: loggedSets.length,
                 workoutType: workoutType
             });
@@ -330,10 +370,10 @@ const WorkoutLog = () => {
     };
 
     useEffect(() => {
-        if (activePlannedWorkout && activePlannedWorkout.exercises?.length > 0 && !selectedExerciseId) {
-            loadPlannedExercise(activePlannedWorkout.exercises[0]);
+        if (activeWorkoutPlan && activeWorkoutPlan.exercises?.length > 0 && !selectedExerciseId) {
+            loadPlannedExercise(activeWorkoutPlan.exercises[0]);
         }
-    }, [activePlannedWorkout, allExercisesList]);
+    }, [activeWorkoutPlan, allExercisesList]);
 
     const loggedSets = useMemo(() => {
         if (!workouts) return [];
@@ -446,7 +486,7 @@ const WorkoutLog = () => {
             logger.info('Attempting to log set', { targetUserId, selectedExerciseId, workoutType });
             const exercise = allExercisesList.find(ex => ex.id === selectedExerciseId) || {
                 id: selectedExerciseId,
-                name: activePlannedWorkout?.exercises.find(ex => ex.exerciseId === selectedExerciseId)?.exerciseName || selectedExerciseId,
+                name: activeWorkoutPlan?.exercises.find(ex => ex.exerciseId === selectedExerciseId)?.exerciseName || selectedExerciseId,
                 category: EXERCISE_CATEGORIES.CUSTOM
             };
 
@@ -473,6 +513,8 @@ const WorkoutLog = () => {
                     modifiers: { ...modifiers },
                     notes: notes,
                     video_url: videoUrl,
+                    trainingMode: isOlympicExercise(exercise) ? 'olympic_weightlifting' : undefined,
+                    sourcePlanId: activeWorkoutPlan?.id || null,
                     ...(isOlympicExercise(exercise) ? {
                         ...buildOlympicSetMetadata({
                             row,
@@ -502,6 +544,18 @@ const WorkoutLog = () => {
                 
                 // Use SyncService for fault-tolerant background persistence
                 syncService.enqueueWorkoutSets(targetUserId, newEntries);
+                if (videoUrl && newEntries.some(entry => entry.sport === 'olympic_weightlifting')) {
+                    await firestoreService.saveLiftVideoMetadata(targetUserId, {
+                        liftDate: todayStr,
+                        exerciseId: exercise.id,
+                        exerciseName: exercise.name,
+                        videoUrl,
+                        setMetadata: newEntries.map(entry => entry.olympicSet).filter(Boolean),
+                        technicalNotes,
+                        sessionReadiness,
+                        mobilityReadiness
+                    });
+                }
                 
                 logger.info('Sets enqueued successfully', { count: newEntries.length, exerciseId: exercise.id });
                 showToast("Record saved locally!", "success");
@@ -653,13 +707,18 @@ const WorkoutLog = () => {
                 </div>
             )}
 
-            {!isCoachViewing && activePlannedWorkout && !isSessionComplete && (
+            {!isCoachViewing && activeWorkoutPlan && !isSessionComplete && (
                 <div className="glass-card" style={{ marginBottom: '2.5rem', borderLeft: '4px solid var(--primary)' }}>
                     <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--primary)', letterSpacing: '0.02em' }}>
-                        ⚡ {activePlannedWorkout.name || 'Today\'s Program'}
+                        {activeWorkoutPlan.trainingMode === 'olympic_weightlifting' ? 'Olympic Session' : 'Today\'s Program'} - {activeWorkoutPlan.name || 'Ready'}
                     </h3>
+                    {activeWorkoutPlan.recoveryAdjustment && (
+                        <p style={{ margin: '0.5rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                            {activeWorkoutPlan.phase?.name} - {activeWorkoutPlan.recoveryAdjustment.note}
+                        </p>
+                    )}
                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
-                        {activePlannedWorkout.exercises.map((pe, idx) => (
+                        {activeWorkoutPlan.exercises.map((pe, idx) => (
                             <button
                                 key={idx}
                                 className={`btn ${selectedPlannedExId === pe.id ? 'btn-primary' : ''}`}
@@ -745,6 +804,34 @@ const WorkoutLog = () => {
                                     ));
                                 } : undefined}
                             />
+
+                            {isSelectedOlympicExercise && (
+                                <div className="glass" style={{ padding: '1rem', marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <div>
+                                            <strong>Substitution Engine</strong>
+                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Equivalent stress: keep sets/reps and match target RPE.</div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            {getSubstitutionOptions(selectedExerciseId).map(option => (
+                                                <button
+                                                    key={option.id}
+                                                    type="button"
+                                                    className="btn"
+                                                    style={{ padding: '0.45rem 0.7rem', fontSize: '0.82rem' }}
+                                                    title={option.stressEquivalent}
+                                                    onClick={() => {
+                                                        setSelectedExerciseId(option.id);
+                                                        showToast(`${option.name} selected with equivalent training stress.`, 'info');
+                                                    }}
+                                                >
+                                                    {option.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {isSelectedOlympicExercise && (
                                 <div className="glass" style={{ padding: '1rem', marginBottom: '1rem', border: '1px solid var(--border-glass)' }}>
@@ -1107,6 +1194,30 @@ const WorkoutLog = () => {
                             onChange={e => setSessionRpe(parseFloat(e.target.value))}
                             style={{ width: '100%', marginBottom: '2rem', cursor: 'pointer' }}
                         />
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1.5rem', textAlign: 'left' }}>
+                            {[
+                                ['recoveryScore', 'Recovery'],
+                                ['sleepQuality', 'Sleep'],
+                                ['motivationLevel', 'Motivation'],
+                                ['painScore', 'Pain']
+                            ].map(([field, label]) => (
+                                <div className="input-group" style={{ margin: 0 }} key={field}>
+                                    <label>{label} ({completionFeedback[field]})</label>
+                                    <input
+                                        type="range"
+                                        min="1"
+                                        max="10"
+                                        value={completionFeedback[field]}
+                                        onChange={e => setCompletionFeedback(prev => ({ ...prev, [field]: parseInt(e.target.value, 10) }))}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="empty-state" style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
+                            {getRecoveryAdjustment({ sessionRpe, ...completionFeedback }, recovery).note}
+                        </div>
                         
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem', fontSize: '0.8rem', opacity: 0.6, marginBottom: '2rem' }}>
                             <div style={{ textAlign: 'left' }}>1 (Very Easy)</div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 
 import { useSettings } from '../context/SettingsContext';
@@ -6,6 +7,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     BarChart, Bar
 } from 'recharts';
+import { getOlympicProgressDashboard, getSmartRecommendations } from '../services/OlympicWeightliftingEngine';
 
 // DOTS score calculation
 const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
@@ -19,9 +21,11 @@ const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
 };
 
 const Progress = () => {
-    const { weights, workouts, isLoading } = useData();
+    const location = useLocation();
+    const { weights, workouts, recovery, profile, isLoading } = useData();
     const { unit } = useSettings();
     const [selectedExercise, setSelectedExercise] = useState('bb_squat');
+    const [activeTab, setActiveTab] = useState(() => new URLSearchParams(location.search).get('tab') || 'general');
 
     // List of exercises for comparison
     const exerciseList = useMemo(() => {
@@ -101,13 +105,24 @@ const Progress = () => {
         return data;
     }, [workouts, weights]);
 
+    const olympicDashboards = useMemo(() => getOlympicProgressDashboard(workouts, recovery), [workouts, recovery]);
+    const olympicRecommendations = useMemo(() => getSmartRecommendations({ profile, workouts, recovery }).slice(0, 4), [profile, workouts, recovery]);
+
+    const olympicCards = [
+        ['snatch', 'Snatch Progress'],
+        ['cleanJerk', 'Clean & Jerk Progress'],
+        ['total', 'Total Progress'],
+        ['frontSquat', 'Front Squat Progress'],
+        ['backSquat', 'Back Squat Progress']
+    ];
+
     if (isLoading) return <div className="card">Loading progress data...</div>;
 
     return (
         <div className="animate-in" style={{ textAlign: 'left', paddingBottom: '5rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <h1 style={{ margin: 0 }}>Performance Analytics</h1>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                {activeTab === 'general' && <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                     <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Focus Exercise:</label>
                     <select 
                         value={selectedExercise} 
@@ -118,8 +133,65 @@ const Progress = () => {
                             <option key={ex.id} value={ex.id}>{ex.name}</option>
                         ))}
                     </select>
-                </div>
+                </div>}
             </div>
+
+            <div className="segmented-control" style={{ marginBottom: '1.5rem' }}>
+                <button type="button" className={activeTab === 'general' ? 'active' : ''} onClick={() => setActiveTab('general')}>General</button>
+                <button type="button" className={activeTab === 'olympic' ? 'active' : ''} onClick={() => setActiveTab('olympic')}>Olympic Weightlifting</button>
+            </div>
+
+            {activeTab === 'olympic' ? (
+                <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1rem', marginBottom: '1.25rem' }}>
+                        {olympicCards.map(([key, label]) => {
+                            const data = olympicDashboards[key] || [];
+                            const best = Math.max(0, ...data.map(row => row.e1rm || 0));
+                            return (
+                                <div key={key} className="glass-card">
+                                    <p className="page-kicker">{label}</p>
+                                    <h2 style={{ marginTop: 0 }}>{best ? `${Math.round(best)} ${unit} e1RM` : 'Awaiting data'}</h2>
+                                    <div style={{ height: 220, width: '100%' }}>
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <LineChart data={data}>
+                                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} />
+                                                <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={10} />
+                                                <Tooltip contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '8px' }} />
+                                                <Line type="monotone" dataKey="e1rm" name="e1RM" stroke="var(--primary)" strokeWidth={3} dot={{ r: 3 }} />
+                                                <Line type="monotone" dataKey="readiness" name="Readiness" stroke="var(--secondary)" strokeWidth={2} dot={false} />
+                                            </LineChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', marginTop: '0.75rem' }}>
+                                        <div className="empty-state"><strong>Volume</strong><br />{Math.round(data.reduce((sum, row) => sum + (row.volume || 0), 0)).toLocaleString()}</div>
+                                        <div className="empty-state"><strong>Intensity</strong><br />{Math.round(data.reduce((sum, row) => sum + (row.intensity || 0), 0) / Math.max(data.filter(row => row.intensity).length, 1)) || '--'}%</div>
+                                        <div className="empty-state"><strong>PRs</strong><br />{data.filter((row, index) => row.e1rm >= Math.max(...data.slice(0, index + 1).map(item => item.e1rm))).length}</div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <section className="glass-card">
+                        <p className="page-kicker">Coach Panel</p>
+                        <h2 style={{ marginTop: 0 }}>Smart Recommendations</h2>
+                        <div style={{ display: 'grid', gap: '0.75rem' }}>
+                            {olympicRecommendations.map((rec, idx) => (
+                                <div className="list-row" key={idx}>
+                                    <div>
+                                        <strong>{rec.text}</strong>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                            DMAIC Control: monitor this after the next completed Olympic session.
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                </>
+            ) : (
+                <>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
                 {/* E1RM Trend Chart */}
@@ -194,6 +266,8 @@ const Progress = () => {
                     </div>
                 </div>
             </div>
+                </>
+            )}
         </div>
 
     );

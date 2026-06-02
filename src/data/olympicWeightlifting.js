@@ -204,6 +204,45 @@ export const olympicWeightliftingExercises = [
         technicalEmphasisTags: ['first_pull', 'extension', 'bar_proximity', 'finish_position']
     }),
     buildOlympicExercise({
+        id: 'oly_block_pull',
+        name: 'Block Pull',
+        category: OLYMPIC_EXERCISE_CATEGORIES.PULL_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.PULL_VARIATION,
+        technicalComplexity: 5,
+        primaryMuscleGroups: ['quads', 'glutes', 'hamstrings', 'traps', 'back'],
+        skillClassification: 'strength_derivative',
+        mobilityRequirements: ['hips', 'thoracic_spine'],
+        recommendedRepRange: '2-5',
+        recommendedIntensityRange: '85-115% competition lift 1RM',
+        technicalEmphasisTags: ['power_position', 'extension', 'bar_proximity', 'finish_position']
+    }),
+    buildOlympicExercise({
+        id: 'oly_deficit_pull',
+        name: 'Deficit Pull',
+        category: OLYMPIC_EXERCISE_CATEGORIES.PULL_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.PULL_VARIATION,
+        technicalComplexity: 6,
+        primaryMuscleGroups: ['quads', 'glutes', 'hamstrings', 'back', 'traps'],
+        skillClassification: 'strength_derivative',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine'],
+        recommendedRepRange: '2-4',
+        recommendedIntensityRange: '75-105% competition lift 1RM',
+        technicalEmphasisTags: ['start_position', 'leg_drive', 'patience_off_floor', 'bar_path']
+    }),
+    buildOlympicExercise({
+        id: 'oly_paused_pull',
+        name: 'Paused Pull',
+        category: OLYMPIC_EXERCISE_CATEGORIES.PULL_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.PULL_VARIATION,
+        technicalComplexity: 6,
+        primaryMuscleGroups: ['quads', 'glutes', 'hamstrings', 'back', 'traps'],
+        skillClassification: 'positional_strength',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine'],
+        recommendedRepRange: '2-4',
+        recommendedIntensityRange: '70-100% competition lift 1RM',
+        technicalEmphasisTags: ['position_control', 'balance', 'bar_proximity', 'tempo']
+    }),
+    buildOlympicExercise({
         id: 'oly_front_squat',
         name: 'Front Squat',
         category: OLYMPIC_EXERCISE_CATEGORIES.SQUAT_VARIATIONS,
@@ -215,6 +254,32 @@ export const olympicWeightliftingExercises = [
         recommendedRepRange: '1-6',
         recommendedIntensityRange: '70-100% front squat 1RM',
         technicalEmphasisTags: ['upright_torso', 'rack_position', 'bracing', 'depth']
+    }),
+    buildOlympicExercise({
+        id: 'oly_pause_front_squat',
+        name: 'Pause Front Squat',
+        category: OLYMPIC_EXERCISE_CATEGORIES.SQUAT_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.SQUAT_VARIATION,
+        technicalComplexity: 6,
+        primaryMuscleGroups: ['quads', 'glutes', 'upper_back', 'core'],
+        skillClassification: 'positional_strength',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '1-5',
+        recommendedIntensityRange: '60-90% front squat 1RM',
+        technicalEmphasisTags: ['bottom_position', 'bracing', 'rack_position', 'clean_recovery']
+    }),
+    buildOlympicExercise({
+        id: 'oly_tempo_front_squat',
+        name: 'Tempo Front Squat',
+        category: OLYMPIC_EXERCISE_CATEGORIES.SQUAT_VARIATIONS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.SQUAT_VARIATION,
+        technicalComplexity: 6,
+        primaryMuscleGroups: ['quads', 'glutes', 'upper_back', 'core'],
+        skillClassification: 'positional_strength',
+        mobilityRequirements: ['ankles', 'hips', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '2-5',
+        recommendedIntensityRange: '55-85% front squat 1RM',
+        technicalEmphasisTags: ['tempo', 'posture', 'balance', 'depth']
     }),
     buildOlympicExercise({
         id: 'oly_jerk',
@@ -280,6 +345,32 @@ export const olympicWeightliftingExercises = [
         recommendedRepRange: '2-6',
         recommendedIntensityRange: '60-85% press/jerk 1RM',
         technicalEmphasisTags: ['dip_timing', 'leg_drive', 'finish_lockout', 'vertical_bar']
+    }),
+    buildOlympicExercise({
+        id: 'oly_jerk_balance',
+        name: 'Jerk Balance',
+        category: OLYMPIC_EXERCISE_CATEGORIES.TECHNICAL_DRILLS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.TECHNICAL_DRILL,
+        technicalComplexity: 7,
+        primaryMuscleGroups: ['quads', 'shoulders', 'triceps', 'upper_back', 'core'],
+        skillClassification: 'jerk_drill',
+        mobilityRequirements: ['ankles', 'hips', 'shoulders', 'thoracic_spine', 'wrists'],
+        recommendedRepRange: '2-5',
+        recommendedIntensityRange: '40-75% jerk 1RM',
+        technicalEmphasisTags: ['split_footwork', 'front_foot', 'lockout', 'balance']
+    }),
+    buildOlympicExercise({
+        id: 'oly_tall_snatch',
+        name: 'Tall Snatch',
+        category: OLYMPIC_EXERCISE_CATEGORIES.TECHNICAL_DRILLS,
+        movementType: OLYMPIC_MOVEMENT_TYPES.TECHNICAL_DRILL,
+        technicalComplexity: 7,
+        primaryMuscleGroups: ['traps', 'shoulders', 'upper_back', 'core'],
+        skillClassification: 'skill_drill',
+        mobilityRequirements: ['shoulders', 'thoracic_spine', 'hips', 'wrists'],
+        recommendedRepRange: '2-4',
+        recommendedIntensityRange: '25-55% snatch 1RM',
+        technicalEmphasisTags: ['speed_under', 'turnover', 'footwork', 'lockout']
     }),
     buildOlympicExercise({
         id: 'oly_clean_and_jerk',
