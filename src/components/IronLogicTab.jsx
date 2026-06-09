@@ -4,12 +4,72 @@ import { useAuth } from '../context/AuthContext';
 import { runDMAICCycle } from '../services/DMAICService';
 import { useToast } from '../context/ToastContext';
 
+const formatContribution = (value = 0) => `${value > 0 ? '+' : ''}${value} pts`;
+
+const formatMetricValue = (metric, value) => {
+    if (value === null || value === undefined || value === '') return 'No data';
+    if (metric === 'volume') return Math.round(value).toLocaleString();
+    if (metric === 'performance') return `${value > 0 ? '+' : ''}${value}%`;
+    if (metric === 'e1rm') return value ? `${value} kg` : 'No data';
+    return value;
+};
+
+const statusColor = (classification = '') => {
+    switch (classification) {
+        case 'Adaptive': return 'var(--accent-success)';
+        case 'Functional Overreaching': return 'var(--primary)';
+        case 'Watch Status': return 'var(--accent-warning)';
+        case 'Maladapted': return 'var(--accent-error)';
+        default: return 'var(--secondary)';
+    }
+};
+
+const ComparisonTable = ({ comparison }) => {
+    const rows = [
+        ['readiness', 'Readiness'],
+        ['recovery', 'Recovery'],
+        ['performance', 'Performance'],
+        ['volume', 'Volume'],
+        ['fatigue', 'Fatigue'],
+        ['e1rm', 'e1RM']
+    ];
+
+    if (!comparison) return null;
+
+    return (
+        <div style={{ marginTop: '1.25rem', overflowX: 'auto' }}>
+            <h4 style={{ marginBottom: '0.75rem' }}>Historical Comparison</h4>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '620px', fontSize: '0.9rem' }}>
+                <thead>
+                    <tr style={{ color: 'var(--text-muted)' }}>
+                        <th style={{ textAlign: 'left', padding: '0.75rem', borderBottom: '1px solid var(--border-glass)' }}>Metric</th>
+                        <th style={{ textAlign: 'right', padding: '0.75rem', borderBottom: '1px solid var(--border-glass)' }}>Current Week</th>
+                        <th style={{ textAlign: 'right', padding: '0.75rem', borderBottom: '1px solid var(--border-glass)' }}>Previous Week</th>
+                        <th style={{ textAlign: 'right', padding: '0.75rem', borderBottom: '1px solid var(--border-glass)' }}>28-Day Average</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map(([key, label]) => (
+                        <tr key={key}>
+                            <td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-glass)', fontWeight: 700 }}>{label}</td>
+                            <td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-glass)', textAlign: 'right' }}>{formatMetricValue(key, comparison.currentWeek?.[key])}</td>
+                            <td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-glass)', textAlign: 'right' }}>{formatMetricValue(key, comparison.previousWeek?.[key])}</td>
+                            <td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-glass)', textAlign: 'right' }}>{formatMetricValue(key, comparison.average28Day?.[key])}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
 const IronLogicTab = () => {
     const { user } = useAuth();
     const { profile, workouts } = useData();
     const { showToast } = useToast();
     const [dmaicState, setDmaicState] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [showExplanation, setShowExplanation] = useState(false);
 
     const refreshAnalysis = useCallback(async () => {
         const athleteId = profile?.id || user?.id;
@@ -155,18 +215,110 @@ const IronLogicTab = () => {
                 {activePhase === 'analyze' && (
                     <div>
                         <h3>Phase 3: Analyze</h3>
-                        <p style={{ opacity: 0.8 }}>Detecting adaptation trends and state classification.</p>
-                        <div style={{ marginTop: '1.5rem', padding: '1.5rem', background: 'rgba(var(--primary-rgb), 0.1)', borderRadius: '12px', border: '1px solid var(--primary)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 'bold', textTransform: 'uppercase' }}>Classification</div>
-                            <div style={{ fontSize: '2rem', fontWeight: '900', margin: '0.5rem 0' }}>{dmaicState?.status?.classification || 'Stable'}</div>
-                            <ul style={{ paddingLeft: '1.2rem', margin: 0, opacity: 0.8 }}>
-                                {dmaicState?.status?.reasoning.map((r, i) => <li key={i} style={{ marginBottom: '0.5rem' }}>{r}</li>)}
-                                {dmaicState?.status?.reasoning.length === 0 && <li>Maintaining consistent adaptation.</li>}
-                            </ul>
-                            <h4 style={{ marginBottom: '0.5rem' }}>Decision Rules</h4>
-                            <ul style={{ paddingLeft: '1.2rem', margin: 0, opacity: 0.8 }}>
-                                {dmaicState?.status?.decisionRules?.map((rule, i) => <li key={i} style={{ marginBottom: '0.5rem' }}>{rule}</li>)}
-                            </ul>
+                        <p style={{ opacity: 0.8 }}>Transparent adaptation scoring, evidence, and state classification.</p>
+                        <div style={{ marginTop: '1.5rem', padding: '1.5rem', background: 'rgba(var(--primary-rgb), 0.08)', borderRadius: '8px', border: `1px solid ${statusColor(dmaicState?.status?.classification)}` }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                                <div>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase' }}>Classification</div>
+                                    <div style={{ color: statusColor(dmaicState?.status?.classification), fontSize: '2rem', fontWeight: '900', margin: '0.35rem 0' }}>
+                                        {dmaicState?.status?.classification || 'Adaptive'}
+                                    </div>
+                                    <div style={{ color: 'var(--text-muted)' }}>
+                                        Confidence: <strong style={{ color: 'var(--text-main)' }}>{dmaicState?.status?.confidence?.score || 0}%</strong>
+                                    </div>
+                                </div>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 'bold', textTransform: 'uppercase' }}>Final Adaptation Score</div>
+                                    <div style={{ fontSize: '2.35rem', fontWeight: 900 }}>{dmaicState?.status?.score ?? 50}</div>
+                                </div>
+                            </div>
+
+                            <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>
+                                {dmaicState?.status?.confidence?.reason || 'Run a cycle to calculate confidence.'}
+                            </p>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.85rem', marginTop: '1rem' }}>
+                                {(dmaicState?.status?.scoreBreakdown || []).map((factor) => (
+                                    <div key={factor.label} className="card" style={{ padding: '1rem', background: 'rgba(255,255,255,0.035)' }}>
+                                        <small style={{ color: 'var(--text-muted)' }}>{factor.label}</small>
+                                        <div style={{ marginTop: '0.45rem', fontWeight: 800 }}>{factor.value}</div>
+                                        <div style={{ color: factor.contribution < 0 ? 'var(--accent-error)' : 'var(--accent-success)', marginTop: '0.35rem', fontWeight: 800 }}>
+                                            {formatContribution(factor.contribution)}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div style={{ marginTop: '1.25rem' }}>
+                                <h4 style={{ marginBottom: '0.5rem' }}>Why This Classification?</h4>
+                                <p style={{ color: 'var(--text-muted)', marginTop: 0 }}>{dmaicState?.status?.evidence?.summary}</p>
+                                <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+                                    <div>
+                                        <strong>Evidence Used</strong>
+                                        <ul style={{ paddingLeft: '1.2rem', marginTop: '0.5rem', color: 'var(--text-muted)' }}>
+                                            {(dmaicState?.status?.evidence?.negative || []).map((item, i) => <li key={i}>{item}</li>)}
+                                            {(!dmaicState?.status?.evidence?.negative?.length) && <li>No major negative threshold dominated the decision.</li>}
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <strong>Positive Signals Detected</strong>
+                                        <ul style={{ paddingLeft: '1.2rem', marginTop: '0.5rem', color: 'var(--text-muted)' }}>
+                                            {(dmaicState?.status?.evidence?.positive || []).map((item, i) => <li key={i}>{item}</li>)}
+                                            {(!dmaicState?.status?.evidence?.positive?.length) && <li>No strong positive counter-signal was detected yet.</li>}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {dmaicState?.status?.conflict && (
+                                <div style={{ marginTop: '1.25rem', padding: '1rem', borderRadius: '8px', border: '1px solid var(--accent-warning)', background: 'rgba(245, 158, 11, 0.08)' }}>
+                                    <strong>{dmaicState.status.conflict.title}</strong>
+                                    <p style={{ color: 'var(--text-muted)', marginBottom: '0.5rem' }}>{dmaicState.status.conflict.message}</p>
+                                    <ul style={{ paddingLeft: '1.2rem', color: 'var(--text-muted)' }}>
+                                        {dmaicState.status.conflict.possibilities.map((item, i) => <li key={i}>{item}</li>)}
+                                    </ul>
+                                    <div><strong>Recommendation:</strong> {dmaicState.status.conflict.recommendation}</div>
+                                </div>
+                            )}
+
+                            <ComparisonTable comparison={dmaicState?.status?.historicalComparison} />
+
+                            <button
+                                className="btn"
+                                style={{ marginTop: '1.25rem' }}
+                                onClick={() => setShowExplanation(prev => !prev)}
+                            >
+                                Why Am I Seeing This?
+                            </button>
+
+                            {showExplanation && (
+                                <div style={{ marginTop: '1rem', padding: '1rem', border: '1px solid var(--border-glass)', borderRadius: '8px', background: 'rgba(0,0,0,0.22)' }}>
+                                    <h4 style={{ marginTop: 0 }}>Data Sources Used</h4>
+                                    <div style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                                        Workouts, planned sessions, recovery logs, e1RM trends, RPE, soreness, acute volume, chronic volume, and prior DMAIC snapshots.
+                                    </div>
+                                    <h4>Thresholds Triggered</h4>
+                                    <div style={{ display: 'grid', gap: '0.65rem' }}>
+                                        {(dmaicState?.status?.evidence?.thresholds || []).map((threshold) => (
+                                            <div key={threshold.label} style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 0.8fr 0.7fr 1.4fr', gap: '0.75rem', padding: '0.75rem', border: '1px solid var(--border-glass)', borderRadius: '8px', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                                                <strong style={{ color: 'var(--text-main)' }}>{threshold.label}</strong>
+                                                <span>Threshold: {threshold.threshold}</span>
+                                                <span>Current: {threshold.current}</span>
+                                                <span>{threshold.triggered ? 'Triggered: YES' : 'Triggered: NO'}</span>
+                                                <span>Impact: {threshold.impact}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <h4>Rule Logic</h4>
+                                    <ul style={{ paddingLeft: '1.2rem', color: 'var(--text-muted)' }}>
+                                        {dmaicState?.status?.decisionRules?.map((rule, i) => <li key={i}>{rule}</li>)}
+                                    </ul>
+                                    <h4>AI Interpretation</h4>
+                                    <ul style={{ paddingLeft: '1.2rem', color: 'var(--text-muted)' }}>
+                                        {dmaicState?.status?.reasoning?.map((r, i) => <li key={i}>{r}</li>)}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

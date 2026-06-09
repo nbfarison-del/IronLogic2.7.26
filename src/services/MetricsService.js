@@ -52,6 +52,11 @@ const average = (values) => {
     return valid.reduce((sum, value) => sum + value, 0) / valid.length;
 };
 
+const getPercentChange = (currentValue, baselineValue) => {
+    if (!baselineValue) return null;
+    return ((currentValue - baselineValue) / baselineValue) * 100;
+};
+
 const sumVolumeWithinDays = (workouts, days, now = new Date()) => workouts.reduce((sum, entry) => {
     const entryDate = parseDate(entry.date);
     if (!entryDate || daysAgo(entryDate, now) > days) return sum;
@@ -104,6 +109,11 @@ const buildE1RMTrends = (workouts) => {
 
     return { e1rm, trend, plateau };
 };
+
+const averageE1RM = (workouts) => average(workouts.map(entry => {
+    if (entry.type === 'cardio') return 0;
+    return parseFloat(entry.estimated1RM) || calculateE1RM(entry.weight, entry.reps, getRpe(entry) || 10);
+}).filter(value => value > 0));
 
 const calculateAdherence = (workouts, plannedWorkouts) => {
     if (!plannedWorkouts?.length) return null;
@@ -172,6 +182,10 @@ export const calculateMetrics = (input = {}, readiness = null) => {
         : [];
 
     const { e1rm, trend, plateau } = buildE1RMTrends(recent28);
+    const currentE1RM = averageE1RM(recent7);
+    const previousE1RM = averageE1RM(previous7);
+    const average28E1RM = averageE1RM(recent28);
+    const performancePercentChange = getPercentChange(currentE1RM, previousE1RM || average28E1RM);
     const acwr = chronicWeeklyVolume > 0 ? acuteVolume / chronicWeeklyVolume : acuteVolume > 0 ? 1.5 : 1;
     const fatigueIndex = Math.min(10, Math.max(0, (
         (acuteRpe || average(rpeValues) || 0) * 0.65
@@ -200,6 +214,33 @@ export const calculateMetrics = (input = {}, readiness = null) => {
         acwr: Math.round(acwr * 100) / 100,
         adherence: calculateAdherence(recent28, plannedWorkouts),
         bodyWeightLatest: bodyWeight?.[bodyWeight.length - 1]?.weight || null,
+        historicalComparison: {
+            currentWeek: {
+                readiness: Math.round((acuteRecovery || 0) * 10) / 10,
+                recovery: Math.round((acuteRecovery || 0) * 10) / 10,
+                performance: Math.round((performancePercentChange || 0) * 10) / 10,
+                volume: Math.round(acuteVolume || 0),
+                fatigue: Math.round(fatigueIndex * 10) / 10,
+                e1rm: Math.round(currentE1RM || 0)
+            },
+            previousWeek: {
+                readiness: Math.round((previousRecovery || 0) * 10) / 10,
+                recovery: Math.round((previousRecovery || 0) * 10) / 10,
+                performance: 0,
+                volume: Math.round(previousWeekVolume || 0),
+                fatigue: Math.round(((previousRpe || 0) * 0.65 + (previousRecovery ? Math.max(10 - previousRecovery, 0) * 0.35 : 0)) * 10) / 10,
+                e1rm: Math.round(previousE1RM || 0)
+            },
+            average28Day: {
+                readiness: Math.round(average(recoveryScores) * 10) / 10,
+                recovery: Math.round(average(recoveryScores) * 10) / 10,
+                performance: Math.round((performancePercentChange || 0) * 10) / 10,
+                volume: Math.round(chronicWeeklyVolume || 0),
+                fatigue: Math.round(fatigueIndex * 10) / 10,
+                e1rm: Math.round(average28E1RM || 0)
+            }
+        },
+        performancePercentChange: Math.round((performancePercentChange || 0) * 10) / 10,
         dataQuality: {
             workoutSets28d: recent28.length,
             workoutSets7d: recent7.length,

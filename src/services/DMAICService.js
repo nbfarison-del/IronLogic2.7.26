@@ -78,7 +78,7 @@ export const runDMAICCycle = async (athleteId) => {
             previousDmaicLogs
         });
         const measure = createMeasurementSummary(metrics);
-        const status = analyzeAdaptationState(metrics, define);
+        const status = analyzeAdaptationState(metrics, define, previousDmaicLogs);
         const recommendation = await generatePrescription(define, status, metrics, previousDmaicLogs);
         const control = createControlPlan(status, recommendation, metrics, previousDmaicLogs);
 
@@ -103,38 +103,204 @@ export const runDMAICCycle = async (athleteId) => {
     }
 };
 
-export const analyzeAdaptationState = (metrics = {}, define = {}) => {
+const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
+
+const formatPercent = (value) => `${value > 0 ? '+' : ''}${Math.round(value * 10) / 10}%`;
+
+const getTrendContribution = (trend, positivePoints, negativePoints = positivePoints) => {
+    if (trend === 'up') return positivePoints;
+    if (trend === 'down') return -negativePoints;
+    if (trend === 'flat') return Math.round(positivePoints * 0.5);
+    return 0;
+};
+
+const countPersistentNegativeCycles = (previousDmaicLogs = []) => previousDmaicLogs
+    .filter(log => ['Watch Status', 'Functional Overreaching', 'Maladapted', 'Overreached', 'Fatigued'].includes(log?.status?.classification))
+    .length;
+
+const createScoreBreakdown = (metrics = {}) => {
+    const flags = metrics.flags || {};
+    const adherenceRate = metrics.adherence?.rate;
+    const adherencePercent = adherenceRate === null || adherenceRate === undefined ? null : Math.round(adherenceRate * 100);
+    const totalPerformanceSignals = flags.performanceUp + flags.performanceFlat + flags.performanceDown;
+    const performanceBalance = totalPerformanceSignals
+        ? ((flags.performanceUp - flags.performanceDown) / totalPerformanceSignals) * 100
+        : 0;
+
+    const performanceContribution = totalPerformanceSignals
+        ? Math.round(clamp(performanceBalance, -100, 100) * 0.3)
+        : 0;
+    const recoveryContribution = metrics.recoveryScore
+        ? Math.round((metrics.recoveryScore - 5) * 4) + getTrendContribution(metrics.recoveryTrend, 5, 8)
+        : 0;
+    const adherenceContribution = adherencePercent === null
+        ? 0
+        : Math.round((adherencePercent - 75) * 0.6);
+    const fatigueContribution = metrics.fatigue_index >= 7.5
+        ? -15
+        : metrics.fatigue_index >= 6.5
+            ? -8
+            : 8;
+    const readinessContribution = getTrendContribution(metrics.recoveryTrend, 10);
+    const acwrContribution = metrics.acwr >= 1.5
+        ? -12
+        : metrics.acwr >= 1.3
+            ? -5
+            : metrics.acwr >= 0.8
+                ? 5
+                : -3;
+
+    const factors = [
+        {
+            label: 'Performance Trend',
+            value: totalPerformanceSignals
+                ? `${flags.performanceUp} improving / ${flags.performanceFlat} stable / ${flags.performanceDown} declining`
+                : 'Not enough e1RM history',
+            contribution: performanceContribution,
+            evidence: metrics.performancePercentChange
+                ? `Estimated strength output changed ${formatPercent(metrics.performancePercentChange)} versus the comparison window.`
+                : 'No reliable recent e1RM change detected.'
+        },
+        {
+            label: 'Recovery Score',
+            value: `${metrics.recoveryScore || 0}/10`,
+            contribution: clamp(recoveryContribution, -20, 20),
+            evidence: `Recovery trend is ${metrics.recoveryTrend || 'new'}.`
+        },
+        {
+            label: 'Session Completion Rate',
+            value: adherencePercent === null ? 'No planned sessions' : `${adherencePercent}%`,
+            contribution: clamp(adherenceContribution, -15, 15),
+            evidence: adherencePercent === null
+                ? 'No planned sessions were available to score adherence.'
+                : `${metrics.adherence.completedPlannedSessions} of ${metrics.adherence.plannedSessions} planned sessions were completed.`
+        },
+        {
+            label: 'Fatigue Index',
+            value: metrics.fatigue_index >= 7.5 ? `Elevated (${metrics.fatigue_index}/10)` : `${metrics.fatigue_index || 0}/10`,
+            contribution: fatigueContribution,
+            evidence: metrics.fatigue_index >= 7.5
+                ? 'Fatigue exceeded the elevated threshold of 7.5.'
+                : 'Fatigue remained below the elevated threshold of 7.5.'
+        },
+        {
+            label: 'Readiness Trend',
+            value: metrics.recoveryTrend || 'new',
+            contribution: readinessContribution,
+            evidence: 'Readiness is currently inferred from recovery trend until a separate readiness stream is available.'
+        },
+        {
+            label: 'Acute:Chronic Workload Ratio',
+            value: metrics.acwr || 1,
+            contribution: acwrContribution,
+            evidence: metrics.acwr >= 1.3
+                ? 'Acute load is meaningfully above chronic weekly load.'
+                : 'Workload ratio is inside the normal monitoring range.'
+        }
+    ];
+
+    const score = clamp(50 + factors.reduce((sum, factor) => sum + factor.contribution, 0));
+    return { factors, score, performanceBalance, adherencePercent };
+};
+
+const createClassificationEvidence = (classification, metrics, breakdown, persistentNegativeCycles) => {
+    const flags = metrics.flags || {};
+    const positive = [];
+    const negative = [];
+    const thresholds = [
+        { label: 'Fatigue Threshold', threshold: '> 7.5', current: metrics.fatigue_index || 0, triggered: (metrics.fatigue_index || 0) > 7.5, impact: '-15 adaptation points when elevated' },
+        { label: 'ACWR Caution Threshold', threshold: '> 1.30', current: metrics.acwr || 1, triggered: (metrics.acwr || 1) > 1.3, impact: '-5 to -12 adaptation points' },
+        { label: 'Recovery Decline Rule', threshold: 'trend = down', current: metrics.recoveryTrend || 'new', triggered: metrics.recoveryTrend === 'down', impact: 'Required for Maladapted classification' },
+        { label: 'Performance Decline Rule', threshold: 'more declining than improving lifts', current: `${flags.performanceDown || 0} down / ${flags.performanceUp || 0} up`, triggered: (flags.performanceDown || 0) > (flags.performanceUp || 0), impact: 'Required for Maladapted classification' },
+        { label: 'Persistence Rule', threshold: '> 2 weeks', current: `${persistentNegativeCycles + 1} flagged cycle(s)`, triggered: persistentNegativeCycles >= 2, impact: 'Required for Maladapted classification' }
+    ];
+
+    if ((flags.performanceUp || 0) > 0) positive.push(`${flags.performanceUp} movement trend(s) are improving.`);
+    if ((flags.performanceFlat || 0) > 0) positive.push(`${flags.performanceFlat} movement trend(s) are stable.`);
+    if (metrics.performancePercentChange > 0) positive.push(`Estimated strength output improved ${formatPercent(metrics.performancePercentChange)}.`);
+    if (breakdown.adherencePercent >= 90) positive.push(`Training adherence remained high at ${breakdown.adherencePercent}%.`);
+    if ((metrics.recoveryScore || 0) >= 6.5) positive.push(`Recovery score is still serviceable at ${metrics.recoveryScore}/10.`);
+
+    if ((flags.performanceDown || 0) > 0) negative.push(`${flags.performanceDown} movement trend(s) are declining.`);
+    if (metrics.recoveryTrend === 'down') negative.push('Recovery trend declined across the monitoring window.');
+    if ((metrics.fatigue_index || 0) >= 7.5) negative.push(`Fatigue index is elevated at ${metrics.fatigue_index}/10.`);
+    if ((metrics.acwr || 1) >= 1.3) negative.push(`Acute workload is ${Math.round(((metrics.acwr || 1) - 1) * 100)}% above chronic workload.`);
+
+    return {
+        summary: `The system classified you as ${classification} because the adaptation score was ${breakdown.score}/100 and the rule checks below were applied.`,
+        positive,
+        negative,
+        thresholds
+    };
+};
+
+const createConflictAnalysis = (metrics = {}, classification = '') => {
+    const flags = metrics.flags || {};
+    const performanceImproving = (flags.performanceUp || 0) > (flags.performanceDown || 0) || (metrics.performancePercentChange || 0) > 1.5;
+    const negativeStatus = ['Functional Overreaching', 'Watch Status', 'Maladapted'].includes(classification);
+
+    if (!performanceImproving || !negativeStatus) return null;
+
+    return {
+        title: 'Potential Conflict Detected',
+        message: 'Your strength metrics are increasing despite elevated fatigue or workload markers.',
+        possibilities: [
+            'Functional overreaching',
+            'Productive accumulation phase',
+            'Early fatigue accumulation',
+            'False positive fatigue detection'
+        ],
+        recommendation: classification === 'Maladapted'
+            ? 'Confirm the trend with another check before making a major change unless recovery continues falling.'
+            : 'Continue monitoring for 1-2 weeks before initiating a deload.'
+    };
+};
+
+const createConfidence = (metrics = {}, classification = '', conflict = null, persistentNegativeCycles = 0) => {
+    const dataQuality = metrics.dataQuality || {};
+    let confidence = 72;
+    if ((dataQuality.workoutSets28d || 0) < 8) confidence -= 18;
+    if ((dataQuality.recoveryEntries14d || 0) < 4) confidence -= 12;
+    if (!metrics.adherence) confidence -= 5;
+    if (conflict) confidence -= 18;
+    if (classification === 'Maladapted' && persistentNegativeCycles < 2) confidence -= 10;
+
+    const reason = conflict
+        ? 'Performance indicators are improving while fatigue or workload indicators are worsening. Mixed signals reduce confidence.'
+        : 'Training, recovery, and workload signals are directionally consistent enough for this classification.';
+
+    return { score: clamp(Math.round(confidence), 35, 95), reason };
+};
+
+export const analyzeAdaptationState = (metrics = {}, define = {}, previousDmaicLogs = []) => {
     const flags = metrics.flags || {};
     const reasoning = [];
     const decisionRules = [];
-    let classification = 'Stable';
+    const breakdown = createScoreBreakdown(metrics);
+    const persistentNegativeCycles = countPersistentNegativeCycles(previousDmaicLogs);
+    const performanceImproving = flags.performanceUp > flags.performanceDown || (metrics.performancePercentChange || 0) > 1.5;
+    const performanceDeclining = flags.performanceDown > flags.performanceUp;
+    const recoveryDeclining = metrics.recoveryTrend === 'down';
+    const fatigueElevated = (metrics.fatigue_index || 0) >= 7.5;
+    const workloadElevated = (metrics.acwr || 1) >= 1.3 || flags.volumeSpike;
 
-    if (flags.volumeSpike && (flags.highRpe || flags.lowRecovery)) {
-        classification = 'Overreached';
-        reasoning.push('Acute workload is high relative to chronic workload while recovery or RPE indicators are stressed.');
-        decisionRules.push('If ACWR >= 1.5 and RPE is high or recovery is low, reduce volume and cap intensity.');
-    } else if (metrics.fatigue_index >= 7.5 || (metrics.rpeTrend === 'up' && metrics.recoveryTrend === 'down')) {
-        classification = 'Fatigued';
-        reasoning.push('Fatigue markers are elevated or RPE is rising while recovery is falling.');
-        decisionRules.push('If RPE rises and recovery falls across the monitoring window, reduce accessory volume 10-20%.');
-    }
+    let classification = 'Adaptive';
 
-    if (flags.performanceDown > 0 && classification === 'Stable') {
+    if (performanceDeclining && recoveryDeclining && fatigueElevated && persistentNegativeCycles >= 2) {
         classification = 'Maladapted';
-        reasoning.push('One or more movement trends are declining despite continued training exposure.');
-        decisionRules.push('If performance trends down, reassess stimulus and reduce intensity or change exercise selection.');
-    }
-
-    if (flags.performanceFlat > 0 && metrics.fatigue_index < 6 && classification === 'Stable') {
-        classification = 'Understimulated';
-        reasoning.push('Performance is flat while fatigue is manageable, suggesting insufficient overload or stimulus mismatch.');
-        decisionRules.push('If performance plateaus with low fatigue, increase overload or shift exercise stimulus.');
-    }
-
-    if (flags.performanceUp > flags.performanceFlat + flags.performanceDown && metrics.fatigue_index < 7.5) {
-        classification = 'Advancing';
-        reasoning.push('Performance is improving without excessive fatigue accumulation.');
-        decisionRules.push('If performance improves and readiness remains acceptable, continue progression.');
+        reasoning.push('Performance, recovery, and fatigue are all negative, and the pattern has persisted beyond two weeks.');
+        decisionRules.push('Maladapted requires performance declining, recovery declining, fatigue elevated, and persistence across more than two weeks.');
+    } else if (performanceImproving && (fatigueElevated || workloadElevated)) {
+        classification = 'Functional Overreaching';
+        reasoning.push('Performance is improving while fatigue or workload is elevated, suggesting productive accumulation rather than maladaptation.');
+        decisionRules.push('If performance continues improving, classify elevated fatigue as functional overreaching before calling it maladaptation.');
+    } else if ((performanceDeclining && (recoveryDeclining || fatigueElevated)) || breakdown.score < 45) {
+        classification = 'Watch Status';
+        reasoning.push('One or more negative signals are present, but the full maladaptation rule has not been met.');
+        decisionRules.push('Use Watch Status when negative signals need monitoring but performance/recovery/fatigue/persistence do not all align.');
+    } else {
+        reasoning.push('Performance, recovery, and workload signals are compatible with continued adaptation.');
+        decisionRules.push('Performance is the validation metric; fatigue markers provide context and do not override stable or improving output alone.');
     }
 
     if (define?.constraints?.injuryHistory || define?.constraints?.movementLimitations) {
@@ -142,13 +308,18 @@ export const analyzeAdaptationState = (metrics = {}, define = {}) => {
         decisionRules.push('If movement limitations are present, prioritize substitutions and conservative progression.');
     }
 
-    if (reasoning.length === 0) {
-        reasoning.push('Current training, recovery, and performance signals are balanced.');
-        decisionRules.push('Maintain current plan while continuing weekly monitoring.');
-    }
+    const conflict = createConflictAnalysis(metrics, classification);
+    const confidence = createConfidence(metrics, classification, conflict, persistentNegativeCycles);
+    const evidence = createClassificationEvidence(classification, metrics, breakdown, persistentNegativeCycles);
 
     return {
         classification,
+        score: breakdown.score,
+        scoreBreakdown: breakdown.factors,
+        confidence,
+        evidence,
+        conflict,
+        historicalComparison: metrics.historicalComparison,
         reasoning,
         decisionRules,
         acwr: metrics.acwr || 1,
@@ -166,6 +337,42 @@ const getFallbackRecommendation = (classification, define = {}) => {
         : 'Keep exercise selection stable unless execution quality changes.';
 
     const fallbacks = {
+        'Functional Overreaching': {
+            adjustmentType: 'maintain',
+            title: 'Productive Accumulation Watch',
+            description: 'Performance is improving while fatigue is elevated. Treat this as functional overreaching unless recovery or output begins to fall.',
+            specifics: {
+                volume: 'Hold current volume for 1 week or trim nonessential accessories 5-10%',
+                intensity: 'Keep main lift intensity stable and avoid grinders',
+                exerciseSelection: constraintNote,
+                recovery: 'Monitor sleep, soreness, and readiness before each hard session',
+                focus: 'Preserve performance while watching fatigue'
+            }
+        },
+        'Watch Status': {
+            adjustmentType: 'maintain',
+            title: 'Monitor Before Changing Course',
+            description: 'Some negative indicators are present, but the system does not have enough aligned evidence to call this maladaptation.',
+            specifics: {
+                volume: 'Keep planned volume stable unless readiness drops again',
+                intensity: 'Cap surprise high-fatigue sessions at RPE 8',
+                exerciseSelection: constraintNote,
+                recovery: 'Add one extra recovery check-in this week',
+                focus: 'Confirm whether the signal persists'
+            }
+        },
+        Adaptive: {
+            adjustmentType: 'intensity_increase',
+            title: 'Validated Adaptation',
+            description: 'Performance and recovery signals support continued progression. Fatigue markers are being used as context, not as the primary verdict.',
+            specifics: {
+                volume: 'Keep volume stable',
+                intensity: 'Progress load 2-5% where bar speed and RPE support it',
+                exerciseSelection: constraintNote,
+                recovery: 'Maintain current recovery strategy',
+                focus: 'Measurable performance adaptation'
+            }
+        },
         Overreached: {
             adjustmentType: 'volume_reduction',
             title: 'Recovery Protection Block',
@@ -240,7 +447,7 @@ const getFallbackRecommendation = (classification, define = {}) => {
         }
     };
 
-    return fallbacks[classification] || fallbacks.Stable;
+    return fallbacks[classification] || fallbacks.Adaptive || fallbacks.Stable;
 };
 
 const generatePrescription = async (define, status, metrics, previousDmaicLogs) => {
@@ -290,7 +497,7 @@ const createControlPlan = (status, recommendation, metrics, previousDmaicLogs = 
     const repeatedFlag = lastClassification && lastClassification === status.classification;
 
     return {
-        monitoringFrequency: status.classification === 'Overreached' || status.classification === 'Maladapted'
+        monitoringFrequency: ['Functional Overreaching', 'Watch Status', 'Maladapted'].includes(status.classification)
             ? 'Check recovery before every session this week'
             : 'Review weekly after the next finalized session',
         nextReviewTrigger: 'After 2 completed sessions or 7 days, whichever comes first',
