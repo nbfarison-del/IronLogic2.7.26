@@ -30,9 +30,13 @@ service cloud.firestore {
       return ownsUserDoc(userId) || isAssignedCoach(userId) || isAdmin();
     }
 
+    function isAdminRoleRequest() {
+      return request.resource.data.keys().hasAny(['role']);
+    }
+
     match /users/{userId}/{document=**} {
       allow read: if canReadUser(userId);
-      allow write: if canWriteUser(userId);
+      allow write: if canWriteUser(userId) && !(isAdminRoleRequest() && !isAdmin() && ownsUserDoc(userId));
     }
 
     match /registered_users/{userId} {

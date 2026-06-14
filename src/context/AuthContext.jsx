@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth } from '../config/firebaseConfig';
 import { getRegisteredUserByEmail } from '../services/firestoreService';
+import { SUPER_ADMIN_EMAIL } from '../config/constants';
 
 const AuthContext = createContext();
 
@@ -32,7 +33,7 @@ export const AuthProvider = ({ children }) => {
                     const { getUserProfile } = await import('../services/firestoreService');
                     const profile = await getUserProfile(firebaseUser.uid);
 
-                    const isAdmin = firebaseUser.email === 'nbfarison@gmail.com';
+                    const isAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
                     setUser({
                         id: firebaseUser.uid,
                         email: firebaseUser.email,
@@ -43,7 +44,7 @@ export const AuthProvider = ({ children }) => {
                     });
                 } catch (error) {
                     console.error("Error fetching user profile:", error);
-                    const isAdmin = firebaseUser.email === 'nbfarison@gmail.com';
+                    const isAdmin = firebaseUser.email === SUPER_ADMIN_EMAIL;
                     setUser({
                         id: firebaseUser.uid,
                         email: firebaseUser.email,

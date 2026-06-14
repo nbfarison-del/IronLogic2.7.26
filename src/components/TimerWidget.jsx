@@ -124,7 +124,7 @@ const TimerWidget = () => {
                     {(type === 'countdown' || type === 'amrap') && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '0.5rem 1rem', borderRadius: '8px' }}>
                             <label style={{ fontSize: '0.8rem', color: '#aaa' }}>Duration (Min)</label>
-                            <input type="number" style={{ width: '60px', background: 'transparent', border: 'none', color: '#fff', textAlign: 'right', fontSize: '1rem', outline: 'none' }} value={Math.floor(duration / 60)} onChange={e => setDuration(parseInt(e.target.value) * 60)} />
+                            <input type="number" style={{ width: '60px', background: 'transparent', border: 'none', color: '#fff', textAlign: 'right', fontSize: '1rem', outline: 'none' }} value={Math.floor(duration / 60)} onChange={e => setDuration(parseInt(e.target.value, 10) * 60)} />
                         </div>
                     )}
 
@@ -132,11 +132,11 @@ const TimerWidget = () => {
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
                                 <label style={{ fontSize: '0.7rem', color: '#aaa', marginBottom: '0.2rem' }}>Interval (Min)</label>
-                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={Math.floor(emomInterval / 60)} onChange={e => setEmomInterval(parseInt(e.target.value) * 60)} />
+                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={Math.floor(emomInterval / 60)} onChange={e => setEmomInterval(parseInt(e.target.value, 10) * 60)} />
                             </div>
                             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
                                 <label style={{ fontSize: '0.7rem', color: '#aaa', marginBottom: '0.2rem' }}>Rounds</label>
-                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={rounds} onChange={e => setRounds(parseInt(e.target.value))} />
+                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={rounds} onChange={e => setRounds(parseInt(e.target.value, 10))} />
                             </div>
                         </div>
                     )}
@@ -145,15 +145,15 @@ const TimerWidget = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.4rem' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
                                 <label style={{ fontSize: '0.7rem', color: '#aaa', marginBottom: '0.2rem' }}>Work (s)</label>
-                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={focusTime} onChange={e => setFocusTime(parseInt(e.target.value))} />
+                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={focusTime} onChange={e => setFocusTime(parseInt(e.target.value, 10))} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
                                 <label style={{ fontSize: '0.7rem', color: '#aaa', marginBottom: '0.2rem' }}>Rest (s)</label>
-                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={restTime} onChange={e => setRestTime(parseInt(e.target.value))} />
+                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={restTime} onChange={e => setRestTime(parseInt(e.target.value, 10))} />
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '8px' }}>
                                 <label style={{ fontSize: '0.7rem', color: '#aaa', marginBottom: '0.2rem' }}>Rounds</label>
-                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={rounds} onChange={e => setRounds(parseInt(e.target.value))} />
+                                <input type="number" style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }} value={rounds} onChange={e => setRounds(parseInt(e.target.value, 10))} />
                             </div>
                         </div>
                     )}

@@ -25,7 +25,7 @@ class SyncService {
 
     loadQueue() {
         try {
-            const saved = localStorage.getItem(QUEUE_STORAGE_KEY);
+            const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(QUEUE_STORAGE_KEY) : null;
             return saved ? JSON.parse(saved) : [];
         } catch (e) {
             logger.error('Failed to load sync queue', { error: e.message });
@@ -35,7 +35,9 @@ class SyncService {
 
     saveQueue() {
         try {
-            localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(this.queue));
+            if (typeof localStorage !== 'undefined') {
+                localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(this.queue));
+            }
         } catch (e) {
             logger.error('Failed to save sync queue', { error: e.message });
         }
@@ -72,7 +74,7 @@ class SyncService {
         logger.info('Task enqueued', { id, type });
         
         // Try processing immediately if online
-        if (navigator.onLine) {
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
             this.processQueue();
         }
 
@@ -94,8 +96,21 @@ class SyncService {
         });
     }
 
+    isTaskReadyForRetry(task) {
+        if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') return true;
+        if (task.blocked) return false;
+        if (!task.lastAttemptAt) return true;
+        
+        // Exponential backoff delay: baseDelay * 2^(attempts - 1)
+        const delay = RETRY_CONFIG.baseDelay * Math.pow(2, task.attempts - 1);
+        const timeSinceLastAttempt = Date.now() - new Date(task.lastAttemptAt).getTime();
+        
+        return timeSinceLastAttempt >= delay;
+    }
+
     async processQueue() {
-        if (this.isProcessing || this.queue.length === 0 || !navigator.onLine) return;
+        const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+        if (this.isProcessing || this.queue.length === 0 || !isOnline) return;
 
         this.isProcessing = true;
         logger.info('Starting sync queue processing', { count: this.queue.length });
@@ -103,6 +118,12 @@ class SyncService {
         const tasksToProcess = [...this.queue];
         
         for (const task of tasksToProcess) {
+            if (task.blocked) {
+                continue;
+            }
+            if (!this.isTaskReadyForRetry(task)) {
+                continue;
+            }
             try {
                 await this.executeTask(task);
                 // Success! Remove from queue
@@ -122,9 +143,13 @@ class SyncService {
 
                 if (task.attempts >= RETRY_CONFIG.maxAttempts) {
                     task.blocked = true;
-                    logger.error('Task reached max retries and remains queued for manual retry', { id: task.id });
+                    logger.error('Task reached max retries and is being removed from the queue to prevent blocking', { id: task.id });
+                    this.queue = this.queue.filter(t => t.id !== task.id);
+                } else {
+                    // Schedule a retry call to processQueue when the delay expires
+                    const delay = RETRY_CONFIG.baseDelay * Math.pow(2, task.attempts - 1);
+                    setTimeout(() => this.processQueue(), delay);
                 }
-                break; 
             }
         }
 

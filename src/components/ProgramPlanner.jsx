@@ -39,7 +39,7 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
                 ...ex,
                 exerciseName: finalName,
                 id: ex.id || Date.now() + Math.random(),
-                sets: Array.isArray(ex.sets) ? ex.sets : Array.from({ length: parseInt(ex.sets) || 1 }, (_, i) => ({
+                sets: Array.isArray(ex.sets) ? ex.sets : Array.from({ length: parseInt(ex.sets, 10) || 1 }, (_, i) => ({
                     id: Date.now() + i + Math.random(),
                     weight: '',
                     reps: ex.reps || '',

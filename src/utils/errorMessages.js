@@ -26,7 +26,7 @@ export const getFriendlyErrorMessage = (error, fallback = 'Something went wrong.
         return 'The app is not configured correctly yet. Please check the Firebase environment settings.';
     }
 
-    if (/permission-denied/i.test(code) || /Missing or insufficient permissions/i.test(message)) {
+    if (/permission.denied/i.test(code) || /Missing or insufficient permissions/i.test(message)) {
         return 'You do not have permission to view or change that data.';
     }
 

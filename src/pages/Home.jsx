@@ -175,7 +175,7 @@ const Home = () => {
 
             {activeTab === 'dashboard' ? (
                 <>
-                    {(workouts.length === 0 || !trainingMaxes?.squat) && (
+                    {(workouts.length === 0 || !trainingMaxes?.bb_squat) && (
                         <div className="glass-card" style={{ marginBottom: '1.25rem', borderColor: 'rgba(var(--primary-rgb), 0.28)' }}>
                             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
                                 <div style={{ flex: 1, minWidth: 260 }}>

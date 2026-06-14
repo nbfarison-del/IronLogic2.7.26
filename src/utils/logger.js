@@ -4,13 +4,19 @@
  */
 
 const getContext = () => {
-  const user = JSON.parse(localStorage.getItem('user')) || {};
+  let user = {};
+  try {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('user') : null;
+    if (stored) user = JSON.parse(stored);
+  } catch {
+    // localStorage 'user' is not always set; this is non-critical
+  }
   return {
     userId: user.id || 'anonymous',
     email: user.email || 'N/A',
     timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    online: navigator.onLine
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Node',
+    online: typeof navigator !== 'undefined' ? navigator.onLine : true
   };
 };
 

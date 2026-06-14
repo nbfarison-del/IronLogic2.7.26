@@ -81,7 +81,7 @@ const RecoveryTracker = () => {
     const handleChange = (e) => {
         setMetrics({
             ...metrics,
-            [e.target.name]: parseInt(e.target.value) || 0
+            [e.target.name]: parseInt(e.target.value, 10) || 0
         });
     };
 

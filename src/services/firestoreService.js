@@ -650,6 +650,8 @@ const normalizeTemplateExercises = (exercises) => {
     return normalizeCollection(exercises)
         .filter(ex => ex && (ex.exerciseId || ex.exerciseName || ex.name))
         .map(ex => {
+            const resolvedExerciseId = ex.exerciseId || (ex.exerciseName || ex.name || '').toLowerCase().replace(/\s+/g, '_');
+
             let setsArray = [];
             if (Array.isArray(ex.sets)) {
                 setsArray = ex.sets
@@ -671,8 +673,8 @@ const normalizeTemplateExercises = (exercises) => {
             }
 
             return {
-                id: ex.id || Math.random().toString(36).substr(2, 9),
-                exerciseId: ex.exerciseId || '',
+                id: ex.id || resolvedExerciseId || Math.random().toString(36).substr(2, 9),
+                exerciseId: resolvedExerciseId,
                 exerciseName: ex.exerciseName || ex.name || 'Exercise',
                 name: ex.name || ex.exerciseName || 'Exercise',
                 notes: ex.notes || '',

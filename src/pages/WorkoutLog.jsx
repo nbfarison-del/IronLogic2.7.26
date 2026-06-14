@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -12,7 +12,6 @@ import ExerciseTools from '../components/ExerciseTools';
 import OlympicSetLogger from '../components/OlympicSetLogger';
 import * as firestoreService from '../services/firestoreService';
 import { runDMAICCycle } from '../services/DMAICService';
-import { useRef } from 'react';
 import { logger } from '../utils/logger';
 import { syncService } from '../services/SyncService';
 import {
@@ -26,6 +25,7 @@ import {
     getRecoveryAdjustment,
     getSubstitutionOptions
 } from '../services/OlympicWeightliftingEngine';
+import { calculateEstimated1RM as calcE1RM } from '../utils/calculator';
 
 // Exercises where distance is captured as whole meters rather than a decimal distance.
 const METER_BASED_EXERCISE_IDS = new Set([
@@ -216,13 +216,13 @@ const WorkoutLog = () => {
     const [isCreatingExercise, setIsCreatingExercise] = useState(false);
     const [newExerciseName, setNewExerciseName] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
-    const [modifiers] = useState({
+    const modifiers = {
         grip: '', bar: '', pause: '', tempo: '',
         isBelt: false, isKneeWraps: false,
         isSquatSuit: false, isSquatSuitStrapsUp: false,
         isBenchShirt: false, isSlingshot: false, board: '',
         isDeadliftSuit: false, isDeadliftSuitStrapsUp: false, isFeetUp: false
-    });
+    };
     const [isSessionComplete, setIsSessionComplete] = useState(false);
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [autoRest, setAutoRest] = useState(true);
@@ -346,12 +346,18 @@ const WorkoutLog = () => {
     const loadPlannedExercise = (plannedEx) => {
         if (!plannedEx) return;
         setSelectedPlannedExId(plannedEx.id);
-        const exMatch = allExercisesList.find(e => e.id === plannedEx.exerciseId || e.name === plannedEx.exerciseName);
+        const exId = plannedEx.exerciseId || plannedEx.id;
+        if (!exId) {
+            showToast("This planned exercise is missing an ID and cannot be loaded.", "error");
+            logger.warn("Planned exercise missing both exerciseId and id", { plannedEx });
+            return;
+        }
+        const exMatch = allExercisesList.find(e => e.id === exId || e.name === plannedEx.exerciseName);
         if (exMatch) {
             setSelectedExerciseId(exMatch.id);
             setWorkoutType(exMatch.category === EXERCISE_CATEGORIES.CARDIO || isMeterBasedExercise(exMatch) ? 'cardio' : 'strength');
         } else {
-            setSelectedExerciseId(plannedEx.exerciseId);
+            setSelectedExerciseId(exId);
             setWorkoutType(isMeterBasedExercise(plannedEx) ? 'cardio' : 'strength');
         }
         if (plannedEx.sets && Array.isArray(plannedEx.sets)) {
@@ -385,14 +391,7 @@ const WorkoutLog = () => {
     }, [workouts, selectedDate]);
 
     const calculateEstimated1RM = (weight, reps, rpe) => {
-        if (!weight || !reps || !rpe) return 0;
-        const w = parseFloat(weight);
-        const r = parseInt(reps);
-        const rp = parseFloat(rpe);
-        if (isNaN(w) || isNaN(r) || isNaN(rp)) return 0;
-        const effectiveReps = r + (10 - rp);
-        if (effectiveReps <= 0) return 0;
-        return Math.round(w * (36 / (37 - effectiveReps)));
+        return calcE1RM(weight, reps, rpe);
     };
 
     const handleAddRow = () => {

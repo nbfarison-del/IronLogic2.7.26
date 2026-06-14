@@ -425,7 +425,7 @@ const ProPlanner = () => {
     };
 
     const applyWeekForward = () => {
-        const numWeeks = parseInt(prompt("How many weeks forward to apply?", "4") || "0");
+        const numWeeks = parseInt(prompt("How many weeks forward to apply?", "4") || "0", 10);
         if (numWeeks <= 0 || isNaN(numWeeks)) return;
         
         modifyWeeks(newWeeks => {

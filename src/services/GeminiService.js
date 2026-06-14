@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY?.trim();
+const API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY)?.trim() || "";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 const MISSING_KEY_ERROR = `
@@ -88,7 +88,7 @@ export const chatWithAI = async (messages, userContext = {}) => {
 Please use this context to provide personalized advice. Reference their previous lifts if relevant.
     `;
 
-  const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 
 

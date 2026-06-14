@@ -110,8 +110,8 @@ const Questionnaire = () => {
             // Save to formal ILM Training Intent Profile
             await ILMService.saveTrainingIntent(user.id, {
                 goalType: answers.goalType,
-                daysPerWeek: parseInt(answers.daysPerWeek),
-                sessionDuration: parseInt(answers.sessionDuration),
+                daysPerWeek: parseInt(answers.daysPerWeek, 10),
+                sessionDuration: parseInt(answers.sessionDuration, 10),
                 equipment: answers.equipment,
                 injuries: answers.injuries ? [answers.injuries] : []
             });

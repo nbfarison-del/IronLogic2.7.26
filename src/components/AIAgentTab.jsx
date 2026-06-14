@@ -169,11 +169,11 @@ const AIAgentTab = () => {
 
             const promises = [];
             generatedProgram.weeks.forEach(week => {
-                const wNum = parseInt(week.weekNumber);
+                const wNum = parseInt(week.weekNumber, 10);
                 if (isNaN(wNum)) return;
 
                 week.days.forEach(dayObj => {
-                    const dNum = parseInt(dayObj.dayNumber);
+                    const dNum = parseInt(dayObj.dayNumber, 10);
                     if (isNaN(dNum)) return;
 
                     const targetDate = new Date(baseDate.getTime());
@@ -186,14 +186,24 @@ const AIAgentTab = () => {
                         date: dateStr,
                         planName: `${generatedProgram.name} - W${wNum}D${dNum}`,
                         name: `${generatedProgram.name} - W${wNum}D${dNum}`,
-                        exercises: dayObj.exercises.map(ex => {
+                        exercises: dayObj.exercises
+                            .filter(ex => {
+                                if (!ex.exerciseId && !ex.name && !ex.exerciseName) {
+                                    console.warn("Skipping AI exercise with no identifier", ex);
+                                    return false;
+                                }
+                                return true;
+                            })
+                            .map(ex => {
                             const standardEx = exercises.find(e => e.id === ex.exerciseId);
                             const finalName = ex.name || standardEx?.name || ex.exerciseId;
+                            const resolvedExerciseId = ex.exerciseId || (ex.name || ex.exerciseName || '').toLowerCase().replace(/\s+/g, '_');
 
                             return {
                                 ...ex,
+                                exerciseId: resolvedExerciseId,
                                 exerciseName: finalName,
-                                sets: Array.from({ length: parseInt(ex.sets) || 1 }, (_, i) => ({
+                                sets: Array.from({ length: parseInt(ex.sets, 10) || 1 }, (_, i) => ({
                                     id: Date.now() + i + Math.random(),
                                     weight: '',
                                     reps: ex.reps || '',

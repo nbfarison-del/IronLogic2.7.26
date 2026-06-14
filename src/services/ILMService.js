@@ -54,7 +54,7 @@ export const getTrainingIntent = async (userId) => {
 export const ingestPerformanceData = async (userId, days = 14) => {
     // This aggregates workouts and planned sessions
     const workoutsRef = collection(db, 'users', userId, 'workouts');
-    const plannedRef = collection(db, 'users', userId, 'plannedWorkouts');
+    const plannedRef = collection(db, 'users', userId, 'athletePrograms');
     
     // In a real app, we'd filter by date in the query
     const [wSnap, pSnap] = await Promise.all([

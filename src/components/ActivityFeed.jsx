@@ -16,7 +16,7 @@ const ActivityFeed = () => {
             const sessionWorkouts = workouts.filter(w => w.date === dateStr);
             
             // Calculate session summary
-            const totalVolume = sessionWorkouts.reduce((sum, w) => sum + (parseFloat(w.weight || 0) * parseInt(w.reps || 0)), 0);
+            const totalVolume = sessionWorkouts.reduce((sum, w) => sum + (parseFloat(w.weight || 0) * parseInt(w.reps || 0, 10)), 0);
             const exercisesCount = new Set(sessionWorkouts.map(w => w.exerciseId)).size;
             
             return {

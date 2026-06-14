@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 
 const ToastContext = createContext();
 
@@ -7,8 +7,9 @@ export const useToast = () => useContext(ToastContext);
 export const ToastProvider = ({ children }) => {
     const [toasts, setToasts] = useState([]);
 
+    const toastIdRef = useRef(0);
     const showToast = useCallback((message, type = 'info') => {
-        const id = Date.now();
+        const id = ++toastIdRef.current;
         setToasts(prev => [...prev, { id, message, type }]);
         setTimeout(() => {
             setToasts(prev => prev.filter(t => t.id !== id));
@@ -23,8 +24,8 @@ export const ToastProvider = ({ children }) => {
                     <div key={t.id} style={{
                         padding: '0.75rem 1.5rem',
                         borderRadius: '8px',
-                        color: t.type === 'info' ? '#000' : '#fff',
-                        background: t.type === 'success' ? '#10b981' : t.type === 'error' ? '#ef4444' : '#fbbf24',
+                        color: '#fff',
+                        background: t.type === 'info' ? '#3b82f6' : t.type === 'success' ? '#10b981' : '#ef4444',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                         animation: 'toast-in 0.3s ease-out',
                         fontWeight: '600',

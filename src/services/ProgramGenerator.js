@@ -8,7 +8,7 @@ export const generateProgram = (data) => {
         createdAt: new Date().toISOString()
     };
 
-    const daysPerWeek = parseInt(data.frequency) || 3;
+    const daysPerWeek = parseInt(data.frequency, 10) || 3;
     const durationWeeks = 4; // MVP: 4 week blocks
     const goal = data.goal?.[0] || 'General Fitness';
     const experience = data.experience || 'Beginner';

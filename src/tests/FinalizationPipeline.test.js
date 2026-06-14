@@ -3,11 +3,28 @@
  * Focus: Idempotency, Fault Tolerance, and Data Integrity.
  */
 
-import { syncService } from '../services/SyncService';
-import * as firestoreService from '../services/firestoreService';
+import { jest } from '@jest/globals';
+
+// Mock localStorage and navigator globals before importing modules
+let store = {};
+global.localStorage = {
+    getItem: jest.fn(key => store[key] || null),
+    setItem: jest.fn((key, value) => { store[key] = String(value); }),
+    clear: jest.fn(() => { store = {}; }),
+    removeItem: jest.fn(key => { delete store[key]; })
+};
+global.navigator = {
+    onLine: true
+};
+
+// Mock firestoreService using Jest ESM mock API
+jest.unstable_mockModule('../services/firestoreService', () => ({
+    finalizeWorkoutSession: jest.fn(),
+    addWorkout: jest.fn()
+}));
 
 // Mock logger to avoid console noise during tests
-jest.mock('../utils/logger', () => ({
+jest.unstable_mockModule('../utils/logger', () => ({
     logger: {
         info: jest.fn(),
         warn: jest.fn(),
@@ -15,10 +32,10 @@ jest.mock('../utils/logger', () => ({
     }
 }));
 
-// Mock firestoreService
-jest.mock('../services/firestoreService', () => ({
-    finalizeWorkoutSession: jest.fn()
-}));
+// Dynamically import modules after registering mock modules
+const { syncService } = await import('../services/SyncService');
+const firestoreService = await import('../services/firestoreService');
+const { logger } = await import('../utils/logger');
 
 describe('Workout Session Finalization Pipeline', () => {
     beforeEach(() => {

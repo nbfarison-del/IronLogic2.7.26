@@ -484,8 +484,12 @@ Return valid JSON only:
 }`;
 
     try {
-        const response = await chatWithAI([{ role: 'system', content: systemPrompt }]);
-        return { ...fallback, ...JSON.parse(response) };
+        const response = await chatWithAI([{ role: 'user', content: systemPrompt }]);
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('No JSON found in response');
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (!parsed.adjustmentType || !parsed.description) throw new Error('Invalid response structure');
+        return { ...fallback, ...parsed };
     } catch {
         return fallback;
     }
