@@ -226,6 +226,7 @@ const WorkoutLog = () => {
     const [isSessionComplete, setIsSessionComplete] = useState(false);
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [autoRest, setAutoRest] = useState(true);
+    const [showDetails, setShowDetails] = useState(false);
     const [showRpeModal, setShowRpeModal] = useState(false);
     const [sessionRpe, setSessionRpe] = useState(7);
     const [completionFeedback, setCompletionFeedback] = useState({
@@ -563,15 +564,13 @@ const WorkoutLog = () => {
                 showToast("Failed to save. Please refresh.", "error");
                 throw err;
             } finally {
-                // Since enqueueing is fast, we decrement immediately, 
-                // but SyncService will handle the actual background write.
                 setPendingSaves(prev => Math.max(0, prev - 1));
             }
             
             if (autoRest && workoutType === 'strength' && !isViewingOther) {
                 resetTimer();
                 setType('countdown');
-                setTimerDuration(180); // Default 3 mins
+                setTimerDuration(180);
                 startTimer();
                 if (!isTimerOpen) toggleTimer();
                 showToast("Set logged. Rest timer started!", "success");
@@ -581,12 +580,34 @@ const WorkoutLog = () => {
 
             if (workoutType === 'strength') {
                 const lastRow = setRows[setRows.length - 1];
+                let suggestedWeight = lastRow?.weight || '';
+                let suggestedReps = lastRow?.reps || '';
+                let weightNote = '';
+                if (lastRow?.weight && lastRow?.actualRpe && lastRow?.targetRpe) {
+                    const w = parseFloat(lastRow.weight);
+                    const aRpe = parseFloat(lastRow.actualRpe);
+                    const tRpe = parseFloat(lastRow.targetRpe);
+                    if (Number.isFinite(w) && Number.isFinite(aRpe) && Number.isFinite(tRpe)) {
+                        const delta = aRpe - tRpe;
+                        let adjPct = 0;
+                        if (delta > 1) adjPct = -0.05;
+                        else if (delta > 0.5) adjPct = -0.025;
+                        else if (delta < -1) adjPct = 0.05;
+                        else if (delta < -0.5) adjPct = 0.025;
+                        if (adjPct !== 0) {
+                            const rounded = Math.round(w * (1 + adjPct) / 2.5) * 2.5;
+                            suggestedWeight = String(Math.max(rounded, 2.5));
+                            weightNote = delta > 0 ? '↓ adjusted down' : '↑ adjusted up';
+                        }
+                    }
+                }
                 setSetRows([createSetRow({
-                    weight: lastRow?.weight || '',
-                    reps: lastRow?.reps || '',
+                    weight: suggestedWeight,
+                    reps: suggestedReps,
                     percentageOf1RM: lastRow?.percentageOf1RM || '',
                     barSpeedRating: lastRow?.barSpeedRating || ''
                 })]);
+                if (weightNote) showToast(`Next set weight ${weightNote} based on RPE`, "info");
             } else {
                 setDuration('');
                 setDistance('');
@@ -895,7 +916,7 @@ const WorkoutLog = () => {
                                     {!isFocusMode && (
                                         <div style={{ 
                                             display: 'grid', 
-                                            gridTemplateColumns: 'minmax(120px, 1.5fr) 1fr 1fr 1fr 120px', 
+                                            gridTemplateColumns: 'minmax(120px, 1.5fr) 1fr 1fr 100px', 
                                             gap: '0.5rem', 
                                             padding: '0 0.5rem',
                                             marginBottom: '0.25rem',
@@ -905,8 +926,7 @@ const WorkoutLog = () => {
                                         }}>
                                             <div style={{ paddingLeft: '0.5rem' }}>WEIGHT ({unit})</div>
                                             <div style={{ textAlign: 'center' }}>REPS</div>
-                                            <div style={{ textAlign: 'center' }}>TARGET</div>
-                                            <div style={{ textAlign: 'center' }}>ACTUAL</div>
+                                            <div style={{ textAlign: 'center' }}>ACTUAL RPE</div>
                                             <div style={{ textAlign: 'right', paddingRight: '0.5rem' }}>ACTIONS</div>
                                         </div>
                                     )}
@@ -915,7 +935,7 @@ const WorkoutLog = () => {
                                         {setRows.map((row, index) => (
                                             <div key={row.id} className={isFocusMode ? 'glass' : ''} style={{ 
                                                 display: 'grid', 
-                                                gridTemplateColumns: isFocusMode ? '1fr' : 'minmax(120px, 1.5fr) 1fr 1fr 1fr 120px', 
+                                                gridTemplateColumns: isFocusMode ? '1fr' : 'minmax(120px, 1.5fr) 1fr 1fr 100px', 
                                                 gap: '0.5rem', 
                                                 alignItems: 'center',
                                                 padding: isFocusMode ? '1.5rem' : '0.25rem',
@@ -923,7 +943,7 @@ const WorkoutLog = () => {
                                                 borderRadius: '12px',
                                                 border: !isFocusMode ? '1px solid var(--border-glass)' : 'none'
                                             }}>
-                                                {/* WEIGHT - Same height as others */}
+                                                {/* WEIGHT */}
                                                 <div style={{ display: 'flex', gap: '4px', height: isFocusMode ? 'auto' : '48px', alignItems: 'center' }}>
                                                     {isFocusMode && <label style={{ fontSize: '0.85rem' }}>Weight</label>}
                                                     <input
@@ -955,38 +975,33 @@ const WorkoutLog = () => {
                                                     />
                                                 </div>
 
-                                                {/* TARGET */}
-                                                <div style={{ display: 'flex', flexDirection: 'column', height: isFocusMode ? 'auto' : '48px', justifyContent: 'center' }}>
-                                                    {isFocusMode && <label style={{ fontSize: '0.85rem' }}>Target</label>}
-                                                    <input
-                                                        type="number"
-                                                        step="0.5"
-                                                        value={row.targetRpe}
-                                                        onChange={(e) => handleRowChange(row.id, 'targetRpe', e.target.value)}
-                                                        className="pro-input"
-                                                        style={{ height: '40px', fontSize: '1rem', textAlign: 'center', opacity: 0.7, borderRadius: '8px' }}
-                                                    />
-                                                </div>
-
-                                                {/* ACTUAL */}
+                                                {/* ACTUAL RPE (with inline target badge) */}
                                                 <div style={{ display: 'flex', flexDirection: 'column', height: isFocusMode ? 'auto' : '48px', justifyContent: 'center' }}>
                                                     {isFocusMode && <label style={{ fontSize: '0.85rem' }}>Actual</label>}
-                                                    <input
-                                                        type="number"
-                                                        step="0.5"
-                                                        value={row.actualRpe}
-                                                        onChange={(e) => handleRowChange(row.id, 'actualRpe', e.target.value)}
-                                                        className="pro-input"
-                                                        style={{ 
-                                                            height: '40px', 
-                                                            fontSize: '1rem', 
-                                                            textAlign: 'center', 
-                                                            borderRadius: '8px',
-                                                            border: '2px solid var(--primary)'
-                                                        }}
-                                                        required
-                                                    />
-                                                    <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'gold', textAlign: isFocusMode ? 'left' : 'center' }}>
+                                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                                        <input
+                                                            type="number"
+                                                            step="0.5"
+                                                            value={row.actualRpe}
+                                                            onChange={(e) => handleRowChange(row.id, 'actualRpe', e.target.value)}
+                                                            className="pro-input"
+                                                            style={{ 
+                                                                flex: 1,
+                                                                height: '40px', 
+                                                                fontSize: '1rem', 
+                                                                textAlign: 'center', 
+                                                                borderRadius: '8px',
+                                                                border: '2px solid var(--primary)'
+                                                            }}
+                                                            required
+                                                        />
+                                                        {row.targetRpe && (
+                                                            <span style={{ fontSize: '0.6rem', opacity: 0.5, whiteSpace: 'nowrap' }}>
+                                                                @{row.targetRpe}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'gold', textAlign: 'center' }}>
                                                         e1RM {calculateEstimated1RM(row.weight, row.reps, row.actualRpe || row.targetRpe) || '--'}{calculateEstimated1RM(row.weight, row.reps, row.actualRpe || row.targetRpe) ? unit : ''}
                                                     </div>
                                                 </div>
@@ -1044,9 +1059,13 @@ const WorkoutLog = () => {
                                 </div>
                             )}
 
-                            <details open style={{ marginTop: '1.5rem', fontSize: '0.9rem' }}>
-                                <summary style={{ cursor: 'pointer', opacity: 0.75 }}>Notes / Video Link</summary>
-                                <div style={{ paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ marginTop: '1rem', display: 'flex', gap: '0.5rem' }}>
+                                <button type="button" className="btn" onClick={() => setShowDetails(!showDetails)} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
+                                    {showDetails ? '− Hide Details' : '+ Details'}
+                                </button>
+                            </div>
+                            {showDetails && (
+                                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.9rem' }}>
                                     <div className="input-group">
                                         <label>Movement Notes</label>
                                         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Technique cues, subjective feel, pain, setup changes..." style={{ height: '80px' }} />
@@ -1077,7 +1096,7 @@ const WorkoutLog = () => {
                                         <input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://..." />
                                     </div>
                                 </div>
-                            </details>
+                            )}
                         </form>
                     )}
                 </div>

@@ -195,157 +195,91 @@ const Home = () => {
                     )}
 
                     <div className="dashboard-hero">
-                        <section className="glass-card hero-panel">
-                            <div>
-                                <p className="page-kicker">This Week</p>
-                                <h2 style={{ fontSize: '2rem', margin: '0 0 0.75rem' }}>
-                                    {weeklySummary.sessions > 0 ? `${weeklySummary.sessions} sessions logged` : 'No sessions logged yet'}
-                                </h2>
-                                <p style={{ color: 'var(--text-muted)', maxWidth: 620, margin: 0 }}>
-                                    Keep the record simple: log the work, review the trend, and let the data guide the next adjustment.
-                                </p>
-                            </div>
-                            <div className="metric-grid" style={{ marginTop: '1.25rem' }}>
-                                <div className="metric-card card">
-                                    <small>Weekly Volume</small>
-                                    <div className="metric-value">{Math.round(weeklySummary.totalWeight).toLocaleString()} {appUnit}</div>
-                                    <div className="metric-note">Across tracked work sets</div>
+                        <section className="glass-card hero-panel" style={{ flex: 2 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                                <div>
+                                    <p className="page-kicker">This Week</p>
+                                    <h2 style={{ fontSize: '1.6rem', margin: '0 0 0.5rem' }}>
+                                        {weeklySummary.sessions > 0 ? `${weeklySummary.sessions} session${weeklySummary.sessions > 1 ? 's' : ''}` : 'No sessions yet'}
+                                    </h2>
                                 </div>
-                                <div className="metric-card card">
-                                    <small>Peak Intensity</small>
-                                    <div className="metric-value">{weeklySummary.peakIntensity?.estimated1RM || 0} {appUnit}</div>
-                                    <div className="metric-note">
-                                        {weeklySummary.peakIntensity
-                                            ? `${weeklySummary.peakIntensity.exerciseName} e1RM`
-                                            : 'Awaiting logged data'}
-                                        {weeklySummary.averageRpe > 0 ? ` • Avg RPE ${weeklySummary.averageRpe.toFixed(1)}` : ''}
+                                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <small>Volume</small>
+                                        <div style={{ fontWeight: 700 }}>{Math.round(weeklySummary.totalWeight).toLocaleString()} {appUnit}</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <small>Peak e1RM</small>
+                                        <div style={{ fontWeight: 700 }}>{weeklySummary.peakIntensity?.estimated1RM || 0} {appUnit}</div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <small>Avg RPE</small>
+                                        <div style={{ fontWeight: 700 }}>{weeklySummary.averageRpe > 0 ? weeklySummary.averageRpe.toFixed(1) : '--'}</div>
                                     </div>
                                 </div>
                             </div>
                         </section>
 
-                        <aside className="glass-card today-panel">
+                        <aside className="glass-card today-panel" style={{ flex: 1 }}>
                             <p className="page-kicker">Today</p>
-                            <h2 style={{ margin: '0 0 0.6rem' }}>{todayPlan ? 'Program ready' : 'No program planned'}</h2>
-                            <p style={{ color: 'var(--text-muted)', margin: '0 0 1rem' }}>
-                                {todayPlan ? (todayPlan.planName || todayPlan.name || 'Scheduled training session') : 'Create a session or apply a template to the calendar.'}
-                            </p>
-                            <div style={{ display: 'grid', gap: '0.65rem' }}>
-                                <Link to={todayPlan ? `/log?planId=${todayPlan.id}` : '/calendar?plan=true'} className="btn btn-primary">
-                                    {todayPlan ? 'Start Planned Session' : 'Plan Today'}
+                            <h3 style={{ margin: '0 0 0.4rem', fontSize: '1.1rem' }}>{todayPlan ? (todayPlan.planName || todayPlan.name || 'Program ready') : 'Free session'}</h3>
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                <Link to={todayPlan ? `/log?planId=${todayPlan.id}` : '/log'} className="btn btn-primary" style={{ flex: 1, textAlign: 'center' }}>
+                                    {todayPlan ? 'Start' : 'Log Workout'}
                                 </Link>
-                                <Link to="/programs" className="btn">Browse Templates</Link>
+                                {!todayPlan && <Link to="/calendar?plan=true" className="btn" style={{ flex: 1, textAlign: 'center' }}>Plan</Link>}
                             </div>
                         </aside>
                     </div>
 
                     <div className="stats-grid" style={{ marginBottom: '1.25rem' }}>
                         <div className="metric-card card">
-                            <small>Today's Training</small>
-                            <div className="metric-value" style={{ fontSize: '1.35rem' }}>{todayPlan ? 'Planned' : suggestedSession.phase.name}</div>
-                            <div className="metric-note">{todayPlan?.name || suggestedSession.exercises.slice(0, 3).map(ex => ex.exerciseName).join(', ')}</div>
-                            <Link to={todayPlan ? `/log?planId=${todayPlan.id}` : '/olympic-lifting'} className="btn btn-primary" style={{ marginTop: '0.9rem', width: '100%' }}>Start Training</Link>
-                        </div>
-                        <div className="metric-card card">
-                            <small>Upcoming Competition</small>
-                            <div className="metric-value" style={{ fontSize: '1.35rem' }}>{competitionPhase.daysUntilMeet ?? '--'} days</div>
-                            <div className="metric-note">{olympicProfile.upcomingMeetDate || 'Add meet date in onboarding'} - {competitionPhase.name}</div>
-                        </div>
-                        <div className="metric-card card">
-                            <small>Readiness Score</small>
+                            <small>Readiness</small>
                             <div className="metric-value">{recoveryAdjustment.readinessScore}</div>
                             <div className="metric-note">{recoveryAdjustment.note}</div>
                         </div>
                         <div className="metric-card card">
                             <small>Recent PR</small>
-                            <div className="metric-value" style={{ fontSize: '1.35rem' }}>{recentPR ? `${recentPR.estimated1RM} ${appUnit}` : '--'}</div>
-                            <div className="metric-note">{recentPR?.exerciseName || 'Log a new best to populate this card'}</div>
+                            <div className="metric-value">{recentPR ? `${recentPR.estimated1RM} ${appUnit}` : '--'}</div>
+                            <div className="metric-note">{recentPR?.exerciseName || 'Log a new best'}</div>
                         </div>
                         <div className="metric-card card">
-                            <small>Training Streak</small>
+                            <small>Streak</small>
                             <div className="metric-value">{trainingStreak}</div>
-                            <div className="metric-note">Finalized sessions in a row</div>
+                            <div className="metric-note">Finalized sessions</div>
+                        </div>
+                        <div className="metric-card card">
+                            <small>Competition</small>
+                            <div className="metric-value">{competitionPhase.daysUntilMeet ?? '--'} days</div>
+                            <div className="metric-note">{competitionPhase.name}</div>
                         </div>
                     </div>
-
-                    <section className="glass-card" style={{ marginBottom: '1.25rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                            <div>
-                                <p className="page-kicker">Iron Logic Coach</p>
-                                <h2 style={{ marginTop: 0 }}>Adaptive Olympic Weightlifting Guidance</h2>
-                            </div>
-                            <Link to="/progress?tab=olympic" className="btn">Open Olympic Dashboard</Link>
-                        </div>
-                        <div style={{ display: 'grid', gap: '0.75rem' }}>
-                            {smartRecommendations.map((rec, index) => (
-                                <div key={index} className="list-row" style={{ alignItems: 'flex-start' }}>
-                                    <div>
-                                        <strong>{rec.text}</strong>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.84rem', marginTop: '0.35rem' }}>
-                                            DMAIC: Define {rec.dmaic.define} - Measure trends/readiness - Analyze {rec.dmaic.analyze} - Improve with the recommendation - Control next session.
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </section>
 
                     <div className="quick-action-grid">
                         <Link to="/log" className="glass-card action-tile">
                             <small>Capture</small>
                             <strong>Free Session</strong>
-                            <span>Log strength, conditioning, or accessory work.</span>
                         </Link>
                         <Link to="/calendar" className="glass-card action-tile">
                             <small>Schedule</small>
                             <strong>Calendar</strong>
-                            <span>Review planned work and historical training.</span>
                         </Link>
                         <Link to="/progress" className="glass-card action-tile">
                             <small>Analyze</small>
-                            <strong>Performance Trends</strong>
-                            <span>See PRs, volume, and consistency over time.</span>
+                            <strong>Trends</strong>
                         </Link>
                         <Link to="/olympic-lifting" className="glass-card action-tile">
                             <small>Olympic</small>
-                            <strong>Weightlifting Mode</strong>
-                            <span>Generate and start a snatch, clean and jerk, squat, pull, press, accessory session.</span>
+                            <strong>Weightlifting</strong>
                         </Link>
-                    </div>
-
-                    <div className="content-grid">
-                        <RecoveryTracker />
-                        <WeightTracker />
                     </div>
 
                     <ActivityFeed />
 
-                    <section className="glass-card" style={{ marginBottom: '1.25rem' }}>
-                        <h2 style={{ marginTop: 0 }}>Recent Milestones</h2>
-                        {recentPRs.length > 0 ? (
-                            <div style={{ display: 'grid', gap: '0.65rem' }}>
-                                {recentPRs.slice(0, 5).map(pr => (
-                                    <div key={`${pr.date}-${pr.exerciseId}`} className="list-row">
-                                        <div>
-                                            <strong>{pr.exerciseName}</strong>
-                                            <div style={{ color: 'var(--text-muted)', fontSize: '0.84rem' }}>{pr.date}</div>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <strong style={{ color: 'var(--primary)' }}>{pr.estimated1RM} {appUnit} e1RM</strong>
-                                            {!pr.isFirst && <div style={{ color: 'var(--accent-success)', fontSize: '0.84rem' }}>+{pr.increase.toFixed(1)}</div>}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="empty-state">Milestones will appear here after you log sessions.</div>
-                        )}
-                    </section>
-
                     <GoalTracker />
 
                     <div style={{ marginTop: '2rem', color: 'var(--text-subtle)', fontSize: '0.85rem', textAlign: 'center' }}>
-                        IronLogic v2.7.26 - Built for performance.
+                        IronLogic v2.7.26
                     </div>
                 </>
             ) : activeTab === 'mobility' ? (
