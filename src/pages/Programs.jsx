@@ -1,21 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getProgramTemplates, importProgramToCalendar, deleteProgramTemplate } from '../services/firestoreService';
 import ProgramPlanner from '../components/ProgramPlanner';
-import PartnerWorkout from './PartnerWorkout';
+
 import { advancedTemplates } from '../data/advancedTemplates';
 
 
 const Programs = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const location = useLocation();
     const { showToast } = useToast();
     
-    const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-    const [subTab, setSubTab] = useState(queryParams.get('tab') === 'partner' ? 'partner' : 'library');
+
     
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -142,56 +140,6 @@ const Programs = () => {
 
     return (
         <div className="animate-in" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 1rem' }}>
-            {/* Tab Navigation */}
-            <div style={{ 
-                display: 'flex', 
-                gap: '0.5rem', 
-                marginBottom: '2.5rem', 
-                background: 'rgba(255,255,255,0.03)', 
-                padding: '0.4rem', 
-                borderRadius: '16px', 
-                border: '1px solid var(--border-glass)' 
-            }}>
-                <button
-                    onClick={() => setSubTab('library')}
-                    style={{
-                        flex: 1,
-                        background: subTab === 'library' ? 'var(--bg-card)' : 'transparent',
-                        border: 'none',
-                        color: subTab === 'library' ? 'var(--accent-warning)' : 'var(--text-muted)',
-
-                        padding: '1rem',
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        fontWeight: '700',
-                        transition: 'all 0.3s ease',
-                        boxShadow: subTab === 'library' ? '0 4px 12px rgba(0,0,0,0.3)' : 'none'
-                    }}
-                >
-                    📚 Program Library
-                </button>
-                <button
-                    onClick={() => setSubTab('partner')}
-                    style={{
-                        flex: 1,
-                        background: subTab === 'partner' ? 'var(--bg-card)' : 'transparent',
-                        border: 'none',
-                        color: subTab === 'partner' ? 'var(--primary)' : 'var(--text-muted)',
-                        padding: '1rem',
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        fontWeight: '700',
-                        transition: 'all 0.3s ease',
-                        boxShadow: subTab === 'partner' ? '0 4px 12px rgba(0,0,0,0.3)' : 'none'
-                    }}
-                >
-                    🤝 Partner Hub
-                </button>
-            </div>
-
-            {subTab === 'partner' ? (
-                <PartnerWorkout />
-            ) : (
                 <div className="library-view">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                         <h1 style={{ margin: 0 }}>Workout Templates</h1>
@@ -300,7 +248,6 @@ const Programs = () => {
                         </div>
                     )}
                 </div>
-            )}
 
             {/* Program Preview Modal */}
             {showPreview && (

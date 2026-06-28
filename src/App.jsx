@@ -28,8 +28,10 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const Programs = lazy(() => import('./pages/Programs'));
 const ProPlanner = lazy(() => import('./pages/ProPlanner'));
-const PartnerWorkout = lazy(() => import('./pages/PartnerWorkout'));
+
 const Questionnaire = lazy(() => import('./pages/Questionnaire'));
+const OnboardingWizard = lazy(() => import('./pages/OnboardingWizard'));
+const CompetitionPeaking = lazy(() => import('./pages/CompetitionPeaking'));
 
 
 const ProtectedRoute = ({ children }) => {
@@ -195,11 +197,7 @@ function AppContent() {
               <Programs />
             </ProtectedRoute>
           } />
-          <Route path="/partner" element={
-            <ProtectedRoute>
-              <PartnerWorkout />
-            </ProtectedRoute>
-          } />
+
           <Route path="/checkin" element={
             <ProtectedRoute>
               <SubscriptionGuard>
@@ -220,6 +218,16 @@ function AppContent() {
           <Route path="/questionnaire" element={
             <ProtectedRoute>
               <Questionnaire />
+            </ProtectedRoute>
+          } />
+          <Route path="/onboarding" element={
+            <ProtectedRoute>
+              <OnboardingWizard />
+            </ProtectedRoute>
+          } />
+          <Route path="/peaking" element={
+            <ProtectedRoute>
+              <CompetitionPeaking />
             </ProtectedRoute>
           } />
           <Route path="/olympic-lifting" element={

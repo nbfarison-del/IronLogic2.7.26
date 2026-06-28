@@ -223,6 +223,21 @@ const Home = () => {
                         </div>
                     )}
 
+                    {!profile?.name && workouts.length === 0 && (
+                        <div className="glass-card" style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(var(--primary-rgb), 0.06)', borderLeft: '4px solid var(--primary)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                <div>
+                                    <p className="page-kicker">Welcome to IronLogic</p>
+                                    <h3 style={{ margin: '0.25rem 0 0' }}>Set up your training profile</h3>
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.2rem 0 0' }}>
+                                        Complete the onboarding wizard to generate a personalized program.
+                                    </p>
+                                </div>
+                                <Link to="/onboarding" className="btn btn-primary">Start Onboarding</Link>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="dashboard-hero">
                         <section className="glass-card hero-panel" style={{ flex: 2 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>

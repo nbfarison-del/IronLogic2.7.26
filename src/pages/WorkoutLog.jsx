@@ -45,35 +45,6 @@ const isMeterBasedExercise = (exerciseOrId) => {
     return METER_BASED_NAME_PATTERN.test(name);
 };
 
-const useWakeLock = () => {
-    const [isWakeLockActive, setIsWakeLockActive] = useState(false);
-    const wakeLockRef = useRef(null);
-
-    const requestWakeLock = async () => {
-        try {
-            if ('wakeLock' in navigator) {
-                wakeLockRef.current = await navigator.wakeLock.request('screen');
-                setIsWakeLockActive(true);
-                wakeLockRef.current.addEventListener('release', () => {
-                    setIsWakeLockActive(false);
-                });
-            }
-        } catch (err) {
-            console.error(`${err.name}, ${err.message}`);
-        }
-    };
-
-    const releaseWakeLock = async () => {
-        if (wakeLockRef.current !== null) {
-            await wakeLockRef.current.release();
-            wakeLockRef.current = null;
-            setIsWakeLockActive(false);
-        }
-    };
-
-    return { isWakeLockActive, requestWakeLock, releaseWakeLock };
-};
-
 // Browser-robust YYYY-MM-DD helper
 const getDateStr = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -224,7 +195,6 @@ const WorkoutLog = () => {
         isDeadliftSuit: false, isDeadliftSuitStrapsUp: false, isFeetUp: false
     };
     const [isSessionComplete, setIsSessionComplete] = useState(false);
-    const [isFocusMode, setIsFocusMode] = useState(false);
     const [autoRest, setAutoRest] = useState(true);
     const [showDetails, setShowDetails] = useState(false);
     const [showIronLogicWhy, setShowIronLogicWhy] = useState(false);
@@ -243,18 +213,6 @@ const WorkoutLog = () => {
     
     const weightInputRef = useRef([]);
     const repsInputRef = useRef([]);
-
-    const { requestWakeLock, releaseWakeLock } = useWakeLock();
-    const [keepAwake, setKeepAwake] = useState(false);
-
-    useEffect(() => {
-        if (keepAwake) {
-            requestWakeLock();
-        } else {
-            releaseWakeLock();
-        }
-        return () => releaseWakeLock();
-    }, [keepAwake]);
 
     useEffect(() => {
         if (!targetUserId || !selectedDate) return;
@@ -670,10 +628,6 @@ const WorkoutLog = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <Link to="/calendar" className="btn" style={{ background: 'transparent', padding: '0.5rem' }}>&larr; Calendar</Link>
-                    {!isCoachViewing && (
-                        <Link to="/programs?tab=partner" className="btn" style={{ fontSize: '0.8rem', background: 'rgba(var(--primary-rgb), 0.1)', border: '1px solid var(--primary)', color: 'var(--primary)' }}>🤝 Partner Mode</Link>
-                    )}
-
                 </div>
                 <h1 style={{ margin: 0, fontSize: '1.75rem' }}>{isCoachViewing ? `Review Log` : 'Workout Log'}</h1>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -682,22 +636,6 @@ const WorkoutLog = () => {
                             <input type="checkbox" checked={autoRest} onChange={e => setAutoRest(e.target.checked)} />
                             Auto-Rest
                         </label>
-                    )}
-                    <button 
-                        className={`btn ${isFocusMode ? 'btn-primary' : ''}`} 
-                        onClick={() => setIsFocusMode(!isFocusMode)}
-                        style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-                    >
-                        {isFocusMode ? '🎯 Focus: ON' : '🎯 Focus Mode'}
-                    </button>
-                    {!isCoachViewing && (
-                        <button
-                            onClick={() => setKeepAwake(!keepAwake)}
-                            className={`btn ${keepAwake ? 'btn-primary' : ''}`}
-                            style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-                        >
-                            {keepAwake ? '💡 Screen: ON' : '😴 Allow Sleep'}
-                        </button>
                     )}
                 </div>
             </div>
@@ -784,43 +722,31 @@ const WorkoutLog = () => {
 
             {!isSessionComplete && (
                 <div className="glass-card" style={{ marginBottom: '2.5rem' }}>
-                    {!isFocusMode && (
-                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                            <div className="input-group" style={{ flex: 1 }}>
-                                <label style={{ fontSize: '0.85rem' }}>Date</label>
-                                <input
-                                    type="date"
-                                    value={getDateStr(selectedDate)}
-                                    onChange={(e) => setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
-                                    disabled={isViewingOther}
-                                />
-                            </div>
-                            <div className="input-group" style={{ flex: 2 }}>
-                                <label style={{ fontSize: '0.85rem' }}>Movement</label>
-                                <select value={selectedExerciseId} onChange={handleExerciseChange} disabled={isViewingOther}>
-                                    <option value="">-- Choose --</option>
-                                    <option value="CREATE_NEW">+ Custom</option>
-                                    {Object.values(EXERCISE_CATEGORIES).map(cat => (
-                                        <optgroup label={cat} key={cat}>
-                                            {allExercisesList.filter(ex => ex.category === cat).map(ex => (
-                                                <option key={ex.id} value={ex.id}>{ex.name}</option>
-                                            ))}
-                                        </optgroup>
-                                    ))}
-                                </select>
-                            </div>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div className="input-group" style={{ flex: 1 }}>
+                            <label style={{ fontSize: '0.85rem' }}>Date</label>
+                            <input
+                                type="date"
+                                value={getDateStr(selectedDate)}
+                                onChange={(e) => setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
+                                disabled={isViewingOther}
+                            />
                         </div>
-                    )}
-
-                    {isFocusMode && selectedExerciseId && (
-                        <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>Current Session</div>
-                            <div style={{ fontSize: '1.8rem', fontWeight: '800', color: 'var(--primary)' }}>
-                                {allExercisesList.find(e => e.id === selectedExerciseId)?.name}
-                            </div>
-                            <button className="btn" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', opacity: 0.6, marginTop: '0.5rem' }} onClick={() => setIsFocusMode(false)}>Change Movement</button>
+                        <div className="input-group" style={{ flex: 2 }}>
+                            <label style={{ fontSize: '0.85rem' }}>Movement</label>
+                            <select value={selectedExerciseId} onChange={handleExerciseChange} disabled={isViewingOther}>
+                                <option value="">-- Choose --</option>
+                                <option value="CREATE_NEW">+ Custom</option>
+                                {Object.values(EXERCISE_CATEGORIES).map(cat => (
+                                    <optgroup label={cat} key={cat}>
+                                        {allExercisesList.filter(ex => ex.category === cat).map(ex => (
+                                            <option key={ex.id} value={ex.id}>{ex.name}</option>
+                                        ))}
+                                    </optgroup>
+                                ))}
+                            </select>
                         </div>
-                    )}
+                    </div>
 
                     {isCreatingExercise && (
                         <div className="glass-card" style={{ marginBottom: '1.5rem', border: '2px solid var(--primary)' }}>
@@ -924,7 +850,6 @@ const WorkoutLog = () => {
                                             key={row.id}
                                             row={row}
                                             oneRepMax={olympicOneRepMax}
-                                            isFocusMode={isFocusMode}
                                             onChange={(field, value) => handleRowChange(row.id, field, value)}
                                             onAdjustWeight={(amount) => adjustWeight(row.id, amount)}
                                             onDuplicate={() => handleDuplicateRow(row.id)}
@@ -941,40 +866,37 @@ const WorkoutLog = () => {
                                 </div>
                                 ) : (
                                 <div className="strength-entry-form">
-                                    {/* HEADERS - Strictly Aligned */}
-                                    {!isFocusMode && (
-                                        <div style={{ 
-                                            display: 'grid', 
-                                            gridTemplateColumns: 'minmax(120px, 1.5fr) 1fr 1fr 100px', 
-                                            gap: '0.5rem', 
-                                            padding: '0 0.5rem',
-                                            marginBottom: '0.25rem',
-                                            opacity: 0.5,
-                                            fontSize: '0.7rem',
-                                            fontWeight: '800'
-                                        }}>
-                                            <div style={{ paddingLeft: '0.5rem' }}>WEIGHT ({unit})</div>
-                                            <div style={{ textAlign: 'center' }}>REPS</div>
-                                            <div style={{ textAlign: 'center' }}>ACTUAL RPE</div>
-                                            <div style={{ textAlign: 'right', paddingRight: '0.5rem' }}>ACTIONS</div>
-                                        </div>
-                                    )}
+                                    {/* HEADERS */}
+                                    <div style={{ 
+                                        display: 'grid', 
+                                        gridTemplateColumns: 'minmax(120px, 1.5fr) 1fr 1fr 100px', 
+                                        gap: '0.5rem', 
+                                        padding: '0 0.5rem',
+                                        marginBottom: '0.25rem',
+                                        opacity: 0.5,
+                                        fontSize: '0.7rem',
+                                        fontWeight: '800'
+                                    }}>
+                                        <div style={{ paddingLeft: '0.5rem' }}>WEIGHT ({unit})</div>
+                                        <div style={{ textAlign: 'center' }}>REPS</div>
+                                        <div style={{ textAlign: 'center' }}>ACTUAL RPE</div>
+                                        <div style={{ textAlign: 'right', paddingRight: '0.5rem' }}>ACTIONS</div>
+                                    </div>
 
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                         {setRows.map((row, index) => (
-                                            <div key={row.id} className={isFocusMode ? 'glass' : ''} style={{ 
+                                            <div key={row.id} style={{ 
                                                 display: 'grid', 
-                                                gridTemplateColumns: isFocusMode ? '1fr' : 'minmax(120px, 1.5fr) 1fr 1fr 100px', 
+                                                gridTemplateColumns: 'minmax(120px, 1.5fr) 1fr 1fr 100px', 
                                                 gap: '0.5rem', 
                                                 alignItems: 'center',
-                                                padding: isFocusMode ? '1.5rem' : '0.25rem',
-                                                background: !isFocusMode ? 'rgba(255,255,255,0.02)' : 'inherit',
+                                                padding: '0.25rem',
+                                                background: 'rgba(255,255,255,0.02)',
                                                 borderRadius: '12px',
-                                                border: !isFocusMode ? '1px solid var(--border-glass)' : 'none'
+                                                border: '1px solid var(--border-glass)'
                                             }}>
                                                 {/* WEIGHT */}
-                                                <div style={{ display: 'flex', gap: '4px', height: isFocusMode ? 'auto' : '48px', alignItems: 'center' }}>
-                                                    {isFocusMode && <label style={{ fontSize: '0.85rem' }}>Weight</label>}
+                                                <div style={{ display: 'flex', gap: '4px', height: '48px', alignItems: 'center' }}>
                                                     <input
                                                         ref={el => weightInputRef.current[index] = el}
                                                         type="number"
@@ -983,17 +905,14 @@ const WorkoutLog = () => {
                                                         className="pro-input"
                                                         style={{ height: '40px', fontSize: '1rem', fontWeight: '700', borderRadius: '8px' }}
                                                     />
-                                                    {!isFocusMode && (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                            <button type="button" className="btn" style={{ minWidth: '32px', height: '19px', padding: 0, fontSize: '0.6rem' }} onClick={() => adjustWeight(row.id, 2.5)}>+</button>
-                                                            <button type="button" className="btn" style={{ minWidth: '32px', height: '19px', padding: 0, fontSize: '0.6rem' }} onClick={() => adjustWeight(row.id, -2.5)}>-</button>
-                                                        </div>
-                                                    )}
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                        <button type="button" className="btn" style={{ minWidth: '32px', height: '19px', padding: 0, fontSize: '0.6rem' }} onClick={() => adjustWeight(row.id, 2.5)}>+</button>
+                                                        <button type="button" className="btn" style={{ minWidth: '32px', height: '19px', padding: 0, fontSize: '0.6rem' }} onClick={() => adjustWeight(row.id, -2.5)}>-</button>
+                                                    </div>
                                                 </div>
 
                                                 {/* REPS */}
-                                                <div style={{ display: 'flex', flexDirection: 'column', height: isFocusMode ? 'auto' : '48px', justifyContent: 'center' }}>
-                                                    {isFocusMode && <label style={{ fontSize: '0.85rem' }}>Reps</label>}
+                                                <div style={{ display: 'flex', flexDirection: 'column', height: '48px', justifyContent: 'center' }}>
                                                     <input
                                                         ref={el => repsInputRef.current[index] = el}
                                                         type="number"
@@ -1005,8 +924,7 @@ const WorkoutLog = () => {
                                                 </div>
 
                                                 {/* ACTUAL RPE (with inline target badge) */}
-                                                <div style={{ display: 'flex', flexDirection: 'column', height: isFocusMode ? 'auto' : '48px', justifyContent: 'center' }}>
-                                                    {isFocusMode && <label style={{ fontSize: '0.85rem' }}>Actual</label>}
+                                                <div style={{ display: 'flex', flexDirection: 'column', height: '48px', justifyContent: 'center' }}>
                                                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                                                         <input
                                                             type="number"
@@ -1036,7 +954,7 @@ const WorkoutLog = () => {
                                                 </div>
 
                                                 {/* ACTIONS */}
-                                                <div style={{ display: 'flex', gap: '4px', height: isFocusMode ? 'auto' : '48px', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                                <div style={{ display: 'flex', gap: '4px', height: '48px', alignItems: 'center', justifyContent: 'flex-end' }}>
                                                     <button type="button" className="btn" style={{ padding: '0.5rem', minWidth: '40px', height: '40px' }} onClick={() => handleDuplicateRow(row.id)} title="Repeat last set">
                                                         📋
                                                     </button>

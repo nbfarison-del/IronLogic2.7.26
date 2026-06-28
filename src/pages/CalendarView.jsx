@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -332,8 +332,13 @@ const CalendarView = () => {
                             style={{ background: 'linear-gradient(135deg, #1565c0, #0288d1)', border: 'none' }}
                             onClick={() => setIsPlanning(true)}
                         >
-                            {isCoachViewing ? '✏️ Assign Athlete Program' : '+ Plan My Workout'}
+                            {isCoachViewing ? 'Assign Athlete Program' : '+ Plan Workout'}
                         </button>
+                    )}
+                    {!isCoachViewing && (
+                        <Link to="/peaking" className="btn" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+                            Peaking
+                        </Link>
                     )}
                 </div>
             </div>

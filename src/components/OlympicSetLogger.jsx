@@ -14,8 +14,7 @@ const OlympicSetLogger = ({
     onAdjustWeight,
     onDuplicate,
     onRemove,
-    canRemove,
-    isFocusMode
+    canRemove
 }) => {
     const applyPercentage = (percentage) => {
         const nextWeight = calculateLoadFromPercentage(oneRepMax, percentage);
@@ -30,7 +29,7 @@ const OlympicSetLogger = ({
     };
 
     return (
-        <div className="glass" style={{ padding: isFocusMode ? '1rem' : '0.75rem', border: '1px solid var(--border-glass)' }}>
+        <div className="glass" style={{ padding: '0.75rem', border: '1px solid var(--border-glass)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '0.65rem', alignItems: 'end' }}>
                 <div className="input-group" style={{ margin: 0 }}>
                     <label>Load</label>

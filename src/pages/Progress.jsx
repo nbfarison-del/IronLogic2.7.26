@@ -8,6 +8,7 @@ import {
     BarChart, Bar
 } from 'recharts';
 import { getOlympicProgressDashboard, getSmartRecommendations } from '../services/OlympicWeightliftingEngine';
+import QualifyingTotals from '../components/QualifyingTotals';
 
 // DOTS score calculation
 const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
@@ -229,6 +230,14 @@ const Progress = () => {
                             IronLogic uses the DMAIC framework to analyze your Olympic weightlifting data and generate coaching recommendations.
                         </div>
                     </section>
+
+                    <QualifyingTotals
+                        athleteTotal={Math.max(0, ...(olympicDashboards.total || []).map(r => r.e1rm || 0))}
+                        bodyWeightKg={profile?.bodyWeight || 77}
+                        gender={profile?.gender || 'men'}
+                        age={profile?.age || 30}
+                        unit={unit}
+                    />
                 </>
             ) : (
                 <>

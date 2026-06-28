@@ -1005,37 +1005,6 @@ export const subscribeToMobilityLogs = (userId, callback, errorCallback) => {
     }, errorCallback);
 };
 
-// ==================== PARTNER WORKOUTS ====================
-
-export const getPartnerTemplates = async (userId) => {
-    const ref = collection(db, 'users', userId, 'partnerTemplates');
-    const qSnap = await getDocs(ref);
-    return qSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-};
-
-export const addPartnerTemplate = async (userId, templateData) => {
-    const ref = collection(db, 'users', userId, 'partnerTemplates');
-    const docRef = await addDoc(ref, {
-        ...templateData,
-        createdAt: new Date().toISOString()
-    });
-    return docRef.id;
-};
-
-export const deletePartnerTemplate = async (userId, templateId) => {
-    const docRef = doc(db, 'users', userId, 'partnerTemplates', templateId);
-    await deleteDoc(docRef);
-};
-
-export const logPartnerWorkout = async (userId, workoutData) => {
-    const ref = collection(db, 'users', userId, 'partnerWorkouts');
-    const docRef = await addDoc(ref, {
-        ...workoutData,
-        timestamp: new Date().toISOString()
-    });
-    return docRef.id;
-};
-
 // ==================== SETTINGS ====================
 
 

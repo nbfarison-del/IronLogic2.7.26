@@ -872,3 +872,78 @@ nav {
   50% { opacity: 1; }
   100% { opacity: 0.6; }
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Bottom Tab Bar */
+.bottom-tabs {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bottom-tabs {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: rgba(10, 11, 15, 0.96);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border-glass);
+    padding: 0.35rem 0;
+    justify-content: space-around;
+    align-items: center;
+    height: 64px;
+  }
+
+  .bottom-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-decoration: none;
+    color: var(--text-muted);
+    padding: 0.35rem 0.6rem;
+    border-radius: var(--radius);
+    transition: color 0.2s;
+    min-width: 0;
+  }
+
+  .bottom-tab.active {
+    color: var(--primary);
+  }
+
+  .bottom-tab.active svg {
+    filter: drop-shadow(0 0 6px rgba(var(--primary-rgb), 0.4));
+  }
+
+  .bottom-tab-label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+
+  /* Prevent content from hiding behind bottom bar */
+  .app-shell {
+    padding-bottom: 72px;
+  }
+
+  /* Simplify top nav on mobile */
+  nav {
+    height: 60px;
+    padding: 0 0.85rem;
+  }
+
+  .nav-links {
+    top: 60px;
+    height: calc(100vh - 60px);
+  }
+
+  .main-content {
+    padding-top: 4.5rem !important;
+  }
+}
