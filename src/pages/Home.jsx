@@ -223,7 +223,7 @@ const Home = () => {
                         </div>
                     )}
 
-                    {!profile?.name && workouts.length === 0 && (
+                    {!profile?.onboardingCompleted && workouts.length === 0 && (
                         <div className="glass-card" style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(var(--primary-rgb), 0.06)', borderLeft: '4px solid var(--primary)' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                                 <div>

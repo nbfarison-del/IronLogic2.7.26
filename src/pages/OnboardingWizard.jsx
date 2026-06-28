@@ -233,6 +233,7 @@ Return ONLY valid JSON with this exact structure:
             await Promise.all(promises);
 
             const profileUpdate = {
+                onboardingCompleted: true,
                 name: answers.name,
                 age: parseInt(answers.age, 10),
                 gender: answers.gender,
@@ -441,12 +442,6 @@ Return ONLY valid JSON with this exact structure:
                 )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-                    {step < 3 && (
-                        <button className="btn" onClick={() => { setStep(STEPS.length - 1); setGeneratedProgram(true); }}
-                            style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                            Skip to deploy (use existing data)
-                        </button>
-                    )}
                     <button
                         className={`btn ${canProceed ? 'btn-primary' : ''}`}
                         onClick={handleNext}
