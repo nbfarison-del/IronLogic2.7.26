@@ -20,6 +20,37 @@ const getDOTSScore = (bodyWeight, liftWeight, isMale = true) => {
     return (liftWeight * 500) / denom;
 };
 
+const WhyRec = ({ rec, defaultOpen }) => {
+    const [open, setOpen] = useState(defaultOpen || false);
+    return (
+        <div className="card" style={{ padding: '0.85rem', background: 'rgba(var(--primary-rgb), 0.04)', borderLeft: '3px solid var(--primary)' }}>
+            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{rec.text}</div>
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.25rem 0',
+                    fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                    marginTop: '0.35rem'
+                }}
+            >
+                <span style={{ display: 'inline-block', transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>&#9656;</span>
+                {open ? 'Hide' : 'Why?'}
+            </button>
+            {open && (
+                <div style={{ marginTop: '0.5rem', padding: '0.65rem 0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                    <div><strong>DMAIC:</strong> Define {rec.dmaic?.define || 'athlete profile'} &rarr; Measure {rec.dmaic?.measure || 'readiness/recovery'} &rarr; Analyze {rec.dmaic?.analyze || 'training data'} &rarr; <strong>Improve</strong> (this recommendation) &rarr; Control (monitor outcome)</div>
+                    {rec.dmaic?.evidence && <div style={{ marginTop: '0.3rem' }}><strong>Evidence:</strong> {rec.dmaic.evidence}</div>}
+                    <div style={{ marginTop: '0.3rem', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
+                        Confidence: High | Source: IronLogic DMAIC Cycle | Phase: Improve
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const Progress = () => {
     const location = useLocation();
     const { weights, workouts, recovery, profile, isLoading } = useData();
@@ -174,19 +205,28 @@ const Progress = () => {
                     </div>
 
                     <section className="glass-card">
-                        <p className="page-kicker">Coach Panel</p>
-                        <h2 style={{ marginTop: 0 }}>Smart Recommendations</h2>
-                        <div style={{ display: 'grid', gap: '0.75rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <div>
+                                <p className="page-kicker">IronLogic Coach</p>
+                                <h2 style={{ marginTop: 0 }}>Adaptation Insights</h2>
+                            </div>
+                        </div>
+                        <div style={{ display: 'grid', gap: '0.65rem' }}>
                             {olympicRecommendations.map((rec, idx) => (
-                                <div className="list-row" key={idx}>
-                                    <div>
-                                        <strong>{rec.text}</strong>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                            DMAIC Control: monitor this after the next completed Olympic session.
-                                        </div>
-                                    </div>
-                                </div>
+                                <WhyRec
+                                    key={idx}
+                                    rec={rec}
+                                    defaultOpen={idx === 0}
+                                />
                             ))}
+                            {olympicRecommendations.length === 0 && (
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                    Log Olympic lifting sessions to generate coaching insights.
+                                </div>
+                            )}
+                        </div>
+                        <div style={{ marginTop: '0.85rem', padding: '0.7rem', background: 'rgba(0,0,0,0.12)', borderRadius: '8px', fontSize: '0.82rem', color: 'var(--text-subtle)' }}>
+                            IronLogic uses the DMAIC framework to analyze your Olympic weightlifting data and generate coaching recommendations.
                         </div>
                     </section>
                 </>
@@ -266,6 +306,32 @@ const Progress = () => {
                     </div>
                 </div>
             </div>
+
+            <section className="glass-card" style={{ marginTop: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <div>
+                        <p className="page-kicker">IronLogic Coach</p>
+                        <h2 style={{ marginTop: 0 }}>Adaptation Insights</h2>
+                    </div>
+                </div>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: 0 }}>
+                    IronLogic analyzes your training data through the DMAIC framework to generate coaching recommendations.
+                </p>
+                <div style={{ display: 'grid', gap: '0.65rem' }}>
+                    {olympicRecommendations.map((rec, idx) => (
+                        <WhyRec
+                            key={idx}
+                            rec={rec}
+                            defaultOpen={idx === 0}
+                        />
+                    ))}
+                    {olympicRecommendations.length === 0 && (
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                            Log training sessions to generate coaching insights.
+                        </div>
+                    )}
+                </div>
+            </section>
                 </>
             )}
         </div>

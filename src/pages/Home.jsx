@@ -10,9 +10,7 @@ import MobilityTab from '../components/MobilityTab';
 import IronLogicTab from '../components/IronLogicTab';
 import ActivityFeed from '../components/ActivityFeed';
 import {
-    buildOlympicSession,
     calculateCompetitionPhase,
-    getOlympicProfile,
     getRecoveryAdjustment,
     getSmartRecommendations
 } from '../services/OlympicWeightliftingEngine';
@@ -43,6 +41,39 @@ const tabs = [
     { id: 'ironlogic-method', label: 'Method' }
 ];
 
+const WhyRec = ({ rec }) => {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="card" style={{ marginBottom: '0.5rem', padding: '0.85rem', background: 'rgba(var(--primary-rgb), 0.04)', borderLeft: '3px solid var(--primary)' }}>
+            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{rec.text}</div>
+            <button
+                type="button"
+                onClick={() => setOpen(!open)}
+                style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.25rem 0',
+                    fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                    marginTop: '0.35rem'
+                }}
+            >
+                <span style={{ display: 'inline-block', transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>&#9656;</span>
+                {open ? 'Hide' : 'Why?'}
+            </button>
+            {open && (
+                <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                    <div><strong>DMAIC:</strong> Define {rec.dmaic.define}</div>
+                    {rec.dmaic.measure && <div><strong>Measure:</strong> {rec.dmaic.measure}</div>}
+                    {rec.dmaic.analyze && <div><strong>Analyze:</strong> {rec.dmaic.analyze}</div>}
+                    <div><strong>Improve:</strong> {rec.text}</div>
+                    <div style={{ marginTop: '0.35rem', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
+                        Confidence: High | Phase: Improve | Source: IronLogic DMAIC Cycle
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const Home = () => {
     const { user } = useAuth();
     const { unit: appUnit } = useSettings();
@@ -63,11 +94,9 @@ const Home = () => {
         return plannedWorkouts.find(p => p.date === todayStr);
     }, [plannedWorkouts, todayStr]);
 
-    const olympicProfile = useMemo(() => getOlympicProfile(profile || {}), [profile]);
     const competitionPhase = useMemo(() => calculateCompetitionPhase(profile || {}), [profile]);
     const recoveryAdjustment = useMemo(() => getRecoveryAdjustment({}, recovery), [recovery]);
     const smartRecommendations = useMemo(() => getSmartRecommendations({ profile, workouts, recovery }).slice(0, 3), [profile, workouts, recovery]);
-    const suggestedSession = useMemo(() => buildOlympicSession({ profile, workouts, recovery }), [profile, workouts, recovery]);
 
     const recentPRs = useMemo(() => {
         const prList = [];
@@ -254,6 +283,40 @@ const Home = () => {
                             <div className="metric-note">{competitionPhase.name}</div>
                         </div>
                     </div>
+
+                    <section className="glass-card" style={{ marginBottom: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                            <div>
+                                <p className="page-kicker">Iron Logic Coach</p>
+                                <h2 style={{ margin: '0.2rem 0 0', fontSize: '1.15rem' }}>Today&apos;s Coaching Recommendation</h2>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn"
+                                style={{ fontSize: '0.85rem' }}
+                                onClick={() => setActiveTab('ironlogic-method')}
+                            >
+                                View Method
+                            </button>
+                        </div>
+                        {smartRecommendations.length > 0 ? (
+                            <div style={{ marginTop: '0.65rem' }}>
+                                {smartRecommendations.slice(0, 2).map((rec, index) => (
+                                    <WhyRec
+                                        key={index}
+                                        rec={rec}
+                                        defaultOpen={index === 0}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div style={{ marginTop: '0.85rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                {workouts.length > 3
+                                    ? 'Run a DMAIC cycle on the Method tab to generate coaching recommendations.'
+                                    : 'Log a few sessions to unlock IronLogic coaching insights.'}
+                            </div>
+                        )}
+                    </section>
 
                     <div className="quick-action-grid">
                         <Link to="/log" className="glass-card action-tile">

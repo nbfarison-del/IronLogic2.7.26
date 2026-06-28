@@ -227,6 +227,7 @@ const WorkoutLog = () => {
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [autoRest, setAutoRest] = useState(true);
     const [showDetails, setShowDetails] = useState(false);
+    const [showIronLogicWhy, setShowIronLogicWhy] = useState(false);
     const [showRpeModal, setShowRpeModal] = useState(false);
     const [sessionRpe, setSessionRpe] = useState(7);
     const [completionFeedback, setCompletionFeedback] = useState({
@@ -729,9 +730,23 @@ const WorkoutLog = () => {
 
             {!isCoachViewing && activeWorkoutPlan && !isSessionComplete && (
                 <div className="glass-card" style={{ marginBottom: '2.5rem', borderLeft: '4px solid var(--primary)' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--primary)', letterSpacing: '0.02em' }}>
-                        {activeWorkoutPlan.trainingMode === 'olympic_weightlifting' ? 'Olympic Session' : 'Today\'s Program'} - {activeWorkoutPlan.name || 'Ready'}
-                    </h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--primary)', letterSpacing: '0.02em' }}>
+                            {activeWorkoutPlan.trainingMode === 'olympic_weightlifting' ? 'Olympic Session' : 'Today\'s Program'} - {activeWorkoutPlan.name || 'Ready'}
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => setShowIronLogicWhy(prev => !prev)}
+                            style={{
+                                background: 'none', border: 'none', cursor: 'pointer',
+                                fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.2rem 0',
+                                fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '0.3rem'
+                            }}
+                        >
+                            <span style={{ display: 'inline-block', transition: 'transform 0.2s', transform: showIronLogicWhy ? 'rotate(90deg)' : 'rotate(0deg)' }}>&#9656;</span>
+                            {showIronLogicWhy ? 'Hide' : 'Why This Workout?'}
+                        </button>
+                    </div>
                     {activeWorkoutPlan.recoveryAdjustment && (
                         <p style={{ margin: '0.5rem 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                             {activeWorkoutPlan.phase?.name} - {activeWorkoutPlan.recoveryAdjustment.note}
@@ -750,6 +765,20 @@ const WorkoutLog = () => {
                             </button>
                         ))}
                     </div>
+                    {showIronLogicWhy && (
+                        <div style={{ marginTop: '0.85rem', padding: '0.85rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                            <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.4rem' }}>IronLogic Coaching Rationale</div>
+                            <div><strong>Phase:</strong> {activeWorkoutPlan.phase?.name || 'General'} ({activeWorkoutPlan.trainingMode || 'strength'})</div>
+                            <div><strong>Readiness:</strong> {activeWorkoutPlan.recoveryAdjustment?.readinessScore || '--'}/10 - {activeWorkoutPlan.recoveryAdjustment?.note || 'No context recorded'}</div>
+                            <div><strong>Exercises Selected:</strong> {activeWorkoutPlan.exercises.map(e => e.exerciseName).join(', ') || 'No exercises'}</div>
+                            <div style={{ marginTop: '0.4rem', fontSize: '0.8rem', color: 'var(--text-subtle)' }}>
+                                <strong>DMAIC Flow:</strong> Define (athlete profile) &rarr; Measure (readiness/recovery) &rarr; Analyze (training phase) &rarr; <strong>Improve</strong> (this session) &rarr; Control (post-session review)
+                            </div>
+                            <div style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: 'var(--text-subtle)' }}>
+                                <strong>Inputs:</strong> Recovery {activeWorkoutPlan.recoveryAdjustment?.readinessScore || '--'}/10, Phase: {activeWorkoutPlan.phase?.name || 'General'}, Load: {activeWorkoutPlan.exercises.length} exercises
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
