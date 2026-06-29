@@ -378,7 +378,7 @@ const IronLogicTab = () => {
                                 />
                                 <MetricCard
                                     label="Readiness"
-                                    value={recoveryAdjustment?.readinessScore || measure?.recoveryScore != null ? `${measure.recoveryScore}/10` : '--'}
+                                    value={measure?.recoveryScore != null ? `${measure.recoveryScore}/10` : recoveryAdjustment?.readinessScore || '--'}
                                 />
                                 <MetricCard
                                     label="Estimated 1RM"
@@ -624,7 +624,7 @@ const IronLogicTab = () => {
                                     <div style={{ fontWeight: 600, marginTop: '0.5rem' }}>DMAIC Flow</div>
                                     <ol style={{ paddingLeft: '1.2rem', marginTop: '0.3rem' }}>
                                         <li><strong>Define</strong> - Athlete context: {defineData.primaryGoal}, {defineData.trainingPhase}</li>
-                                        <li><strong>Measure</strong> - Recovery: {measure?.recoveryScore}/10, Volume: {Math.round(measure?.acuteVolume || 0).toLocaleString()}, RPE: {measure?.averageRpe || '--'}</li>
+                                        <li><strong>Measure</strong> - Recovery: {measure?.recoveryScore != null ? `${measure.recoveryScore}/10` : 'N/A'}, Volume: {measure?.acuteVolume ? Math.round(measure.acuteVolume).toLocaleString() : 'N/A'}, RPE: {measure?.averageRpe || '--'}</li>
                                         <li><strong>Analyze</strong> - Classification: {classification} (score: {status?.score})</li>
                                         <li><strong>Improve</strong> - {recommendation.title}: {recommendation.description}</li>
                                         <li><strong>Control</strong> - Review after {ctrl?.nextReviewTrigger || 'next cycle'}</li>
