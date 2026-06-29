@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 import { useData } from './DataContext';
+import { useToast } from './ToastContext';
 import * as firestoreService from '../services/firestoreService';
 
 const SettingsContext = createContext();
@@ -10,6 +11,7 @@ export const useSettings = () => useContext(SettingsContext);
 export const SettingsProvider = ({ children }) => {
     const { user } = useAuth();
     const { settings } = useData();
+    const { showToast } = useToast();
 
     const unit = settings?.unit || 'kg';
 
@@ -20,9 +22,10 @@ export const SettingsProvider = ({ children }) => {
                 await firestoreService.updateSettings(user.id, { unit: newUnit });
             } catch (error) {
                 console.error('Error saving settings:', error);
+                showToast('Failed to save settings.', 'error');
             }
         }
-    }, [unit, user]);
+    }, [unit, user, showToast]);
 
     const value = useMemo(() => ({
         unit,

@@ -26,6 +26,7 @@ import {
     getSubstitutionOptions
 } from '../services/OlympicWeightliftingEngine';
 import { calculateEstimated1RM as calcE1RM } from '../utils/calculator';
+import { getDateStr } from '../utils/dateUtils';
 
 // Exercises where distance is captured as whole meters rather than a decimal distance.
 const METER_BASED_EXERCISE_IDS = new Set([
@@ -43,11 +44,6 @@ const isMeterBasedExercise = (exerciseOrId) => {
     if (metricType === 'meters' || exerciseUnit === 'm') return true;
     if (id && METER_BASED_EXERCISE_IDS.has(id)) return true;
     return METER_BASED_NAME_PATTERN.test(name);
-};
-
-// Browser-robust YYYY-MM-DD helper
-const getDateStr = (date) => {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
 const createSetRow = (overrides = {}) => ({
@@ -109,6 +105,7 @@ const WorkoutLog = () => {
                 setExtPlanned(p);
             } catch (err) {
                 console.error("Error loading athlete data:", err);
+                showToast('Failed to load athlete data.', 'error');
             } finally {
                 setExtLoading(false);
             }
@@ -300,6 +297,7 @@ const WorkoutLog = () => {
             await firestoreService.markSessionComplete(targetUserId, getDateStr(selectedDate), false);
         } catch (error) {
             console.error('Error reopening workout:', error);
+            showToast('Failed to reopen workout.', 'error');
         }
     };
 
@@ -424,6 +422,7 @@ const WorkoutLog = () => {
             setSelectedExerciseId(newEx.id);
         } catch (error) {
             console.error('Error creating exercise:', error);
+            showToast('Failed to create exercise.', 'error');
         }
     };
 
@@ -576,6 +575,7 @@ const WorkoutLog = () => {
             setTechnicalNotes(createEmptyTechnicalNotes());
         } catch (error) {
             console.error('Error logging workout:', error);
+            showToast('Failed to save workout. Check your connection.', 'error');
         } finally {
             setSaving(false);
         }
@@ -955,11 +955,11 @@ const WorkoutLog = () => {
 
                                                 {/* ACTIONS */}
                                                 <div style={{ display: 'flex', gap: '4px', height: '48px', alignItems: 'center', justifyContent: 'flex-end' }}>
-                                                    <button type="button" className="btn" style={{ padding: '0.5rem', minWidth: '40px', height: '40px' }} onClick={() => handleDuplicateRow(row.id)} title="Repeat last set">
+                                                    <button type="button" className="btn" style={{ padding: '0.5rem', minWidth: '40px', height: '40px' }} onClick={() => handleDuplicateRow(row.id)} aria-label="Repeat last set">
                                                         📋
                                                     </button>
                                                     {setRows.length > 1 && (
-                                                        <button type="button" className="btn" onClick={() => handleRemoveRow(row.id)} style={{ color: 'var(--accent-error)', padding: '0.5rem', minWidth: '40px', height: '40px' }}>
+                                                        <button type="button" className="btn" onClick={() => handleRemoveRow(row.id)} style={{ color: 'var(--accent-error)', padding: '0.5rem', minWidth: '40px', height: '40px' }} aria-label="Remove set">
                                                             ✕
                                                         </button>
                                                     )}
@@ -1136,7 +1136,7 @@ const WorkoutLog = () => {
 
             {/* Session RPE Modal */}
             {showRpeModal && (
-                <div className="nav-overlay open" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000 }}>
+                <div className="nav-overlay open" role="dialog" aria-modal="true" aria-label="Finalize session" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 4000 }}>
                     <div className="glass-card" style={{ maxWidth: '400px', width: '90%', textAlign: 'center' }}>
                         <h2 style={{ marginTop: 0 }}>Finalize Session</h2>
                         {finalizeError && (
@@ -1210,6 +1210,7 @@ const WorkoutLog = () => {
 
 const CommentSection = ({ userId, sessionId }) => {
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
     const [loading, setLoading] = useState(true);
@@ -1236,6 +1237,7 @@ const CommentSection = ({ userId, sessionId }) => {
             setNewComment('');
         } catch (error) {
             console.error('Error sending comment:', error);
+            showToast('Failed to send comment.', 'error');
         }
     };
 

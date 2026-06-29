@@ -27,16 +27,39 @@ service cloud.firestore {
     }
 
     function canWriteUser(userId) {
-      return ownsUserDoc(userId) || isAssignedCoach(userId) || isAdmin();
+      return ownsUserDoc(userId) || isAdmin();
+    }
+
+    function canCoachWrite(userId) {
+      return isAssignedCoach(userId);
     }
 
     function isAdminRoleRequest() {
       return request.resource.data.keys().hasAny(['role']);
     }
 
+    // Admin and owner have full write access to all subcollections
+    // Coaches have read access but write access only to specific subcollections
     match /users/{userId}/{document=**} {
       allow read: if canReadUser(userId);
       allow write: if canWriteUser(userId) && !(isAdminRoleRequest() && !isAdmin() && ownsUserDoc(userId));
+    }
+
+    // Coach write access to specific subcollections needed for their role
+    match /users/{userId}/athletePrograms/{document=**} {
+      allow write: if canCoachWrite(userId);
+    }
+    match /users/{userId}/coaching/{document=**} {
+      allow write: if canCoachWrite(userId);
+    }
+    match /users/{userId}/programCompliance/{document=**} {
+      allow write: if canCoachWrite(userId);
+    }
+    match /users/{userId}/workouts/{workoutId}/comments/{document=**} {
+      allow write: if canCoachWrite(userId);
+    }
+    match /users/{userId}/ilm/{document=**} {
+      allow write: if canCoachWrite(userId);
     }
 
     match /registered_users/{userId} {

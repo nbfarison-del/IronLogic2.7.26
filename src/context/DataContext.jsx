@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 import * as firestoreService from '../services/firestoreService';
 import { syncService } from '../services/SyncService';
 
@@ -9,6 +10,7 @@ export const useData = () => useContext(DataContext);
 
 export const DataProvider = ({ children }) => {
     const { user } = useAuth();
+    const { showToast } = useToast();
 
     const [workouts, setWorkouts] = useState([]);
     const [weights, setWeights] = useState([]);
@@ -41,6 +43,7 @@ export const DataProvider = ({ children }) => {
         const handleError = (source) => (err) => {
             console.error(`${source} Sync Error:`, err);
             setSyncError(`${source}: ${err.message || 'Unknown error'}`);
+            showToast(`Sync error: ${source} — ${err.message || 'Unknown error'}`, 'error');
         };
 
         window.addEventListener('online', handleOnline);

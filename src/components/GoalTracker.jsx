@@ -1,11 +1,13 @@
 import React, { useState, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useToast } from '../context/ToastContext';
 import * as firestoreService from '../services/firestoreService';
 
 const GoalTracker = () => {
     const { user } = useAuth();
     const { goals: events, isLoading: loading } = useData();
+    const { showToast } = useToast();
 
     // Form States
     const [showAddEvent, setShowAddEvent] = useState(false);
@@ -35,6 +37,7 @@ const GoalTracker = () => {
             setShowAddEvent(false);
         } catch (error) {
             console.error('Error adding event:', error);
+            showToast('Failed to add event. Please try again.', 'error');
         }
     };
 
@@ -45,6 +48,7 @@ const GoalTracker = () => {
             await firestoreService.deleteGoal(user.id, id);
         } catch (error) {
             console.error('Error deleting event:', error);
+            showToast('Failed to delete event. Please try again.', 'error');
         }
     };
 
@@ -66,6 +70,7 @@ const GoalTracker = () => {
             await firestoreService.updateGoal(user.id, eventId, updatedEvent);
         } catch (error) {
             console.error('Error adding goal:', error);
+            showToast('Failed to add goal. Please try again.', 'error');
         }
     };
 
@@ -85,6 +90,7 @@ const GoalTracker = () => {
             await firestoreService.updateGoal(user.id, eventId, updatedEvent);
         } catch (error) {
             console.error('Error toggling goal:', error);
+            showToast('Failed to update goal. Please try again.', 'error');
         }
     };
 
@@ -101,6 +107,7 @@ const GoalTracker = () => {
             await firestoreService.updateGoal(user.id, eventId, updatedEvent);
         } catch (error) {
             console.error('Error deleting goal:', error);
+            showToast('Failed to delete goal. Please try again.', 'error');
         }
     };
 

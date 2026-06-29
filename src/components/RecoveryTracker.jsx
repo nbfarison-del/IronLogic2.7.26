@@ -1,6 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useToast } from '../context/ToastContext';
 import * as firestoreService from '../services/firestoreService';
 
 const GOGGINS_QUOTES = {
@@ -49,6 +50,7 @@ const getRandomQuote = (score) => {
 const RecoveryTracker = () => {
     const { user } = useAuth();
     const { recovery: history, isLoading: loading } = useData();
+    const { showToast } = useToast();
     const [todayScore, setTodayScore] = useState(null);
     const [message, setMessage] = useState('');
     const [saving, setSaving] = useState(false);
@@ -139,6 +141,7 @@ const RecoveryTracker = () => {
         } catch (error) {
             console.error('Error saving recovery:', error);
             setMessage('Error saving recovery data');
+            showToast('Failed to save recovery data.', 'error');
         } finally {
             setSaving(false);
         }

@@ -304,10 +304,10 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <DataProvider>
-        <SettingsProvider>
-          <TimerProvider>
-            <ToastProvider>
+      <ToastProvider>
+        <DataProvider>
+          <SettingsProvider>
+            <TimerProvider>
               <Suspense fallback={
                 <AppLoading label="Loading IronLogic" />
               }>
@@ -316,10 +316,10 @@ function App() {
                 </ErrorBoundary>
               </Suspense>
 
-            </ToastProvider>
-          </TimerProvider>
-        </SettingsProvider>
-      </DataProvider>
+            </TimerProvider>
+          </SettingsProvider>
+        </DataProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

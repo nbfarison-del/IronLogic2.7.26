@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { getAssignedAthletes } from '../services/firestoreService';
 import { Link } from 'react-router-dom';
 import * as firestoreService from '../services/firestoreService';
@@ -8,6 +9,7 @@ import { SUPER_ADMIN_EMAIL } from '../config/constants';
 
 const CoachDashboard = () => {
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [athletes, setAthletes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [metrics, setMetrics] = useState({});
@@ -76,6 +78,7 @@ const CoachDashboard = () => {
                     };
                 } catch (err) {
                     console.error(`Error fetching data for ${athlete.id}:`, err);
+                    showToast(`Failed to load data for ${athlete.email}`, 'error');
                     return { id: athlete.id, name: athlete.email, metrics: { lastWorkout: 'Error', currentBlock: '-', compliance: 0, ilmStatus: 'UNKNOWN' } };
                 }
             }));
@@ -95,6 +98,7 @@ const CoachDashboard = () => {
             }));
         } catch (error) {
             console.error('Error fetching athletes:', error);
+            showToast('Failed to fetch athletes. Check your connection.', 'error');
         } finally {
             setLoading(false);
         }

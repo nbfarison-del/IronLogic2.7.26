@@ -210,8 +210,7 @@ const ProgramPlanner = ({ date, onSave, onCancel, initialData = null, mode = 'as
         const filteredExercises = plannedExercises.filter(ex => ex.exerciseId);
         if (filteredExercises.length === 0) return alert('Please select an exercise');
 
-        const getDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        const todayStr = getDateStr(date || new Date());
+        const todayStr = `${(date || new Date()).getFullYear()}-${String((date || new Date()).getMonth() + 1).padStart(2, '0')}-${String((date || new Date()).getDate()).padStart(2, '0')}`;
 
         const programData = {
             name: programName,

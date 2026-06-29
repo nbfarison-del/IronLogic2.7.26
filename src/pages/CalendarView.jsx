@@ -3,17 +3,15 @@ import { Link, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
+import { useToast } from '../context/ToastContext';
 import ProgramPlanner from '../components/ProgramPlanner';
 import * as firestoreService from '../services/firestoreService';
-
-// Browser-robust YYYY-MM-DD helper
-const getDateStr = (date) => {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-};
+import { getDateStr } from '../utils/dateUtils';
 
 const CalendarView = () => {
     const { unit } = useSettings();
     const { user } = useAuth();
+    const { showToast } = useToast();
     const {
         workouts,
         recovery: recoveryHistory,
@@ -82,6 +80,7 @@ const CalendarView = () => {
         };
         const handleError = (error) => {
             console.error('Calendar subscription error:', error);
+            showToast('Failed to load calendar data. Check your connection.', 'error');
             setExtLoading(false);
         };
 
@@ -139,6 +138,7 @@ const CalendarView = () => {
             }
         } catch (error) {
             console.error('Error saving weight:', error);
+            showToast('Failed to save weight. Please try again.', 'error');
         }
     };
 
@@ -161,6 +161,7 @@ const CalendarView = () => {
             }
         } catch (error) {
             console.error('Error saving note:', error);
+            showToast('Failed to save note. Please try again.', 'error');
         }
     };
 
@@ -176,6 +177,7 @@ const CalendarView = () => {
             setEditingProgram(null);
         } catch (error) {
             console.error('Error saving planned workout:', error);
+            showToast('Failed to save workout. Please try again.', 'error');
         }
     };
 
@@ -191,6 +193,7 @@ const CalendarView = () => {
             setConfirmingDelete(null);
         } catch (error) {
             console.error('Error deleting planned workout:', error);
+            showToast('Failed to delete workout. Please try again.', 'error');
         }
     };
 

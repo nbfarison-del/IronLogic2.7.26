@@ -2,12 +2,14 @@ import React, { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useSettings } from '../context/SettingsContext';
+import { useToast } from '../context/ToastContext';
 import * as firestoreService from '../services/firestoreService';
 
 const WeightTracker = () => {
     const { unit } = useSettings();
     const { user } = useAuth();
     const { weights: history, isLoading: loading } = useData();
+    const { showToast } = useToast();
     const [todayWeight, setTodayWeight] = useState('');
     const [message, setMessage] = useState('');
     const [saving, setSaving] = useState(false);
@@ -49,6 +51,7 @@ const WeightTracker = () => {
         } catch (error) {
             console.error('Error saving weight:', error);
             setMessage('Error saving weight');
+            showToast('Failed to save weight.', 'error');
         } finally {
             setSaving(false);
         }

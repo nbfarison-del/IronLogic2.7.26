@@ -7,6 +7,7 @@ import {
     addDoc,
     updateDoc,
     deleteDoc,
+    writeBatch,
     query,
     where,
     orderBy,
@@ -23,6 +24,7 @@ export {
     addDoc,
     updateDoc,
     deleteDoc,
+    writeBatch,
     query,
     where,
     orderBy,
@@ -32,6 +34,7 @@ export {
 
 import { db } from '../config/firebaseConfig';
 import { logger } from '../utils/logger';
+import { getDateStr as toDateStr } from '../utils/dateUtils';
 export { db };
 
 // ==================== ADMIN & TRACKING ====================
@@ -636,10 +639,6 @@ export const deleteProgramTemplate = async (templateId) => {
     await deleteDoc(docRef);
 };
 
-const toDateStr = (date) => {
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-};
-
 const normalizeCollection = (value) => {
     if (Array.isArray(value)) return value.filter(Boolean);
     if (value && typeof value === 'object') return Object.values(value).filter(Boolean);
@@ -749,33 +748,39 @@ export const importProgramToCalendar = async (userId, templateId, startDateStr, 
     const existingPlans = await getPlannedWorkouts(userId);
     const existingMap = new Set(existingPlans.map(p => `${p.templateId}_${p.date}`));
 
-    const promises = sessions
-        .map(session => {
-            const workoutDate = new Date(startDate);
-            workoutDate.setDate(startDate.getDate() + session.offset);
-            const dateStr = toDateStr(workoutDate);
+    const batch = writeBatch(db);
+    const athleteProgramsRef = collection(db, 'users', userId, 'athletePrograms');
+    let createdCount = 0;
 
-            if (existingMap.has(`${templateId}_${dateStr}`)) return null;
+    sessions.forEach(session => {
+        const workoutDate = new Date(startDate);
+        workoutDate.setDate(startDate.getDate() + session.offset);
+        const dateStr = toDateStr(workoutDate);
 
-            return saveAthleteProgram(userId, 'system', {
-                name: session.name,
-                planName: `${template.name || 'Program'} - W${session.weekNumber}D${session.dayNumber}`,
-                date: dateStr,
-                exercises: session.exercises,
-                notes: session.notes,
-                isFromTemplate: true,
-                templateId
-            });
-        })
-        .filter(Boolean);
+        if (existingMap.has(`${templateId}_${dateStr}`)) return;
 
-    if (promises.length === 0) {
+        const newDocRef = doc(athleteProgramsRef);
+        batch.set(newDocRef, {
+            name: session.name,
+            planName: `${template.name || 'Program'} - W${session.weekNumber}D${session.dayNumber}`,
+            date: dateStr,
+            exercises: session.exercises,
+            notes: session.notes,
+            isFromTemplate: true,
+            templateId,
+            authorId: 'system',
+            assignedAt: new Date().toISOString()
+        });
+        createdCount++;
+    });
+
+    if (createdCount === 0) {
         throw new Error('This template is already applied on the selected dates.');
     }
-    
-    const savedIds = await Promise.all(promises);
+
+    await batch.commit();
     return {
-        createdCount: savedIds.length,
+        createdCount,
         totalSessions: sessions.length
     };
 };
@@ -903,8 +908,9 @@ export const getChatHistory = async (userId, limitCount = 50) => {
 export const clearChatHistory = async (userId) => {
     const chatRef = collection(db, 'users', userId, 'chatHistory');
     const querySnapshot = await getDocs(chatRef);
-    const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
-    await Promise.all(deletePromises);
+    const batch = writeBatch(db);
+    querySnapshot.docs.forEach(docSnap => batch.delete(docSnap.ref));
+    await batch.commit();
 };
 
 // ==================== CUSTOM EXERCISES ====================
@@ -964,8 +970,13 @@ export const ensureCustomExercisesExist = async (userId, program) => {
         });
     });
     if (newExercises.length > 0) {
-        const promises = newExercises.map(ex => addCustomExercise(userId, ex.data, ex.id));
-        await Promise.all(promises);
+        const batch = writeBatch(db);
+        const exercisesRef = collection(db, 'users', userId, 'customExercises');
+        newExercises.forEach(ex => {
+            const docRef = ex.id ? doc(exercisesRef, ex.id) : doc(exercisesRef);
+            batch.set(docRef, ex.data);
+        });
+        await batch.commit();
     }
 };
 

@@ -114,6 +114,7 @@ const Profile = () => {
             window.location.href = '/';
         } catch (err) {
             console.error('Refresh error:', err);
+            showToast('Failed to clear cache. Reloading...', 'error');
             window.location.reload();
         }
     };
