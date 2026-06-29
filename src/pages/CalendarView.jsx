@@ -55,9 +55,6 @@ const CalendarView = () => {
     const [isPlanning, setIsPlanning] = useState(planParam === 'true');
     const [editingProgram, setEditingProgram] = useState(null);
 
-    // Input State for Weight
-    const [weightInput, setWeightInput] = useState('');
-    const [noteInput, setNoteInput] = useState('');
     const [confirmingDelete, setConfirmingDelete] = useState(null);
 
 
@@ -113,13 +110,17 @@ const CalendarView = () => {
     const effectiveNotes = isCoachViewing ? extNotes : notesHistory;
     const effectiveMobility = isCoachViewing ? extMobility : mobilityLogs;
 
-    // Sync Weight and Note Input
+    const [weightInput, setWeightInput] = useState('');
+    const [noteInput, setNoteInput] = useState('');
+
+    // Reset inputs when selected date changes
     useEffect(() => {
         const dateStr = getDateStr(selectedDate);
         const weightEntry = effectiveWeights.find(w => w.date === dateStr);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setWeightInput(weightEntry ? weightEntry.weight : '');
-
         const noteEntry = effectiveNotes.find(n => n.date === dateStr);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setNoteInput(noteEntry ? noteEntry.text : '');
     }, [selectedDate, effectiveWeights, effectiveNotes, isCoachViewing]);
 

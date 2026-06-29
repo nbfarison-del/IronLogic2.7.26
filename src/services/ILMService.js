@@ -51,7 +51,7 @@ export const getTrainingIntent = async (userId) => {
 
 // --- 2. MEASURE: Data Ingestion Layer ---
 
-export const ingestPerformanceData = async (userId, days = 14) => {
+export const ingestPerformanceData = async (userId) => {
     // This aggregates workouts and planned sessions
     const workoutsRef = collection(db, 'users', userId, 'workouts');
     const plannedRef = collection(db, 'users', userId, 'athletePrograms');
@@ -131,8 +131,8 @@ export const analyzeTrainingStatus = (performanceData, readiness = {}) => {
 
 // --- 4. IMPROVE: Auto-Adjustment Engine ---
 
-export const generateAdjustments = (analysis, intent) => {
-    const { category, score } = analysis;
+export const generateAdjustments = (analysis) => {
+    const { category } = analysis;
     const adjustments = {
         loadProgression: 1.0, // Multiplier for standard progression
         volumeModifier: 1.0,  // Multiplier for set count
@@ -200,7 +200,7 @@ export const generateDetailedRecommendation = async (analysis, adjustments, inte
 
     try {
         return await chatWithAI([{ role: 'user', content: prompt }]);
-    } catch (e) {
+    } catch {
         return adjustments.instruction;
     }
 };

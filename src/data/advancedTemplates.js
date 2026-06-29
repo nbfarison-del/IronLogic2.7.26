@@ -9,24 +9,20 @@ const beginnerPowerlifting12Week = {
     visibility: "public",
     weeks: Array.from({ length: 12 }, (_, i) => {
         const weekNum = i + 1;
-        let intensity, volumeNotes, phase;
+        let intensity, phase;
         
         if (weekNum <= 4) {
             phase = "Technique & Volume";
             intensity = "RPE 6-7";
-            volumeNotes = "Keep reps repeatable. Focus on bar speed.";
         } else if (weekNum <= 8) {
             phase = "Intensification";
             intensity = "RPE 7-8";
-            volumeNotes = "Add weight, decrease volume slightly.";
         } else if (weekNum <= 10) {
             phase = "Realization";
             intensity = "RPE 8-9";
-            volumeNotes = "Heavy exposures. Lower fatigue.";
         } else {
             phase = "Peak & Taper";
             intensity = "RPE 8-9 (Singles)";
-            volumeNotes = "Max recovery. Sharp focus.";
         }
 
         return {
@@ -127,7 +123,6 @@ const pregnancyStrength12Week = {
     visibility: "public",
     weeks: Array.from({ length: 12 }, (_, i) => {
         const weekNum = i + 1;
-        let volumeMod = weekNum > 8 ? "Relaxed" : "Steady";
         
         return {
             weekNumber: weekNum,

@@ -134,6 +134,7 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
         setIsFinished(false);
     }, [path]);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { buildProgram(); }, [buildProgram]);
 
     useEffect(() => {
@@ -143,6 +144,7 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
         } else if (isActive && timeLeft === 0) {
             if (currentIndex < program.length - 1) {
                 const next = currentIndex + 1;
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setCurrentIndex(next);
                 setTimeLeft(program[next].duration);
             } else {

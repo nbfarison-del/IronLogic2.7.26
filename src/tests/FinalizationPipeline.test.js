@@ -35,7 +35,7 @@ jest.unstable_mockModule('../utils/logger', () => ({
 // Dynamically import modules after registering mock modules
 const { syncService } = await import('../services/SyncService');
 const firestoreService = await import('../services/firestoreService');
-const { logger } = await import('../utils/logger');
+await import('../utils/logger');
 
 describe('Workout Session Finalization Pipeline', () => {
     beforeEach(() => {
