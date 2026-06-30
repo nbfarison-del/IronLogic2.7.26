@@ -440,6 +440,22 @@ const MobilityTab = () => {
     const [view, setView] = useState('select');   // 'select' | 'session'
     const [selectedPath, setSelectedPath] = useState(null);
 
+    // Keep screen awake during mobility sessions
+    useEffect(() => {
+        let wakeLock = null;
+        if (view === 'session' && navigator.wakeLock) {
+            navigator.wakeLock.request('screen').then(lock => {
+                wakeLock = lock;
+            }).catch(() => {});
+        }
+        return () => {
+            if (wakeLock) {
+                wakeLock.release().catch(() => {});
+                wakeLock = null;
+            }
+        };
+    }, [view]);
+
     const handleSelectPath = path => {
         localStorage.setItem(LAST_PATH_KEY, path.id);
         setSelectedPath(path);
