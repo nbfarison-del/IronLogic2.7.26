@@ -1,0 +1,58 @@
+{
+  "version": "1.0.0",
+  "project_root": "C:\\Users\\nbfar\\OneDrive\\IronLogic2.7.26",
+  "ai_root": "ai",
+  "scripts_root": "scripts",
+  "config_root": "config",
+  "docs_root": "docs",
+
+  "schedule": {
+    "code_review": {
+      "enabled": true,
+      "cron": "0 9 * * 1",
+      "description": "Every Monday at 9:00 AM",
+      "agent": "code_review.ps1",
+      "prompt": "code_review.md"
+    },
+    "issue_detection": {
+      "enabled": true,
+      "cron": "0 9 * * 3",
+      "description": "Every Wednesday at 9:00 AM",
+      "agent": "issue_detector.ps1",
+      "prompt": "issue_detection.md"
+    },
+    "cleanup": {
+      "enabled": true,
+      "cron": "0 9 * * 5",
+      "description": "Every Friday at 9:00 AM",
+      "agent": "cleanup.ps1",
+      "prompt": "cleanup.md"
+    }
+  },
+
+  "logging": {
+    "enabled": true,
+    "log_dir": "ai/logs",
+    "max_log_days": 90,
+    "level": "info"
+  },
+
+  "reports": {
+    "enabled": true,
+    "report_dir": "ai/reports",
+    "format": "markdown",
+    "max_reports": 52
+  },
+
+  "memory": {
+    "enabled": true,
+    "memory_dir": "ai/memory",
+    "max_context_files": 10
+  },
+
+  "notifications": {
+    "enabled": false,
+    "email": "",
+    "webhook_url": ""
+  }
+}

@@ -3,43 +3,38 @@
  * Focus: Idempotency, Fault Tolerance, and Data Integrity.
  */
 
-import { jest } from '@jest/globals';
+import { vi, describe, test, expect, beforeEach } from 'vitest';
 
-// Mock localStorage and navigator globals before importing modules
+// Mock localStorage and navigator globals
 let store = {};
-global.localStorage = {
-    getItem: jest.fn(key => store[key] || null),
-    setItem: jest.fn((key, value) => { store[key] = String(value); }),
-    clear: jest.fn(() => { store = {}; }),
-    removeItem: jest.fn(key => { delete store[key]; })
-};
-global.navigator = {
-    onLine: true
-};
+vi.stubGlobal('localStorage', {
+    getItem: vi.fn(key => store[key] || null),
+    setItem: vi.fn((key, value) => { store[key] = String(value); }),
+    clear: vi.fn(() => { store = {}; }),
+    removeItem: vi.fn(key => { delete store[key]; })
+});
+vi.stubGlobal('navigator', { onLine: true });
 
-// Mock firestoreService using Jest ESM mock API
-jest.unstable_mockModule('../services/firestoreService', () => ({
-    finalizeWorkoutSession: jest.fn(),
-    addWorkout: jest.fn()
+// Mock firestoreService and logger (vi.mock is hoisted above imports)
+vi.mock('../services/firestoreService', () => ({
+    finalizeWorkoutSession: vi.fn(),
+    addWorkout: vi.fn()
 }));
-
-// Mock logger to avoid console noise during tests
-jest.unstable_mockModule('../utils/logger', () => ({
+vi.mock('../utils/logger', () => ({
     logger: {
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
     }
 }));
 
-// Dynamically import modules after registering mock modules
-const { syncService } = await import('../services/SyncService');
-const firestoreService = await import('../services/firestoreService');
-await import('../utils/logger');
+// Static imports — mocks are hoisted by Vitest compiler
+import { syncService } from '../services/SyncService';
+import * as firestoreService from '../services/firestoreService';
 
 describe('Workout Session Finalization Pipeline', () => {
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
         localStorage.clear();
         syncService.queue = [];
     });

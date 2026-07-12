@@ -624,7 +624,7 @@ const WorkoutLog = () => {
     const CommentSectionToRender = <CommentSection userId={targetUserId} sessionId={`session_${getDateStr(selectedDate)}`} />;
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left', paddingBottom: '3rem' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left', paddingBottom: '6rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <Link to="/calendar" className="btn" style={{ background: 'transparent', padding: '0.5rem' }}>&larr; Calendar</Link>
@@ -1201,6 +1201,52 @@ const WorkoutLog = () => {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Floating Finalize Session FAB */}
+            {!isSessionComplete && !isViewingOther && loggedSets.length > 0 && (
+                <div style={{
+                    position: 'fixed',
+                    bottom: '1.5rem',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 3000,
+                    display: 'flex',
+                    gap: '0.75rem',
+                    alignItems: 'center',
+                    background: 'rgba(10, 11, 15, 0.85)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '60px',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+                }}>
+                    {pendingSaves > 0 && (
+                        <span style={{ fontSize: '0.8rem', color: 'var(--primary)', animation: 'pulse 1.5s infinite', whiteSpace: 'nowrap' }}>
+                            Saving {pendingSaves} set(s)...
+                        </span>
+                    )}
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                        {loggedSets.length} set{loggedSets.length !== 1 ? 's' : ''}
+                    </span>
+                    <button
+                        className="btn btn-primary"
+                        onClick={handleFinalizeWorkout}
+                        disabled={pendingSaves > 0}
+                        style={{
+                            background: pendingSaves > 0 ? '#444' : 'var(--accent-success)',
+                            color: '#fff',
+                            opacity: pendingSaves > 0 ? 0.6 : 1,
+                            padding: '0.6rem 1.5rem',
+                            borderRadius: '40px',
+                            fontWeight: '700',
+                            whiteSpace: 'nowrap'
+                        }}
+                    >
+                        Finalize Session
+                    </button>
                 </div>
             )}
         </div>
