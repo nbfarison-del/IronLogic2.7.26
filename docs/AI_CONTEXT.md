@@ -26,14 +26,13 @@ IronLogic2.7.26/
 │   ├── pages/            # Route pages (Home, WorkoutLog, Calendar, Progress, etc.)
 │   ├── services/         # Business logic (Firestore, Gemini, DMAIC, ILM, Sync)
 │   └── utils/            # Utility functions (calculator, date, logger, error messages)
-├── ai/                   # Local AI automation infrastructure
-│   ├── prompts/          # Agent prompt templates
-│   ├── logs/             # Automation execution logs
-│   ├── reports/          # Generated markdown reports
-│   ├── agents/           # Agent runner scripts
-│   └── memory/           # Persistent memory / context files
-├── scripts/              # Scheduler and launcher scripts
-├── config/               # Automation configuration
+├── IronLogicHQ/
+│   └── AI/
+│       ├── prompts/      # Role definitions for AI agents (project_manager, application_engineer, etc.)
+│       ├── reports/      # Generated pipeline reports
+│       ├── logs/         # Execution logs (session.log + per-step logs)
+│       ├── context/      # Persistent context / memory files
+│       └── scripts/      # ai-runner.ps1, master-runner.ps1
 ├── docs/                 # Documentation
 ├── firestore.rules       # Firestore security rules
 └── package.json
@@ -52,16 +51,40 @@ IronLogic2.7.26/
 | `src/config/constants.js` | `SUPER_ADMIN_EMAIL` and app constants |
 | `vite.config.js` | Build configuration, PWA settings |
 
-## Agent Responsibilities
+## Pipeline (Run Agent)
 
-- **code_review**: Scan source files for lint errors, dead code, and anti-patterns
-- **issue_detector**: Analyze logs and reports for recurring errors, performance issues
-- **cleanup**: Archive old logs, trim memory files, remove stale artifacts
+The default pipeline is:
+```
+Project Manager → Application Engineer → QA Engineer → Documentation Engineer → Executive Summary
+```
 
-## Automation Rules
+Each step passes its report as context to the next. If any step fails, the pipeline stops and produces a summary with failure details.
 
-1. Never modify application source files (`src/`, `vite.config.js`, `package.json`)
-2. All automation artifacts live under `ai/`, `scripts/`, `config/`, `docs/`
-3. Logs rotate automatically after 90 days (configurable)
-4. Reports are retained for up to 52 weeks
-5. Schedule changes are made in `config/automation_config.json` only
+## Agent Roles (IronLogicHQ/AI/prompts/)
+
+| Prompt | Responsibility |
+|--------|---------------|
+| `project_manager` | Task assignment, priority management, cross-role coordination |
+| `application_engineer` | Feature development, API integration, state management, architecture |
+| `qa_engineer` | Test writing, verification (lint/test/build), regression checking |
+| `documentation_engineer` | README, changelog, API references, architecture docs, AI context |
+| `automation_engineer` | CI/CD pipelines, build tooling, test infrastructure |
+| `ux_engineer` | Mobile responsiveness, accessibility (WCAG), usability |
+| `ironlogic_engineer` | Generalist bug fixes, code review, embedded QA |
+| `research_engineer` | Deep investigation, framework audits, architecture analysis |
+
+## Known Issues
+
+| ID | Issue | Status |
+|----|-------|--------|
+| P3 | Toast timeout leak on unmount | ✅ RESOLVED |
+| P2 | TimerContext missing useMemo | 🔴 Open |
+| S2 | Admin email hardcoded in 5 files | 🔴 Open |
+
+## Verification Commands
+
+```bash
+npm run lint    # 0 errors required
+npm test        # 100% pass rate
+npm run build   # Must succeed
+```
