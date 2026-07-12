@@ -123,11 +123,14 @@ const StrategyStep = ({ checkInData, setStep }) => (
                                         </style>
                                     </head>
                                     <body>
-                                        <div class="header">ILM DIRECTIVE - ${new Date().toLocaleDateString()}</div>
-                                        <div class="box">${checkInData.adjustments.detailedRecommendation.replace(/\n/g, '<br/>')}</div>
+                                        <div class="header">ILM DIRECTIVE - <span id="ilm-date"></span></div>
+                                        <div id="ilm-content" class="box"></div>
                                     </body>
                                 </html>
                             `);
+                            win.document.close();
+                            win.document.getElementById('ilm-date').textContent = new Date().toLocaleDateString();
+                            win.document.getElementById('ilm-content').textContent = checkInData.adjustments.detailedRecommendation;
                         }}
                     >
                         🪟 Side-Reference

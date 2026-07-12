@@ -940,13 +940,9 @@ const WorkoutLog = () => {
                                                                 borderRadius: '8px',
                                                                 border: '2px solid var(--primary)'
                                                             }}
+                                                            placeholder={row.targetRpe ? `@${row.targetRpe}` : ''}
                                                             required
                                                         />
-                                                        {row.targetRpe && (
-                                                            <span style={{ fontSize: '0.6rem', opacity: 0.5, whiteSpace: 'nowrap' }}>
-                                                                @{row.targetRpe}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                     <div style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'gold', textAlign: 'center' }}>
                                                         e1RM {calculateEstimated1RM(row.weight, row.reps, row.actualRpe || row.targetRpe) || '--'}{calculateEstimated1RM(row.weight, row.reps, row.actualRpe || row.targetRpe) ? unit : ''}

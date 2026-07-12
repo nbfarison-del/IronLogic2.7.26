@@ -74,6 +74,7 @@ export const DataProvider = ({ children }) => {
             }, 0);
 
             return () => {
+                clearInterval(pendingInterval);
                 window.clearTimeout(resetTimer);
                 window.removeEventListener('online', handleOnline);
                 window.removeEventListener('offline', handleOffline);
