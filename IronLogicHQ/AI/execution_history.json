@@ -1,0 +1,34 @@
+{
+  "nightly": {
+    "last_run": null,
+    "status": null,
+    "duration_seconds": null,
+    "reports_generated": [],
+    "errors": [],
+    "branches_created": []
+  },
+  "weekly_ux": {
+    "last_run": null,
+    "status": null,
+    "duration_seconds": null,
+    "reports_generated": [],
+    "errors": [],
+    "branches_created": []
+  },
+  "weekly_ironlogic": {
+    "last_run": null,
+    "status": null,
+    "duration_seconds": null,
+    "reports_generated": [],
+    "errors": [],
+    "branches_created": []
+  },
+  "monthly_research": {
+    "last_run": null,
+    "status": null,
+    "duration_seconds": null,
+    "reports_generated": [],
+    "errors": [],
+    "branches_created": []
+  }
+}

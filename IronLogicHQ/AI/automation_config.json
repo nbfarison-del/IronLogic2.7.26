@@ -1,0 +1,24 @@
+{
+  "schedules": {
+    "nightly": {
+      "description": "Nightly Maintenance: PM \u2192 App Engineer \u2192 QA \u2192 Documentation Engineer",
+      "frequency": "daily",
+      "workflow": ["project_manager", "application_engineer", "qa_engineer", "documentation_engineer"]
+    },
+    "weekly_ux": {
+      "description": "Weekly UX Review: PM \u2192 UX Engineer \u2192 QA Engineer",
+      "frequency": "weekly",
+      "workflow": ["project_manager", "ux_engineer", "qa_engineer"]
+    },
+    "weekly_ironlogic": {
+      "description": "Weekly IronLogic Review: PM \u2192 IronLogic Engineer (review only, no code changes)",
+      "frequency": "weekly",
+      "workflow": ["project_manager", "ironlogic_engineer"]
+    },
+    "monthly_research": {
+      "description": "Monthly Research Review: PM \u2192 Research Engineer \u2192 IronLogic Engineer (review)",
+      "frequency": "monthly",
+      "workflow": ["project_manager", "research_engineer", "ironlogic_engineer"]
+    }
+  }
+}

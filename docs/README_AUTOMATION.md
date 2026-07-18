@@ -2,126 +2,138 @@
 
 ## Overview
 
-Local AI-powered automation infrastructure for code review, issue detection, and project maintenance. Runs on a configurable schedule via Windows Task Scheduler.
+One-scheduled-task automation framework. A single Windows Task Scheduler trigger runs the master launcher, which detects overdue workflows and executes the appropriate AI agents. The Project Manager is the first agent in every pipeline and determines what work is due.
+
+## Architecture
+
+```
+Windows Task Scheduler (At startup)
+        |
+        v
+master-launcher.bat
+        |
+        v
+master-runner.ps1 -Mode auto
+        |
+        v
+Reads automation_config.json + execution_history.json
+        |
+        v
+Detects overdue workflows (catch-up logic)
+        |
+        v
+For each overdue workflow:
+  Run pipeline steps sequentially (PM -> Agent -> ...)
+  Update execution_history.json
+  Generate ExecutiveSummary.md
+```
 
 ## Folder Layout
 
 ```
 IronLogic2.7.26/
-├── ai/                          # All automation artifacts
-│   ├── prompts/                 # Agent prompt templates (.md)
-│   ├── logs/                    # Execution logs (auto-rotated, 90-day retention)
-│   ├── reports/                 # Markdown reports (52-week retention)
-│   ├── agents/                  # Agent runner PowerShell scripts
-│   └── memory/                  # Persistent context for agents
-├── scripts/
-│   ├── master_launcher.ps1      # Entry point — reads config, runs the right agent
-│   └── scheduler_setup.ps1      # Install / uninstall Windows scheduled tasks
-├── config/
-│   └── automation_config.json   # Central configuration (schedule, paths, logging)
-└── docs/
-    ├── AI_CONTEXT.md            # Project context for AI agents
-    └── README_AUTOMATION.md     # This file
++-- master-launcher.bat           Single Task Scheduler entry point
++-- IronLogicHQ/
+    +-- AI/
+        +-- automation_config.json     Schedule definitions (edit to change timing)
+        +-- execution_history.json     Tracks last run, status, errors per workflow
+        +-- prompts/                   Agent role definitions (7 prompt files)
+        |   +-- project_manager.md     Decision-maker, always runs first
+        |   +-- application_engineer.md
+        |   +-- qa_engineer.md
+        |   +-- documentation_engineer.md
+        |   +-- ux_engineer.md
+        |   +-- ironlogic_engineer.md
+        |   +-- research_engineer.md
+        +-- scripts/
+        |   +-- master-runner.ps1      Orchestrator: catch-up, execution, summaries
+        |   +-- ai-runner.ps1          Single-step agent executor
+        +-- reports/                   Generated per-step reports + Executive Summaries
+        +-- logs/                      Execution logs (session.log + per-step logs)
 ```
+
+## Workflows
+
+| Workflow | Pipeline | Frequency | Output |
+|----------|----------|-----------|--------|
+| **nightly** | PM -> Application Engineer -> QA -> Documentation Engineer | Daily | ExecutiveSummary.md |
+| **weekly_ux** | PM -> UX Engineer -> QA | Weekly | UX_Report.md |
+| **weekly_ironlogic** | PM -> IronLogic Engineer (review only) | Weekly | IronLogic_Report.md |
+| **monthly_research** | PM -> Research Engineer -> IronLogic Engineer (review) | Monthly | Research_Report.md |
+
+## Missed-Run Catch-Up
+
+The system does NOT replay every missed schedule. When the computer starts:
+
+1. `execution_history.json` is read
+2. Each workflow's `last_run` is compared to its period boundary:
+   - **Daily**: overdue if `last_run` is before today
+   - **Weekly**: overdue if `last_run` is before this Monday
+   - **Monthly**: overdue if `last_run` is before the 1st of this month
+3. ONE execution of each overdue workflow is performed
+4. `execution_history.json` is updated
+
+Example: Computer off Mon-Fri, turned on Saturday -> runs ONE nightly, ONE weekly_ux, ONE weekly_ironlogic, and ONE monthly_research (if overdue).
 
 ## Configuration
 
-All schedules live in one file:
-
-**`config/automation_config.json`**
+Edit `IronLogicHQ/AI/automation_config.json`:
 
 ```json
 {
-  "schedule": {
-    "code_review": {
-      "enabled": true,
-      "cron": "0 9 * * 1",
-      "description": "Every Monday at 9:00 AM"
+  "schedules": {
+    "nightly": {
+      "description": "Description of this workflow",
+      "frequency": "daily|weekly|monthly",
+      "workflow": ["prompt_name_1", "prompt_name_2", "..."]
     }
   }
 }
 ```
 
-Change the `cron` values or set `enabled: false` to disable an agent. No other file needs editing.
+No source code edits are needed to change schedules.
 
-## Agents
+## Execution History
 
-| Agent | When | What It Does |
-|-------|------|-------------|
-| `code_review.ps1` | Monday 9 AM | Scans `src/` for lint errors, dead code, anti-patterns |
-| `issue_detector.ps1` | Wednesday 9 AM | Analyzes logs and reports for recurring issues |
-| `cleanup.ps1` | Friday 9 AM | Archives old logs, trims memory, removes stale reports |
+Maintained in `IronLogicHQ/AI/execution_history.json`:
 
-## Installation
+- `last_run` - timestamp of last execution
+- `status` - SUCCESS or FAILURE
+- `duration_seconds` - how long the workflow took
+- `reports_generated` - paths to generated reports
+- `errors` - error messages from failed steps
+- `branches_created` - branches created during the workflow
 
-### Prerequisites
+## Manual Run
 
-- Windows 10+ (PowerShell 5.1+)
-- Node.js 18+ (for ESLint if code review agent needs it)
-
-### Steps
-
-1. Open PowerShell **as Administrator**
-2. Run the setup script:
-   ```
-   .\scripts\scheduler_setup.ps1 -Action install
-   ```
-3. Confirm the tasks appear in Task Scheduler:
-   ```
-   .\scripts\scheduler_setup.ps1 -Action status
-   ```
-
-### Manual Run
-
-Run any agent immediately without waiting for the schedule:
-
-```
-.\scripts\master_launcher.ps1 -Agent code_review
-.\scripts\master_launcher.ps1 -Agent issue_detection
-.\scripts\master_launcher.ps1 -Agent cleanup
+```batch
+master-launcher.bat
 ```
 
-### Uninstall
+Or run a specific workflow directly:
 
-```
-.\scripts\scheduler_setup.ps1 -Action uninstall
-```
-
-## Logs
-
-Each run creates a timestamped log file in `ai/logs/`:
-
-```
-ai/logs/
-├── code_review_2026-07-12_090000.log
-├── issue_detection_2026-07-14_090000.log
-└── cleanup_2026-07-16_090000.log
+```batch
+powershell -ExecutionPolicy Bypass -File "IronLogicHQ\AI\scripts\master-runner.ps1" -Mode nightly
 ```
 
-Logs older than 90 days are automatically pruned.
+Valid modes: `auto` (default, catch-up), `nightly`, `weekly_ux`, `weekly_ironlogic`, `monthly_research`.
 
-## Reports
+## Setting Up Windows Task Scheduler
 
-Reports are written to `ai/reports/` as markdown files:
-
-```
-ai/reports/
-├── code_review_2026-W28.md
-├── issue_detection_2026-W29.md
-└── cleanup_2026-W30.md
-```
-
-## Extending
-
-To add a new agent:
-
-1. Create your script in `ai/agents/`
-2. Create a prompt template in `ai/prompts/`
-3. Add an entry in `config/automation_config.json` under `schedule`
-4. Re-run `.\scripts\scheduler_setup.ps1 -Action install` to register the new task
+1. Press Win+R, type `taskschd.msc`, press Enter
+2. Click **Create Task** (right side)
+3. **General** tab: Name = "IronLogic AI Automation", check "Run whether user is logged on or not"
+4. **Triggers** tab: New -> Begin the task: "At startup", delay task for: "1 minute"
+5. **Actions** tab: New -> Action: "Start a program"
+   - Program/script: `C:\Users\nbfar\OneDrive\IronLogic2.7.26\master-launcher.bat`
+6. **Conditions** tab: Uncheck "Start the task only if the computer is on AC power"
+7. **Settings** tab: Check "Run task as soon as possible after a scheduled start is missed"
+8. Click OK, enter your Windows password when prompted
 
 ## Safety
 
-- **Automation never modifies application source files.**
-- Only writes to `ai/`, `scripts/`, `config/`, `docs/`
-- All destructive actions (archive, delete) log first
+- Automation never modifies application source files (`src/`, `vite.config.js`, `package.json`)
+- The IronLogic Engineer agent reviews only -- never modifies the DMAIC algorithm automatically
+- All code changes require lint + test + build verification
+- Workflows stop on first failure
+- Feature branches are created for any code modifications (user approval required)

@@ -31,15 +31,17 @@ IronLogic2.7.26/
 │   ├── services/          # Business logic (8 services)
 │   ├── tests/             # Test files (1 file, 4 tests)
 │   └── utils/             # Utility functions (7 modules)
-├── ai/                    # Local AI automation infrastructure
-│   ├── prompts/           # Agent prompt templates
-│   ├── logs/              # Automation execution logs
-│   ├── reports/           # Generated markdown reports
-│   ├── agents/            # Agent runner scripts
-│   └── memory/            # Persistent memory / context files
-├── scripts/               # Scheduler and launcher scripts
-├── config/                # Automation configuration
-├── docs/                  # Documentation (all docs except CHANGELOG + RELEASE_NOTES)
+├── IronLogicHQ/AI/        # AI automation framework
+│   ├── automation_config.json   # Schedule definitions
+│   ├── execution_history.json   # Run tracking
+│   ├── prompts/                 # Agent role definitions (7 prompt files)
+│   ├── scripts/                 # Runner scripts
+│   │   ├── master-runner.ps1    # Orchestrator with catch-up logic
+│   │   └── ai-runner.ps1        # Single-step agent executor
+│   ├── reports/                 # Generated markdown reports
+│   └── logs/                    # Execution logs
+├── master-launcher.bat    # Single Task Scheduler entry point
+├── docs/                  # Documentation
 ├── firestore.rules        # Firestore security rules
 ├── README.md              # Project overview and setup
 ├── CHANGELOG.md           # Version history
@@ -89,27 +91,42 @@ IronLogic2.7.26/
 | UX Report | `docs/UX_Report.md` | UX audit recommendations |
 | Algorithm Audit | `docs/IronLogic_Report.md` | DMAIC algorithm consistency audit |
 | Research Review | `docs/Research_Report.md` | Monthly literature review |
-| Automation Guide | `docs/README_AUTOMATION.md` | AI automation setup |
+| Automation Guide | `docs/README_AUTOMATION.md` | AI automation setup and workflow reference |
 | AI Context | `docs/AI_CONTEXT.md` | Context for AI automation agents |
 
-## Agent Responsibilities
+## AI Agent Roles
 
-- **code_review**: Scan source files for lint errors, dead code, and anti-patterns
-- **issue_detector**: Analyze logs and reports for recurring errors, performance issues
-- **cleanup**: Archive old logs, trim memory files, remove stale artifacts
+| Role | Workflows | Responsibility |
+|------|-----------|---------------|
+| **project_manager** | All | Decision-maker: determines tasks, assigns work, tracks progress |
+| **application_engineer** | nightly | Feature development, API integration, state management |
+| **qa_engineer** | nightly, weekly_ux | Test writing, verification, quality assurance |
+| **documentation_engineer** | nightly | Documentation, changelogs, API references |
+| **ux_engineer** | weekly_ux | Accessibility, responsive design, usability |
+| **ironlogic_engineer** | weekly_ironlogic, monthly_research | Bug fixes, code review, performance (review only in IronLogic workflows) |
+| **research_engineer** | monthly_research | Deep investigation, framework audits, architectural analysis |
+
+## Pipelines
+
+| Workflow | Steps | Frequency | Output |
+|----------|-------|-----------|--------|
+| **nightly** | PM -> App Engineer -> QA -> Documentation Engineer | Daily | ExecutiveSummary.md |
+| **weekly_ux** | PM -> UX Engineer -> QA | Weekly | UX_Report.md |
+| **weekly_ironlogic** | PM -> IronLogic Engineer (review only) | Weekly | IronLogic_Report.md |
+| **monthly_research** | PM -> Research Engineer -> IronLogic Engineer (review) | Monthly | Research_Report.md |
 
 ## Automation Rules
 
 1. Never modify application source files (`src/`, `vite.config.js`, `package.json`)
-2. All automation artifacts live under `ai/`, `scripts/`, `config/`, `docs/`
-3. Logs rotate automatically after 90 days (configurable)
-4. Reports are retained for up to 52 weeks
-5. Schedule changes are made in `config/automation_config.json` only
+2. IronLogic Engineer reviews only -- never modifies the DMAIC algorithm automatically
+3. All automation artifacts live under `IronLogicHQ/AI/`
+4. Schedule changes are made in `automation_config.json` only
+5. Workflows stop on first failure
+6. Feature branches require user approval before any code changes
 
 ## Known Issues
 
 - Memory leak: ToastContext timeouts on unmount (unresolved)
-- 65 `console.error` calls with no centralized error monitoring
 - 65 `console.error` calls with no centralized error monitoring
 - 11 `console.log` calls in production code
 - Only 1 test file (critical coverage gap)
