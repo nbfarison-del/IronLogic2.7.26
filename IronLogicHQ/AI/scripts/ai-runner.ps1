@@ -68,11 +68,11 @@ if ($ShowVerbose) { Write-Host $startLine }
 # Ensure dirs exist
 if (-not (Test-Path $reportsDir)) { New-Item -ItemType Directory -Path $reportsDir -Force | Out-Null }
 
-# Execute
+# Execute opencode in non-interactive run mode (auto-approve permissions)
 $exitCode = 0
 $output = ""
 try {
-    $output = $fullPrompt | & $OpenCodeCmd 2>&1
+    $output = $fullPrompt | & $OpenCodeCmd run --auto 2>&1
     $exitCode = $LASTEXITCODE
 }
 catch {
