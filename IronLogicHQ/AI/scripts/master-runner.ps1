@@ -18,6 +18,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Resolve-Path $ProjectRoot
+$aiDir = $ProjectRoot
+
+# Load automation config
+$configFile = Join-Path $ProjectRoot "IronLogicHQ\AI\automation_config.json"
+$config = $null
+if (Test-Path $configFile) {
+    try { $config = Get-Content $configFile -Raw | ConvertFrom-Json } catch { }
+}
 
 # Pipeline definitions
 $pipelineDefs = @{
@@ -251,15 +259,109 @@ Write-Host "|  $successCount succeeded, $failCount failed                       
 Write-Host "|  Executive Summary: $(Split-Path $summaryFile -Leaf)   |"
 Write-Host "+=================================================+"
 
+# ================================================================
+# Git commit and push (if enabled and pipeline succeeded)
+# ================================================================
+$branchName = $null
+$pushSucceeded = $false
+
+if ($config -and $config.git -and $config.git.enabled -eq $true -and $pipelineStatus -eq "SUCCESS") {
+    try {
+        # Locate git.exe
+        $gitCmd = Get-Command "git.exe" -ErrorAction SilentlyContinue
+        if (-not $gitCmd) { $gitCmd = Get-Command "git" -ErrorAction SilentlyContinue }
+        if (-not $gitCmd) {
+            # Search common install locations + GitHub Desktop bundled git
+            $gitPaths = @(
+                "${env:ProgramFiles}\Git\bin\git.exe",
+                "${env:ProgramFiles(x86)}\Git\bin\git.exe",
+                "$env:LOCALAPPDATA\Programs\Git\bin\git.exe",
+                "${env:ProgramFiles}\Git\cmd\git.exe",
+                "${env:ProgramFiles(x86)}\Git\cmd\git.exe"
+            )
+            # Add GitHub Desktop bundled git (version wildcard)
+            $ghDesktopPaths = Get-ChildItem "$env:LOCALAPPDATA\GitHubDesktop\app-*\resources\app\git\cmd\git.exe" -ErrorAction SilentlyContinue
+            foreach ($gp in $ghDesktopPaths) { $gitPaths += $gp.FullName }
+            foreach ($gp in $gitPaths) {
+                if (Test-Path $gp) { $gitCmd = $gp; break }
+            }
+        }
+
+        if ($gitCmd) {
+            $gitExe = if ($gitCmd -is [System.Management.Automation.CommandInfo]) { $gitCmd.Source } else { $gitCmd }
+            $remote = if ($config.git.remote) { $config.git.remote } else { "origin" }
+            $prefix = if ($config.git.branch_prefix) { $config.git.branch_prefix } else { "ai-reports" }
+            $base   = if ($config.git.base_branch) { $config.git.base_branch } else { "main" }
+            $msgPre = if ($config.git.commit_message_prefix) { $config.git.commit_message_prefix } else { "[AI Automation]" }
+            $dateStr = Get-Date -Format "yyyyMMdd-HHmmss"
+            $branchName = "${prefix}/${PipelineName}-${dateStr}"
+            $commitMsg = "${msgPre} Pipeline=${PipelineName} Session=${pipelineSession} Status=${pipelineStatus}"
+
+            Write-Host "  -> Git: committing to branch ${branchName}"
+
+            # Fetch latest base branch
+            & $gitExe fetch $remote $base 2>&1 | Out-Null
+
+            # Create and switch to a new feature branch
+            & $gitExe checkout -b $branchName "$remote/$base" 2>&1 | Out-Null
+
+            if ($LASTEXITCODE -eq 0) {
+                # Stage configured files
+                $filesToCommit = if ($config.git.files_to_commit) { @($config.git.files_to_commit) } else { @("IronLogicHQ/AI/reports/", "IronLogicHQ/AI/logs/") }
+                foreach ($f in $filesToCommit) { & $gitExe add $f 2>&1 | Out-Null }
+
+                # Also add the executive summary explicitly
+                & $gitExe add $summaryFile 2>&1 | Out-Null
+
+                # Commit
+                & $gitExe commit -m $commitMsg 2>&1 | Out-Null
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "  -> Git: commit successful"
+                    # Push
+                    & $gitExe push $remote $branchName 2>&1 | Out-Null
+                    if ($LASTEXITCODE -eq 0) {
+                        $pushSucceeded = $true
+                        Write-Host "  -> Git: pushed to ${remote}/${branchName}"
+                    } else {
+                        Write-Warning "Git push failed (remote may not be accessible)"
+                    }
+                } else {
+                    Write-Host "  -> Git: nothing to commit (no changes)"
+                    & $gitExe checkout $base 2>&1 | Out-Null
+                    & $gitExe branch -D $branchName 2>&1 | Out-Null
+                }
+            } else {
+                Write-Warning "Git: could not create branch ${branchName} from ${remote}/${base}"
+            }
+        } else {
+            Write-Host "  -> Git: not installed -- skipping commit/push"
+            Write-Host "  -> Install Git for Windows from https://git-scm.com to enable this feature"
+        }
+    }
+    catch {
+        Write-Warning "Git operation skipped: $_"
+    }
+}
+else {
+    if ($pipelineStatus -ne "SUCCESS") {
+        Write-Host "  -> Git: skipped (pipeline did not succeed)"
+    }
+    elseif (-not $config -or -not $config.git -or $config.git.enabled -ne $true) {
+        Write-Host "  -> Git: disabled in automation_config.json"
+    }
+}
+
 # Return
 [PSCustomObject]@{
-    Pipeline     = $pipelineSession
-    Status       = $pipelineStatus
-    Steps        = $results.Count
-    SuccessCount = $successCount
-    FailCount    = $failCount
-    SummaryFile  = $summaryFile
-    Results      = $results
+    Pipeline       = $pipelineSession
+    Status         = $pipelineStatus
+    Steps          = $results.Count
+    SuccessCount   = $successCount
+    FailCount      = $failCount
+    SummaryFile    = $summaryFile
+    GitBranch      = $branchName
+    GitPushed      = $pushSucceeded
+    Results        = $results
 }
 
 if ($failCount -gt 0) { exit 1 } else { exit 0 }
