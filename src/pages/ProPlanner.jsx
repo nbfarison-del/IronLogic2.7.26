@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -38,11 +38,7 @@ const ProPlanner = () => {
     const [isSyncing, setIsSyncing] = useState(false);
     const syncTimeoutRef = useRef(null);
 
-    useEffect(() => {
-        loadInitialData();
-    }, [user, targetAthleteId]);
-
-    const loadInitialData = async () => {
+    const loadInitialData = useCallback(async () => {
         if (!user) return;
         setLoading(true);
         try {
@@ -70,9 +66,9 @@ const ProPlanner = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, targetAthleteId, showToast]);
 
-    const buildStructureFromPlanned = (planned) => {
+    const buildStructureFromPlanned = useCallback((planned) => {
         if (planned.length === 0) return [createEmptyWeek()];
         const sorted = [...planned].sort((a, b) => new Date(a.date) - new Date(b.date));
         const firstDate = new Date(sorted[0].date);
@@ -105,7 +101,11 @@ const ProPlanner = () => {
             result.push(weekMap[i] || createEmptyWeek());
         }
         return result;
-    };
+    }, []);
+
+    useEffect(() => {
+        loadInitialData();
+    }, [loadInitialData]);
 
     const createEmptyWeek = () => DAYS.map(() => ({ sessions: [] }));
 

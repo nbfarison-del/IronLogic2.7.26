@@ -1,0 +1,57 @@
+{
+  "description": "IronLogic AI Automation Configuration",
+  "version": "1.0.0",
+  "git": {
+    "enabled": true,
+    "remote": "origin",
+    "base_branch": "main",
+    "branch_prefix": "ai-reports",
+    "files_to_commit": [
+      "IronLogicHQ/AI/reports/",
+      "IronLogicHQ/AI/logs/"
+    ],
+    "commit_message_template": "[AI Automation] Pipeline={PipelineName} Session={SessionId} Status={Status}"
+  },
+  "pipelines": {
+    "default": {
+      "description": "Default nightly pipeline",
+      "agents": ["project_manager", "application_engineer", "qa_engineer", "documentation_engineer"],
+      "git_push": true
+    },
+    "nightly": {
+      "description": "Nightly full pipeline",
+      "agents": ["project_manager", "application_engineer", "qa_engineer", "documentation_engineer"],
+      "git_push": true
+    },
+    "weekly": {
+      "description": "Weekly general pipeline",
+      "agents": ["project_manager", "ironlogic_engineer"],
+      "git_push": true
+    },
+    "sunday": {
+      "description": "Sunday UX-focused pipeline",
+      "agents": ["project_manager", "ux_engineer", "qa_engineer"],
+      "git_push": true
+    },
+    "monthly": {
+      "description": "Monthly research pipeline",
+      "agents": ["project_manager", "research_engineer", "ironlogic_engineer"],
+      "git_push": true
+    },
+    "weeklyUX": {
+      "description": "Weekly UX pipeline with QA and docs",
+      "agents": ["project_manager", "ux_engineer", "qa_engineer", "documentation_engineer"],
+      "git_push": true
+    },
+    "weeklyIronLogic": {
+      "description": "Weekly IronLogic engineering pipeline",
+      "agents": ["project_manager", "ironlogic_engineer", "qa_engineer", "documentation_engineer"],
+      "git_push": true
+    },
+    "monthlyResearch": {
+      "description": "Monthly research with engineering review",
+      "agents": ["project_manager", "research_engineer", "ironlogic_engineer", "documentation_engineer"],
+      "git_push": true
+    }
+  }
+}

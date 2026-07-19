@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -111,7 +111,7 @@ const WorkoutLog = () => {
             }
         };
         loadExtData();
-    }, [targetUserId, isViewingOther]);
+    }, [targetUserId, isViewingOther, showToast]);
 
     const workouts = isViewingOther ? extWorkouts : syncedWorkouts;
     const customExercises = isViewingOther ? extCustom : syncedCustom;
@@ -301,7 +301,7 @@ const WorkoutLog = () => {
         }
     };
 
-    const loadPlannedExercise = (plannedEx) => {
+    const loadPlannedExercise = useCallback((plannedEx) => {
         if (!plannedEx) return;
         setSelectedPlannedExId(plannedEx.id);
         const exId = plannedEx.exerciseId || plannedEx.id;
@@ -331,13 +331,13 @@ const WorkoutLog = () => {
             })));
         }
         setNotes(plannedEx.notes || '');
-    };
+    }, [allExercisesList, showToast]);
 
     useEffect(() => {
         if (activeWorkoutPlan && activeWorkoutPlan.exercises?.length > 0 && !selectedExerciseId) {
             loadPlannedExercise(activeWorkoutPlan.exercises[0]);
         }
-    }, [activeWorkoutPlan, allExercisesList]);
+    }, [activeWorkoutPlan, allExercisesList, selectedExerciseId]);
 
     const loggedSets = useMemo(() => {
         if (!workouts) return [];

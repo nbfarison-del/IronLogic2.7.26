@@ -32,4 +32,17 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'firebase': ['firebase/firestore', 'firebase/app'],
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'recharts': ['recharts'],
+          'react-markdown': ['react-markdown', 'remark-gfm'],
+          'gemini': ['@google/generative-ai']
+        }
+      }
+    }
+  },
 })

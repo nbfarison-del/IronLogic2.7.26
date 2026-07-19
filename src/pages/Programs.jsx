@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -32,11 +32,7 @@ const Programs = () => {
     ], []);
 
 
-    useEffect(() => {
-        loadTemplates();
-    }, [user]);
-
-    const loadTemplates = async () => {
+    const loadTemplates = useCallback(async () => {
         setLoading(true);
         try {
             const data = await getProgramTemplates(user?.role === 'admin');
@@ -51,7 +47,11 @@ const Programs = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, systemTemplates, showToast]);
+
+    useEffect(() => {
+        loadTemplates();
+    }, [loadTemplates]);
 
     const handleImport = async (template) => {
         if (!user) return;

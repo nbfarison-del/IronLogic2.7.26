@@ -177,7 +177,7 @@ export const DataProvider = ({ children }) => {
             window.removeEventListener('offline', handleOffline);
             clearInterval(pendingInterval);
         };
-    }, [user]);
+    }, [user, showToast]);
 
     // --- SHADOW CACHE (Debounced Persistence) ---
     useEffect(() => {

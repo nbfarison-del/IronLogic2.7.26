@@ -53,7 +53,7 @@ const TimerWidget = () => {
 
             }
         }
-    }, [isActive, timePassed, phaseTimePassed, type, duration, focusTime, restTime, rounds, emomInterval, phase, currentRound, pause, setPhase, setCurrentRound]);
+    }, [isActive, timePassed, phaseTimePassed, type, duration, focusTime, restTime, rounds, emomInterval, phase, currentRound, pause, setPhase, setCurrentRound, setPhaseTimePassed]);
 
     if (!isOpen) return null;
 

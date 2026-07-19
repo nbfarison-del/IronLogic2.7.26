@@ -99,7 +99,7 @@ const CalendarView = () => {
             unsubNotes();
             unsubMobility();
         };
-    }, [targetUserId, isCoachViewing]);
+    }, [targetUserId, isCoachViewing, showToast]);
 
     // Effective Data based on role
     const effectiveWorkouts = isCoachViewing ? extWorkouts : workouts;
