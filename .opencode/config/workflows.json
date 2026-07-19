@@ -1,0 +1,81 @@
+{
+  "workflows": {
+    "nightly": {
+      "name": "Nightly Build",
+      "frequency": "daily",
+      "batchFile": "nightly.bat",
+      "pipeline": ["pm", "app-engineer", "qa-engineer", "doc-engineer"],
+      "output": "ExecutiveSummary.md",
+      "priority": "high"
+    },
+    "weeklyUX": {
+      "name": "Weekly UX Review",
+      "frequency": "weekly",
+      "batchFile": "sunday.bat",
+      "pipeline": ["pm", "ux-engineer", "qa-engineer"],
+      "output": "UX_Report.md",
+      "priority": "medium"
+    },
+    "weeklyIronLogic": {
+      "name": "Weekly IronLogic Review",
+      "frequency": "weekly",
+      "batchFile": "weekly.bat",
+      "pipeline": ["pm", "ironlogic-engineer"],
+      "output": "IronLogic_Report.md",
+      "priority": "medium"
+    },
+    "monthlyResearch": {
+      "name": "Monthly Research",
+      "frequency": "monthly",
+      "batchFile": "monthly.bat",
+      "pipeline": ["pm", "research-engineer", "ironlogic-engineer"],
+      "output": "Research_Report.md",
+      "priority": "low"
+    }
+  },
+  "agents": {
+    "pm": {
+      "role": "Project Manager",
+      "responsibilities": ["task assignment", "priority management", "cross-role coordination"],
+      "constraints": ["never modify code", "analyze and assign only"]
+    },
+    "app-engineer": {
+      "role": "App Engineer",
+      "responsibilities": ["code changes", "bug fixes", "features", "test execution"],
+      "constraints": ["follow code conventions", "run lint/typecheck"]
+    },
+    "qa-engineer": {
+      "role": "QA Engineer",
+      "responsibilities": ["validation", "regression testing", "quality assurance"],
+      "constraints": ["never mark critical bugs resolved without verification"]
+    },
+    "ux-engineer": {
+      "role": "UX Engineer",
+      "responsibilities": ["UI/UX improvements", "accessibility", "user experience"],
+      "constraints": ["follow design system", "mobile-first"]
+    },
+    "doc-engineer": {
+      "role": "Documentation Engineer",
+      "responsibilities": ["documentation updates", "executive summaries", "changelogs"],
+      "constraints": ["never modify code", "document only approved changes"]
+    },
+    "ironlogic-engineer": {
+      "role": "IronLogic Engineer",
+      "responsibilities": ["IronLogic analysis", "algorithm review", "performance"],
+      "constraints": ["review only", "never modify DMAIC algorithm"]
+    },
+    "research-engineer": {
+      "role": "Research Engineer",
+      "responsibilities": ["technology research", "innovation reports", "best practices"],
+      "constraints": ["evidence-based recommendations", "consider compatibility"]
+    }
+  },
+  "priorityLevels": {
+    "1": "Critical bugs",
+    "2": "Failing tests",
+    "3": "Build failures",
+    "4": "Performance issues",
+    "5": "UX improvements",
+    "6": "Documentation"
+  }
+}
