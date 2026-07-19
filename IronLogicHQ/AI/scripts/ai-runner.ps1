@@ -52,7 +52,7 @@ if (-not (Test-Path $reportsDir)) { New-Item -ItemType Directory -Path $reportsD
 $exitCode = 0
 $output = ""
 try {
-    $output = $fullPrompt | & $OpenCodeCmd run --auto
+    $output = $fullPrompt | & $OpenCodeCmd run --auto 2>$null
     $exitCode = $LASTEXITCODE
 }
 catch {
