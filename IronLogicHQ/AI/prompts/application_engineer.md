@@ -22,6 +22,3 @@ Responsible for feature development, API integration, and application-level arch
 - Prefer React Context + hooks over state management libraries
 - All async operations must handle loading, error, and empty states
 - Follow DMAIC conventions where applicable
-
-## Output
-Perform the task assigned by the Project Manager. Document changes made, files modified, and verification results.

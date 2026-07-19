@@ -11,20 +11,18 @@ Generalist engineering role handling bug fixes, implementation, and code review 
 - Embedded QA verification (lint + test + build) on all changes
 
 ## Verification checklist
-Every change must pass before marking complete:
-- [ ] Lint: `npm run lint` -- 0 errors
-- [ ] Tests: `npm test` -- 100% pass rate
-- [ ] Build: `npm run build` -- successful
+- [ ] Lint: `npm run lint` - 0 errors
+- [ ] Tests: `npm test` - 100% pass rate
+- [ ] Build: `npm run build` - successful
 
 ## Key documents
-- `docs/QA_Report.md` -- prioritized bug list
-- `docs/ARCHITECTURE.md` -- system architecture
-- `docs/DEVELOPER_GUIDE.md` -- setup and conventions
+- `docs/QA_Report.md` - prioritized bug list
+- `docs/ARCHITECTURE.md` - system architecture
+- `docs/DEVELOPER_GUIDE.md` - setup and conventions
+- `docs/UX_Report.md` - UX findings
 
 ## Principles
 - Never introduce new warnings
 - Fix root cause, not symptoms
+- One concern per commit/change
 - Verify before reporting done
-
-## Output
-Implement the fix assigned by the Project Manager. Run the verification checklist and document all changes.

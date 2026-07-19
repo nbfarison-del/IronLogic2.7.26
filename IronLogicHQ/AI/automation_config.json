@@ -1,50 +1,57 @@
 {
+  "description": "IronLogic AI Automation Configuration",
+  "version": "1.0.0",
   "git": {
     "enabled": true,
     "remote": "origin",
-    "branch_prefix": "ai-reports",
     "base_branch": "main",
-    "commit_message_prefix": "[AI Automation]",
+    "branch_prefix": "ai-reports",
     "files_to_commit": [
       "IronLogicHQ/AI/reports/",
-      "IronLogicHQ/AI/logs/",
-      "docs/README_AUTOMATION.md",
-      "docs/AI_CONTEXT.md",
-      "IronLogicHQ/AI/automation_config.json"
-    ]
+      "IronLogicHQ/AI/logs/"
+    ],
+    "commit_message_template": "[AI Automation] Pipeline={PipelineName} Session={SessionId} Status={Status}"
   },
   "pipelines": {
     "default": {
-      "description": "Nightly Maintenance: PM > App Engineer > QA > Documentation Engineer",
-      "steps": ["project_manager", "application_engineer", "qa_engineer", "documentation_engineer"]
+      "description": "Default nightly pipeline",
+      "agents": ["project_manager", "application_engineer", "qa_engineer", "documentation_engineer"],
+      "git_push": true
     },
     "nightly": {
-      "description": "Nightly Maintenance: PM > App Engineer > QA > Documentation Engineer",
-      "steps": ["project_manager", "application_engineer", "qa_engineer", "documentation_engineer"]
+      "description": "Nightly full pipeline",
+      "agents": ["project_manager", "application_engineer", "qa_engineer", "documentation_engineer"],
+      "git_push": true
     },
     "weekly": {
-      "description": "Weekly IronLogic Review: PM > IronLogic Engineer (review only)",
-      "steps": ["project_manager", "ironlogic_engineer"]
+      "description": "Weekly general pipeline",
+      "agents": ["project_manager", "ironlogic_engineer"],
+      "git_push": true
     },
     "sunday": {
-      "description": "Weekly UX Review: PM > UX Engineer > QA Engineer",
-      "steps": ["project_manager", "ux_engineer", "qa_engineer"]
+      "description": "Sunday UX-focused pipeline",
+      "agents": ["project_manager", "ux_engineer", "qa_engineer"],
+      "git_push": true
     },
     "monthly": {
-      "description": "Monthly Research Review: PM > Research Engineer > IronLogic Engineer (review)",
-      "steps": ["project_manager", "research_engineer", "ironlogic_engineer"]
+      "description": "Monthly research pipeline",
+      "agents": ["project_manager", "research_engineer", "ironlogic_engineer"],
+      "git_push": true
     },
     "weeklyUX": {
-      "description": "Weekly UX Review: PM > UX Engineer > QA Engineer > Documentation Engineer",
-      "steps": ["project_manager", "ux_engineer", "qa_engineer", "documentation_engineer"]
+      "description": "Weekly UX pipeline with QA and docs",
+      "agents": ["project_manager", "ux_engineer", "qa_engineer", "documentation_engineer"],
+      "git_push": true
     },
     "weeklyIronLogic": {
-      "description": "Weekly IronLogic Review: PM > IronLogic Engineer > QA > Documentation",
-      "steps": ["project_manager", "ironlogic_engineer", "qa_engineer", "documentation_engineer"]
+      "description": "Weekly IronLogic engineering pipeline",
+      "agents": ["project_manager", "ironlogic_engineer", "qa_engineer", "documentation_engineer"],
+      "git_push": true
     },
     "monthlyResearch": {
-      "description": "Monthly Research: PM > Research Engineer > IronLogic Engineer (review) > Documentation",
-      "steps": ["project_manager", "research_engineer", "ironlogic_engineer", "documentation_engineer"]
+      "description": "Monthly research with engineering review",
+      "agents": ["project_manager", "research_engineer", "ironlogic_engineer", "documentation_engineer"],
+      "git_push": true
     }
   }
 }

@@ -3,7 +3,7 @@
 Responsible for deep investigation, framework audits, and architectural analysis (monthly cycle only).
 
 ## Scope
-- Framework audits (e.g., DMAIC compliance)
+- Framework audits (e.g., DMAIC compliance against IronLogic manuscript)
 - Performance profiling and bundle analysis
 - Security architecture review
 - Technical debt assessment
@@ -20,10 +20,7 @@ Responsible for deep investigation, framework audits, and architectural analysis
 Research output is reviewed by IronLogic Engineer before acceptance.
 
 ## Principles
-- All claims must be backed by code evidence
+- All claims must be backed by code evidence (grep, file read, or runtime trace)
 - Distinguish between opinion and fact
 - Include reproduction steps for bugs
 - Estimate effort in engineer-hours for each finding
-
-## Output
-Conduct the research investigation assigned by the Project Manager. Produce a findings report with file:line references and effort estimates.
