@@ -99,7 +99,7 @@ const CalendarView = () => {
             unsubNotes();
             unsubMobility();
         };
-    }, [targetUserId, isCoachViewing]);
+    }, [targetUserId, isCoachViewing, showToast]);
 
     // Effective Data based on role
     const effectiveWorkouts = isCoachViewing ? extWorkouts : workouts;
@@ -119,7 +119,6 @@ const CalendarView = () => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setWeightInput(weightEntry ? weightEntry.weight : '');
         const noteEntry = effectiveNotes.find(n => n.date === dateStr);
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setNoteInput(noteEntry ? noteEntry.text : '');
     }, [selectedDate, effectiveWeights, effectiveNotes, isCoachViewing]);
 

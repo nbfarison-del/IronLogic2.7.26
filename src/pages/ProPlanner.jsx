@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -9,6 +9,43 @@ import { advancedTemplates } from '../data/advancedTemplates';
 import ExerciseTools from '../components/ExerciseTools';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const createEmptyWeek = () => DAYS.map(() => ({ sessions: [] }));
+
+const buildStructureFromPlanned = (planned) => {
+    if (planned.length === 0) return [createEmptyWeek()];
+    const sorted = [...planned].sort((a, b) => new Date(a.date) - new Date(b.date));
+    const firstDate = new Date(sorted[0].date);
+    const startOffset = (firstDate.getDay() + 6) % 7; 
+    const MondayDate = new Date(firstDate);
+    MondayDate.setDate(firstDate.getDate() - startOffset);
+
+    const weekMap = {};
+    sorted.forEach(p => {
+        const date = new Date(p.date);
+        const diffInDays = Math.floor((date - MondayDate) / (1000 * 60 * 60 * 24));
+        const weekIdx = Math.floor(diffInDays / 7);
+        const dayIdx = diffInDays % 7;
+        if (weekIdx < 0 || weekIdx > 52) return; 
+
+        if (!weekMap[weekIdx]) weekMap[weekIdx] = DAYS.map(() => ({ sessions: [] }));
+        weekMap[weekIdx][dayIdx].sessions.push({
+            id: p.id,
+            name: p.name || 'Strength Session',
+            exercises: (p.exercises || []).map(ex => ({
+                ...ex,
+                id: ex.id || Math.random().toString(36).substr(2, 9)
+            }))
+        });
+    });
+
+    const result = [];
+    const maxWeek = Math.max(...Object.keys(weekMap).map(Number), 0);
+    for(let i=0; i<=maxWeek; i++) {
+        result.push(weekMap[i] || createEmptyWeek());
+    }
+    return result;
+};
 
 const ProPlanner = () => {
     const { athleteId: paramAthleteId } = useParams();
@@ -38,11 +75,7 @@ const ProPlanner = () => {
     const [isSyncing, setIsSyncing] = useState(false);
     const syncTimeoutRef = useRef(null);
 
-    useEffect(() => {
-        loadInitialData();
-    }, [user, targetAthleteId]);
-
-    const loadInitialData = async () => {
+    const loadInitialData = useCallback(async () => {
         if (!user) return;
         setLoading(true);
         try {
@@ -70,44 +103,11 @@ const ProPlanner = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, targetAthleteId]);
 
-    const buildStructureFromPlanned = (planned) => {
-        if (planned.length === 0) return [createEmptyWeek()];
-        const sorted = [...planned].sort((a, b) => new Date(a.date) - new Date(b.date));
-        const firstDate = new Date(sorted[0].date);
-        const startOffset = (firstDate.getDay() + 6) % 7; 
-        const MondayDate = new Date(firstDate);
-        MondayDate.setDate(firstDate.getDate() - startOffset);
-
-        const weekMap = {};
-        sorted.forEach(p => {
-            const date = new Date(p.date);
-            const diffInDays = Math.floor((date - MondayDate) / (1000 * 60 * 60 * 24));
-            const weekIdx = Math.floor(diffInDays / 7);
-            const dayIdx = diffInDays % 7;
-            if (weekIdx < 0 || weekIdx > 52) return; 
-
-            if (!weekMap[weekIdx]) weekMap[weekIdx] = DAYS.map(() => ({ sessions: [] }));
-            weekMap[weekIdx][dayIdx].sessions.push({
-                id: p.id,
-                name: p.name || 'Strength Session',
-                exercises: (p.exercises || []).map(ex => ({
-                    ...ex,
-                    id: ex.id || Math.random().toString(36).substr(2, 9)
-                }))
-            });
-        });
-
-        const result = [];
-        const maxWeek = Math.max(...Object.keys(weekMap).map(Number), 0);
-        for(let i=0; i<=maxWeek; i++) {
-            result.push(weekMap[i] || createEmptyWeek());
-        }
-        return result;
-    };
-
-    const createEmptyWeek = () => DAYS.map(() => ({ sessions: [] }));
+    useEffect(() => {
+        loadInitialData();
+    }, [loadInitialData]);
 
     const getMondayOfWeek = (weekIdx) => {
         const d = new Date();
