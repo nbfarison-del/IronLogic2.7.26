@@ -12,7 +12,7 @@ param(
     [switch]$ShowVerbose
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $ProjectRoot = Resolve-Path $ProjectRoot
 
 $pipelineDefs = @{

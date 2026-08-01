@@ -13,7 +13,7 @@ param(
     [switch]$ShowVerbose
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $ProjectRoot = Resolve-Path $ProjectRoot
 
 $promptFile  = Join-Path $ProjectRoot "IronLogicHQ\AI\prompts\$PromptName.md"
