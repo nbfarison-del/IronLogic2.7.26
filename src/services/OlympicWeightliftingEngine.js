@@ -76,10 +76,11 @@ export const calculateCompetitionPhase = (profile = {}) => {
     return { name: 'Accumulation', volumeMultiplier: 1.12, intensityBias: -3, daysUntilMeet: meetDays };
 };
 
-const latestByExercise = (workouts = [], exerciseIds = []) => {
+const latestByExercise = (workouts = [], exerciseIds = [], predicate = null) => {
     const ids = new Set(exerciseIds);
     return workouts
         .filter(w => ids.has(w.exerciseId) && numberOrZero(w.estimated1RM || w.weight) > 0)
+        .filter(w => !predicate || predicate(w))
         .sort((a, b) => new Date(getDateOnly(b.date)) - new Date(getDateOnly(a.date)))[0];
 };
 
@@ -87,7 +88,7 @@ export const analyzeWeakPoints = (profile = {}, workouts = []) => {
     const p = getOlympicProfile(profile);
     const cleanJerk = numberOrZero(p.cleanJerk1RM) || numberOrZero(latestByExercise(workouts, ['oly_clean_and_jerk'])?.estimated1RM);
     const frontSquat = numberOrZero(p.frontSquat1RM) || numberOrZero(latestByExercise(workouts, ['oly_front_squat', 'bb_front_squat'])?.estimated1RM);
-    const backSquat = numberOrZero(p.backSquat1RM) || numberOrZero(latestByExercise(workouts, ['bb_squat'])?.estimated1RM);
+    const backSquat = numberOrZero(p.backSquat1RM) || numberOrZero(latestByExercise(workouts, ['bb_squat'], w => w.modifiers?.bar !== 'Low Bar')?.estimated1RM);
     const pushPress = numberOrZero(p.pushPress1RM) || numberOrZero(latestByExercise(workouts, ['oly_push_press', 'bb_ohp'])?.estimated1RM);
 
     const olympicSets = workouts.filter(w => w.sport === 'olympic_weightlifting' || isOlympicExercise(w));
@@ -188,8 +189,9 @@ export const getOlympicProgressDashboard = (workouts = [], recovery = []) => {
         backSquat: ['bb_squat'],
     };
 
-    const buildTrend = (ids) => workouts
+    const buildTrend = (ids, predicate) => workouts
         .filter(w => ids.includes(w.exerciseId) && (w.estimated1RM || w.weight))
+        .filter(w => !predicate || predicate(w))
         .sort((a, b) => new Date(getDateOnly(a.date)) - new Date(getDateOnly(b.date)))
         .map(w => {
             const volume = numberOrZero(w.weight) * numberOrZero(w.reps) * numberOrZero(w.sets || 1);
@@ -202,7 +204,10 @@ export const getOlympicProgressDashboard = (workouts = [], recovery = []) => {
             };
         });
 
-    const dashboards = Object.fromEntries(Object.entries(targets).map(([key, ids]) => [key, buildTrend(ids)]));
+    const dashboards = Object.fromEntries(Object.entries(targets).map(([key, ids]) => [
+        key,
+        buildTrend(ids, key === 'backSquat' ? w => w.modifiers?.bar !== 'Low Bar' : null)
+    ]));
     const snatchBest = Math.max(0, ...dashboards.snatch.map(d => d.e1rm));
     const cjBest = Math.max(0, ...dashboards.cleanJerk.map(d => d.e1rm));
     dashboards.total = [{ date: new Date().toISOString().split('T')[0], e1rm: snatchBest + cjBest, volume: 0, intensity: 0, readiness: numberOrZero(recovery?.[0]?.score) }];

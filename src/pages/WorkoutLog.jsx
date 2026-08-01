@@ -184,6 +184,7 @@ const WorkoutLog = () => {
     const [isCreatingExercise, setIsCreatingExercise] = useState(false);
     const [newExerciseName, setNewExerciseName] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
+    const [barType, setBarType] = useState('High Bar');
     const modifiers = {
         grip: '', bar: '', pause: '', tempo: '',
         isBelt: false, isKneeWraps: false,
@@ -468,7 +469,7 @@ const WorkoutLog = () => {
                     targetRpe: row.targetRpe,
                     actualRpe: row.actualRpe,
                     estimated1RM: calculateEstimated1RM(row.weight, row.reps, row.actualRpe || row.targetRpe),
-                    modifiers: { ...modifiers },
+                    modifiers: { ...modifiers, bar: barType },
                     notes: notes,
                     video_url: videoUrl,
                     trainingMode: isOlympicExercise(exercise) ? 'olympic_weightlifting' : undefined,
@@ -592,6 +593,12 @@ const WorkoutLog = () => {
         const nextWorkoutType = exercise?.category === EXERCISE_CATEGORIES.CARDIO || isMeterBasedExercise(exercise || id) ? 'cardio' : 'strength';
         setWorkoutType(nextWorkoutType);
         const lastEntry = workouts.find(w => w.exerciseId === id);
+        if (id === 'bb_squat') {
+            const lastBar = lastEntry?.modifiers?.bar;
+            setBarType(lastBar === 'High Bar' || lastBar === 'Low Bar' ? lastBar : 'High Bar');
+        } else {
+            setBarType('High Bar');
+        }
         if (lastEntry && nextWorkoutType === 'strength' && lastEntry.weight) {
              setSetRows([createSetRow({
                  weight: lastEntry.weight, 
@@ -746,6 +753,18 @@ const WorkoutLog = () => {
                                 ))}
                             </select>
                         </div>
+                        {selectedExerciseId === 'bb_squat' && (
+                            <div className="input-group" style={{ flex: 1 }}>
+                                <label style={{ fontSize: '0.85rem' }}>Bar Position</label>
+                                <select value={barType} onChange={(e) => setBarType(e.target.value)} disabled={isViewingOther}>
+                                    <option value="High Bar">High Bar</option>
+                                    <option value="Low Bar">Low Bar</option>
+                                </select>
+                                <small style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-subtle)', marginTop: '0.25rem' }}>
+                                    High Bar counts toward competition squat
+                                </small>
+                            </div>
+                        )}
                     </div>
 
                     {isCreatingExercise && (

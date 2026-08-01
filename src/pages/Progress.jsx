@@ -69,8 +69,12 @@ const Progress = () => {
     }, [workouts]);
 
     const e1rmData = useMemo(() => {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 30);
+        const cutoffTime = cutoff.getTime();
         return workouts
             .filter(w => w.exerciseId === selectedExercise && w.estimated1RM)
+            .filter(w => new Date(w.date).getTime() >= cutoffTime)
             .sort((a, b) => new Date(a.date) - new Date(b.date))
             .map(w => ({
                 date: w.date,
@@ -116,7 +120,7 @@ const Progress = () => {
             sortedWorkouts.forEach(w => {
                 const wDate = new Date(w.date);
                 if (wDate <= bwDate && w.estimated1RM) {
-                    if (['bb_squat', 'bb_front_squat', 'ssb_squat'].includes(w.exerciseId)) 
+                    if ((w.exerciseId === 'bb_squat' && w.modifiers?.bar !== 'Low Bar') || ['bb_front_squat', 'ssb_squat'].includes(w.exerciseId))
                         currentMaxes.bb_squat = Math.max(currentMaxes.bb_squat, w.estimated1RM);
                     if (['bb_bench'].includes(w.exerciseId)) 
                         currentMaxes.bb_bench = Math.max(currentMaxes.bb_bench, w.estimated1RM);
@@ -246,7 +250,7 @@ const Progress = () => {
                 {/* E1RM Trend Chart */}
                 <div className="glass-card" style={{ borderTop: '4px solid var(--primary)' }}>
                     <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        📈 {exerciseList.find(e => e.id === selectedExercise)?.name} Intensity (e1RM)
+                        📈 {exerciseList.find(e => e.id === selectedExercise)?.name} Intensity (e1RM) &mdash; Last 30 Days
                     </h2>
                     <div style={{ height: '300px', width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
