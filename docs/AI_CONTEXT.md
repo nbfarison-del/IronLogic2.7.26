@@ -46,9 +46,12 @@ IronLogic2.7.26/
 | `src/services/DMAICService.js` | DMAIC decision engine (Define → Measure → Analyze → Improve → Control) |
 | `src/services/GeminiService.js` | Gemini AI chat wrapper with retry/timeout |
 | `src/services/firestoreService.js` | All Firestore CRUD operations |
-| `src/pages/WorkoutLog.jsx` | Main workout logging page (~1300 lines) |
+| `src/services/OlympicWeightliftingEngine.js` | Olympic weak points, competition phase, recovery adjustment, session builder, dashboards |
+| `src/pages/WorkoutLog.jsx` | Main workout logging page (~1300 lines); bar-position selector for `bb_squat` |
+| `src/pages/Progress.jsx` | Progress charts; 30-day e1RM filter; DOTS max excludes low-bar squats |
 | `src/context/DataContext.jsx` | Central data state with Firestore subscriptions |
 | `src/config/constants.js` | `SUPER_ADMIN_EMAIL` and app constants |
+| `src/tests/` | Vitest unit tests (FinalizationPipeline, OlympicWeightliftingEngine) |
 | `vite.config.js` | Build configuration, PWA settings |
 
 ## Pipeline (Run Agent)
@@ -80,11 +83,30 @@ Each step passes its report as context to the next. If any step fails, the pipel
 | P3 | Toast timeout leak on unmount | ✅ RESOLVED |
 | P2 | TimerContext missing useMemo | 🔴 Open |
 | S2 | Admin email hardcoded in 5 files | 🔴 Open |
+| L1 | 5 `react-hooks/exhaustive-deps` warnings (0 errors) | 🔴 Open |
+| L2 | 30-day e1RM filter UTC-vs-local cutoff edge (minor) | 🔴 Open |
+| L3 | No jsdom / React Testing Library (component surfaces review-only) | 🔴 Open |
+
+### Lint warnings (0 errors, 5 warnings)
+
+| File | Line | Issue |
+|------|------|-------|
+| `AISuggestionModal.jsx` | 20 | `useEffect` missing dep: `handleAnalyze` |
+| `TimerWidget.jsx` | 56 | `useEffect` missing dep: `setPhaseTimePassed` |
+| `DataContext.jsx` | 180 | `useEffect` missing dep: `showToast` |
+| `CoachDashboard.jsx` | 22 | `useEffect` missing dep: `fetchAthletes` |
+| `Programs.jsx` | 37 | `useEffect` missing dep: `loadTemplates` |
+
+## Recent Features (dd486e4, 2026-08-01)
+
+- **Competition squat handling** — `bb_squat` entries with `modifiers.bar === 'Low Bar'` are excluded from DOTS max (`Progress.jsx:123`), back-squat dashboard trend, and weak-point analysis (`OlympicWeightliftingEngine.js:91,209`). High Bar and unspecified (legacy) entries count.
+- **Bar-position tracking** — High Bar / Low Bar selector for `bb_squat` in `WorkoutLog.jsx`; saved to `modifiers.bar` (line 472), reused from the most recent entry (lines 597-601), reset to High Bar for other exercises.
+- **30-day e1RM filter** — Progress chart shows only the last 30 days of e1RM data (`Progress.jsx:71-83`).
 
 ## Verification Commands
 
 ```bash
-npm run lint    # 0 errors required
-npm test        # 100% pass rate
+npm run lint    # 0 errors required (5 known warnings)
+npm test        # 100% pass rate (13 tests / 2 files)
 npm run build   # Must succeed
 ```

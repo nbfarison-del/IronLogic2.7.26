@@ -55,6 +55,9 @@ Existing workout documents remain valid. Olympic entries add optional fields und
   "actualRpe": "8",
   "sport": "olympic_weightlifting",
   "movementType": "full_lift",
+  "modifiers": {
+    "bar": "High Bar"
+  },
   "exerciseMetadata": {
     "technicalComplexity": 10,
     "primaryMuscleGroups": ["quads", "glutes", "hamstrings", "traps", "shoulders", "core"],
@@ -150,14 +153,37 @@ Future AI video analysis stores metadata at `users/{userId}/liftVideos/{videoId}
 }
 ```
 
+## Competition Squat (Bar Position) Handling
+
+Since commit `dd486e4` (2026-08-01), back-squat strength surfaces distinguish High Bar from Low Bar training. Only **High Bar** and unspecified (legacy) `bb_squat` entries count toward the competition squat:
+
+- `WorkoutLog.jsx` shows a High Bar / Low Bar selector **only** for `bb_squat`. The value is saved to `modifiers.bar` on every strength set (`WorkoutLog.jsx:472`) and reused from the most recent entry of the same exercise (`WorkoutLog.jsx:597-601`). Non-squat exercises reset to `High Bar`.
+- `Progress.jsx` DOTS max excludes entries where `modifiers.bar === 'Low Bar'` (`Progress.jsx:123`).
+- `OlympicWeightliftingEngine.js` back-squat dashboard trend and weak-point analysis filter out low-bar entries via a predicate (`OlympicWeightliftingEngine.js:91,209`).
+
+```js
+// Predicate used for back-squat surfaces
+w => w.modifiers?.bar !== 'Low Bar'
+```
+
+This behavior is unit-tested in `src/tests/OlympicWeightliftingEngine.test.js`.
+
+## 30-Day e1RM Filter
+
+The lift intensity chart on `Progress.jsx` (`e1rmData`, `Progress.jsx:71-83`) filters workout entries to `date >= now - 30 days` and updates the chart title to "Last 30 Days".
+
+> Minor known issue: `new Date('YYYY-MM-DD')` parses as UTC midnight while the cutoff is local time, so in US timezones a workout logged exactly 30 days ago can be dropped. Not a blocker; a date-only comparison would remove the edge.
+
 ## Component Architecture
 
 - `src/data/olympicWeightlifting.js`: movement catalog, categories, metadata, and video-analysis placeholders.
 - `src/utils/olympicWeightlifting.js`: percentage calculator, Olympic exercise detection, set/session metadata builders.
-- `src/services/OlympicWeightliftingEngine.js`: weak-point analysis, competition phase selection, recovery adjustment, substitutions, session generation, and smart recommendations.
+- `src/services/OlympicWeightliftingEngine.js`: weak-point analysis, competition phase selection, recovery adjustment, substitutions, session generation, smart recommendations, and competition-squat (bar-position) filtering.
 - `src/components/OlympicSetLogger.jsx`: fast set entry, duplicate set, load jumps, percentage shortcuts, quick RPE controls.
 - `src/analytics/olympicWeightlifting.js`: session summaries such as misses, success percentage, and average technical quality.
-- `src/pages/WorkoutLog.jsx`: generic logging shell that delegates Olympic-specific fields only for Olympic movements.
+- `src/pages/WorkoutLog.jsx`: generic logging shell that delegates Olympic-specific fields only for Olympic movements; hosts the bar-position selector for `bb_squat`.
+- `src/pages/Progress.jsx`: Olympic dashboards and general progress; applies the 30-day e1RM filter and low-bar exclusion to DOTS/back-squat surfaces.
+- `src/tests/OlympicWeightliftingEngine.test.js`: Vitest coverage for bar-position exclusion, weak-point analysis, profile fallback, and total regression.
 
 ## Migration Plan
 
