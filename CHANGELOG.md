@@ -19,9 +19,9 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 
 ### Fixed
 - Pipeline automation now sets `ErrorActionPreference=Continue` so opencode ANSI stderr output no longer terminates pipeline steps. (#ae55a27)
+- **`react-hooks/exhaustive-deps` lint warnings (all 5)** — `handleAnalyze` wrapped in `useCallback([athlete])` (`AISuggestionModal.jsx`), `setPhaseTimePassed` added to deps (`TimerWidget.jsx`), `showToast` added to deps (`DataContext.jsx`), `fetchAthletes` wrapped in `useCallback([user, showToast])` (`CoachDashboard.jsx`), and `loadTemplates` wrapped in `useCallback([systemTemplates, showToast, user])` (`Programs.jsx`). All added deps are referentially stable, so no re-run-loop or stale-closure risk. Lint is now 0 errors / 0 warnings.
 
 ### Known Issues
-- 5 `react-hooks/exhaustive-deps` lint warnings (0 errors): `AISuggestionModal.jsx:20`, `TimerWidget.jsx:56`, `DataContext.jsx:180`, `CoachDashboard.jsx:22`, `Programs.jsx:37`.
 - Minor: the 30-day e1RM filter parses `YYYY-MM-DD` dates as UTC midnight while the cutoff uses local time; in US timezones a workout exactly 30 days old can be dropped.
 - No `jsdom` / React Testing Library configured, so component-level surfaces are covered by code review rather than automated tests.
 

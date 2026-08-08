@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getAssignedAthletes } from '../services/firestoreService';
@@ -19,9 +19,9 @@ const CoachDashboard = () => {
         if (user && (user.role === 'coach' || user.role === 'admin')) {
             fetchAthletes();
         }
-    }, [user]);
+    }, [user, fetchAthletes]);
 
-    const fetchAthletes = async () => {
+    const fetchAthletes = useCallback(async () => {
         setLoading(true);
         try {
             let data;
@@ -102,7 +102,7 @@ const CoachDashboard = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, showToast]);
 
 
     return (

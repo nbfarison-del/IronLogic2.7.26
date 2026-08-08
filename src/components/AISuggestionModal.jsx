@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { generateStrengthBlock, analyzeTrends } from '../services/GeminiService';
 import { getWorkouts, getPlannedWorkouts, assignProgramToAthlete } from '../services/firestoreService';
 import { validateProgram } from '../utils/programValidation';
@@ -13,13 +13,7 @@ const AISuggestionModal = ({ athlete, onClose }) => {
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [status, setStatus] = useState('idle'); // idle, analyzing, generating, applying
 
-    useEffect(() => {
-        if (athlete) {
-            handleAnalyze();
-        }
-    }, [athlete]);
-
-    const handleAnalyze = async () => {
+    const handleAnalyze = useCallback(async () => {
         setStatus('analyzing');
         setLoading(true);
         try {
@@ -36,7 +30,13 @@ const AISuggestionModal = ({ athlete, onClose }) => {
             setLoading(false);
             setStatus('idle');
         }
-    };
+    }, [athlete]);
+
+    useEffect(() => {
+        if (athlete) {
+            handleAnalyze();
+        }
+    }, [athlete, handleAnalyze]);
 
     const handleGenerateProgram = async () => {
         setStatus('generating');

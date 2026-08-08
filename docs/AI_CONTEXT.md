@@ -83,19 +83,23 @@ Each step passes its report as context to the next. If any step fails, the pipel
 | P3 | Toast timeout leak on unmount | ✅ RESOLVED |
 | P2 | TimerContext missing useMemo | 🔴 Open |
 | S2 | Admin email hardcoded in 5 files | 🔴 Open |
-| L1 | 5 `react-hooks/exhaustive-deps` warnings (0 errors) | 🔴 Open |
+| L1 | 5 `react-hooks/exhaustive-deps` warnings (0 errors) | ✅ RESOLVED 2026-08-08 |
 | L2 | 30-day e1RM filter UTC-vs-local cutoff edge (minor) | 🔴 Open |
 | L3 | No jsdom / React Testing Library (component surfaces review-only) | 🔴 Open |
 
-### Lint warnings (0 errors, 5 warnings)
+### L1 resolution (2026-08-08) — lint now 0 errors / 0 warnings
 
-| File | Line | Issue |
-|------|------|-------|
-| `AISuggestionModal.jsx` | 20 | `useEffect` missing dep: `handleAnalyze` |
-| `TimerWidget.jsx` | 56 | `useEffect` missing dep: `setPhaseTimePassed` |
-| `DataContext.jsx` | 180 | `useEffect` missing dep: `showToast` |
-| `CoachDashboard.jsx` | 22 | `useEffect` missing dep: `fetchAthletes` |
-| `Programs.jsx` | 37 | `useEffect` missing dep: `loadTemplates` |
+All 5 `react-hooks/exhaustive-deps` warnings were resolved by wrapping async handlers in `useCallback` and adding missing (referentially stable) deps:
+
+| File | Fix |
+|------|-----|
+| `AISuggestionModal.jsx` | `handleAnalyze` wrapped in `useCallback([athlete])`; effect deps `[athlete, handleAnalyze]` |
+| `TimerWidget.jsx` | Added `setPhaseTimePassed` (state setter) to effect deps |
+| `DataContext.jsx` | Added `showToast` (`useCallback([])`, stable) to effect deps |
+| `CoachDashboard.jsx` | `fetchAthletes` wrapped in `useCallback([user, showToast])`; effect deps include it |
+| `Programs.jsx` | `loadTemplates` wrapped in `useCallback([systemTemplates, showToast, user])`; effect deps include it |
+
+No re-run-loop or stale-closure risk — `user` (state), `showToast` (`useCallback([])`), `systemTemplates` (`useMemo([])`), and the `athlete` prop (state) are all referentially stable. QA-verified 2026-08-08 (lint/test/build PASS).
 
 ## Recent Features (dd486e4, 2026-08-01)
 
@@ -106,7 +110,7 @@ Each step passes its report as context to the next. If any step fails, the pipel
 ## Verification Commands
 
 ```bash
-npm run lint    # 0 errors required (5 known warnings)
+npm run lint    # 0 errors required (0 warnings as of 2026-08-08)
 npm test        # 100% pass rate (13 tests / 2 files)
 npm run build   # Must succeed
 ```

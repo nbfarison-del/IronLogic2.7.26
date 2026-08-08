@@ -66,7 +66,7 @@ npm run preview  # preview the production build
 ### Verification
 
 ```bash
-npm run lint    # 0 errors required (5 known warnings)
+npm run lint    # 0 errors, 0 warnings
 npm test        # Vitest suite (13 tests / 2 files)
 npm run build   # must succeed
 ```
@@ -107,6 +107,5 @@ The repo includes an AI agent pipeline (`IronLogicHQ/AI/`) that runs scheduled h
 
 ## Known Issues
 
-- 5 `react-hooks/exhaustive-deps` lint warnings (0 errors).
 - No `jsdom` / React Testing Library configured — component-level surfaces are review-only.
 - Full issue list in [docs/AI_CONTEXT.md](docs/AI_CONTEXT.md).
