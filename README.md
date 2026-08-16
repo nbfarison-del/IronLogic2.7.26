@@ -9,7 +9,7 @@ IronLogic programs strength, powerlifting, and Olympic weightlifting athletes th
 - **DMAIC decision engine** — every recommendation maps to Define / Measure / Analyze / Improve / Control with evidence.
 - **Olympic Weightlifting** — onboarding, competition phase planning (Accumulation → Intensification → Peaking → Taper), weak-point analysis, accessory selection, and dedicated dashboards for snatch, clean and jerk, total, front squat, and back squat.
 - **Competition squat handling** — High Bar / Low Bar tracking; only High Bar (and legacy) `bb_squat` entries count toward the competition squat, DOTS max, and weak-point analysis.
-- **30-day e1RM trends** — lift intensity charts show the last 30 days of estimated 1RM data.
+- **30-day e1RM trends** — lift intensity charts show the last 30 days of estimated 1RM data, filtered with a timezone-safe local-calendar window.
 - **Workout logging** — fast set entry, RPE autoadjustment, rest timer, bar-position selector, offline queue, and batched session finalization.
 - **AI coach chat** — Google Gemini integration with retry/timeout handling.
 - **PWA** — installable with offline persistence via multi-tab Firestore cache.
@@ -67,7 +67,7 @@ npm run preview  # preview the production build
 
 ```bash
 npm run lint    # 0 errors, 0 warnings
-npm test        # Vitest suite (13 tests / 2 files)
+npm test        # Vitest suite (21 tests / 3 files)
 npm run build   # must succeed
 ```
 

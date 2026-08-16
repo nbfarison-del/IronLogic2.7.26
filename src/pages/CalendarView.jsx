@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 import ProgramPlanner from '../components/ProgramPlanner';
 import * as firestoreService from '../services/firestoreService';
 import { getDateStr } from '../utils/dateUtils';
+import { buildWeekCSV, downloadCSV, getWeekStart } from '../utils/csvExport';
 
 const CalendarView = () => {
     const { unit } = useSettings();
@@ -201,6 +202,27 @@ const CalendarView = () => {
         navigate('/log', { state: { plannedWorkout: program } });
     };
 
+    const exportWeekCSV = () => {
+        const weekStart = getWeekStart(selectedDate);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        const filename = `ironlogic-week-${getDateStr(weekStart)}-to-${getDateStr(weekEnd)}.csv`;
+
+        const csv = buildWeekCSV({
+            date: selectedDate,
+            unit,
+            workouts: effectiveWorkouts,
+            planned: effectivePlanned,
+            recovery: effectiveRecovery,
+            weights: effectiveWeights,
+            notes: effectiveNotes,
+            mobility: effectiveMobility
+        });
+
+        downloadCSV(filename, csv);
+        showToast(`Exported week of ${getDateStr(weekStart)}`, 'success');
+    };
+
     // Calendar Helpers
     const getDaysInMonth = (date) => {
         const year = date.getFullYear();
@@ -313,7 +335,15 @@ const CalendarView = () => {
         <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'left' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h1>{isCoachViewing ? `Athlete Calendar` : 'Calendar Tracking'}</h1>
-                <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <button
+                        className="btn"
+                        style={{ background: 'rgba(76, 175, 80, 0.1)', borderColor: 'rgba(76, 175, 80, 0.3)' }}
+                        onClick={exportWeekCSV}
+                        title={`Export week of ${getDateStr(getWeekStart(selectedDate))} to CSV`}
+                    >
+                        Export Week CSV
+                    </button>
                     {!isCoachViewing && (
                         <button
                             className="btn btn-primary"

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../context/DataContext';
+import { isWithinRecentDays } from '../utils/dateUtils';
 
 import { useSettings } from '../context/SettingsContext';
 import {
@@ -69,12 +70,9 @@ const Progress = () => {
     }, [workouts]);
 
     const e1rmData = useMemo(() => {
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - 30);
-        const cutoffTime = cutoff.getTime();
         return workouts
             .filter(w => w.exerciseId === selectedExercise && w.estimated1RM)
-            .filter(w => new Date(w.date).getTime() >= cutoffTime)
+            .filter(w => isWithinRecentDays(w.date, 30))
             .sort((a, b) => new Date(a.date) - new Date(b.date))
             .map(w => ({
                 date: w.date,

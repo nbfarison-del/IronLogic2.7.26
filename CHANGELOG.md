@@ -12,17 +12,19 @@ and this project aims to follow [Semantic Versioning](https://semver.org/spec/v2
 - **Bar-position tracking** — `WorkoutLog.jsx` gains a High Bar / Low Bar selector for `bb_squat`. The choice is saved to `modifiers.bar` on every strength set, reused from the most recent entry of the same exercise, and reset to High Bar for non-squat exercises. (#dd486e4)
 - **30-day e1RM filter** — the lift intensity chart on `Progress.jsx` now shows only the last 30 days of estimated 1RM data, with the title updated to "Last 30 Days". (#dd486e4)
 - **Unit tests for the Olympic engine** — `src/tests/OlympicWeightliftingEngine.test.js` adds 9 tests covering low-bar exclusion on the back-squat dashboard, weak-point analysis, profile fallback, total regression, and competition-phase behavior.
+- **Unit tests for `dateUtils`** — `src/tests/dateUtils.test.js` adds 8 tests covering the inclusive day-30 boundary, day-31 exclusion, legacy timestamp entries, empty/invalid dates, and `parseWorkoutDate` timezone safety.
 
 ### Changed
 - `latestByExercise` and `buildTrend` in `OlympicWeightliftingEngine.js` accept an optional predicate to filter workouts by bar position.
-- Test suite grows from 1 file / 4 tests to 2 files / 13 tests.
+- Test suite grows from 2 files / 13 tests to 3 files / 21 tests.
 
 ### Fixed
 - Pipeline automation now sets `ErrorActionPreference=Continue` so opencode ANSI stderr output no longer terminates pipeline steps. (#ae55a27)
 - **`react-hooks/exhaustive-deps` lint warnings (all 5)** — `handleAnalyze` wrapped in `useCallback([athlete])` (`AISuggestionModal.jsx`), `setPhaseTimePassed` added to deps (`TimerWidget.jsx`), `showToast` added to deps (`DataContext.jsx`), `fetchAthletes` wrapped in `useCallback([user, showToast])` (`CoachDashboard.jsx`), and `loadTemplates` wrapped in `useCallback([systemTemplates, showToast, user])` (`Programs.jsx`). All added deps are referentially stable, so no re-run-loop or stale-closure risk. Lint is now 0 errors / 0 warnings.
+- **30-day e1RM filter timezone edge** — `Progress.jsx` now filters via the new `isWithinRecentDays` helper (`src/utils/dateUtils.js`), which compares date-only `YYYY-MM-DD` strings built from local date components instead of parsing `YYYY-MM-DD` as UTC midnight. A workout exactly 30 days old is now included in all timezones (previously dropped in negative-offset zones).
 
 ### Known Issues
-- Minor: the 30-day e1RM filter parses `YYYY-MM-DD` dates as UTC midnight while the cutoff uses local time; in US timezones a workout exactly 30 days old can be dropped.
+- Minor (legacy-only): for old full-UTC-timestamp entries, the 30-day filter uses the UTC date (`split('T')[0]`), so near UTC midnight the boundary can shift by ±1 day. Modern entries are stored as date-only strings (`toDateStr`, `firestoreService.js:758`), so the standard path is exact.
 - No `jsdom` / React Testing Library configured, so component-level surfaces are covered by code review rather than automated tests.
 
 ## [2026-07-19] — AI Automation Pipeline Framework

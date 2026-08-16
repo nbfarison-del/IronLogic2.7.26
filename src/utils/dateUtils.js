@@ -8,3 +8,10 @@ export const parseWorkoutDate = (value) => {
     const parsed = new Date(`${dateStr}T12:00:00`);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
 };
+
+export const isWithinRecentDays = (dateValue, days, now = new Date()) => {
+    if (!dateValue) return false;
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - days);
+    return String(dateValue).split('T')[0] >= getDateStr(cutoff);
+};
