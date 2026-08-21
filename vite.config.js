@@ -32,4 +32,36 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('@firebase') || id.includes('node_modules/firebase')) return 'firebase';
+          if (
+            id.includes('recharts') ||
+            id.includes('victory-vendor') ||
+            id.includes('/d3-') ||
+            id.includes('internmap')
+          ) {
+            return 'charts';
+          }
+          if (id.includes('@google/generative-ai')) return 'ai';
+          if (id.includes('react-is') || id.includes('react-markdown')) return 'vendor';
+          if (
+            id.includes('node_modules/react') ||
+            id.includes('node_modules/scheduler') ||
+            id.includes('react-router') ||
+            id.includes('@remix-run') ||
+            id.includes('use-sync-external-store') ||
+            id.includes('node_modules/cookie/') ||
+            id.includes('set-cookie-parser')
+          ) {
+            return 'react';
+          }
+          return 'vendor';
+        }
+      }
+    }
+  },
 })

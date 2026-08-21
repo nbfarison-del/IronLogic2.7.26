@@ -296,7 +296,6 @@ export const finalizeWorkoutSession = async (userId, dateStr, metadata) => {
     // Note: We don't batch sets here because they are usually saved incrementally to avoid data loss.
     // However, this ensures the "Completion" status is solid.
     try {
-        const { writeBatch } = await import('firebase/firestore');
         const batch = writeBatch(db);
         
         const sessionRef = doc(db, 'users', userId, 'sessions', dateStr);

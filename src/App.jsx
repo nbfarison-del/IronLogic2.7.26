@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, Link, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { getUserProfile } from './services/firestoreService';
 import { DataProvider } from './context/DataContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { TimerProvider } from './context/TimerContext';
@@ -114,7 +115,6 @@ const CoachAthleteAccessGuard = ({ children }) => {
       }
 
       try {
-        const { getUserProfile } = await import('./services/firestoreService');
         const athleteProfile = await getUserProfile(athleteId);
         const isAssignedCoach = athleteProfile?.coach_id === user.id || athleteProfile?.coachId === user.id;
         if (isMounted) setAccessState(isAssignedCoach ? 'allowed' : 'denied');
