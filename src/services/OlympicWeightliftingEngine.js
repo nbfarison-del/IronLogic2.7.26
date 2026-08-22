@@ -1,5 +1,6 @@
 import { olympicExerciseById } from '../data/olympicWeightlifting';
 import { isOlympicExercise } from '../utils/olympicWeightlifting';
+import { aggregateTrendByWeek } from '../utils/trends';
 
 export const OLYMPIC_PROFILE_DEFAULTS = {
     snatch1RM: '',
@@ -41,6 +42,8 @@ const numberOrZero = (value) => {
     const parsed = parseFloat(value);
     return Number.isFinite(parsed) ? parsed : 0;
 };
+
+export const isHighBarBackSquat = (w) => !w.modifiers?.bar || w.modifiers.bar === 'High Bar';
 
 const getDateOnly = (value) => {
     if (!value) return '';
@@ -204,14 +207,19 @@ export const getOlympicProgressDashboard = (workouts = [], recovery = []) => {
             };
         });
 
-    const dashboards = Object.fromEntries(Object.entries(targets).map(([key, ids]) => [
-        key,
-        buildTrend(ids, key === 'backSquat' ? w => w.modifiers?.bar !== 'Low Bar' : null)
-    ]));
-    const snatchBest = Math.max(0, ...dashboards.snatch.map(d => d.e1rm));
-    const cjBest = Math.max(0, ...dashboards.cleanJerk.map(d => d.e1rm));
-    dashboards.total = [{ date: new Date().toISOString().split('T')[0], e1rm: snatchBest + cjBest, volume: 0, intensity: 0, readiness: numberOrZero(recovery?.[0]?.score) }];
-    return dashboards;
+    const dashboards = Object.fromEntries(Object.entries(targets).map(([key, ids]) => {
+        const predicate = key === 'backSquat' ? isHighBarBackSquat : null;
+        return [key, buildTrend(ids, predicate)];
+    }));
+
+    const aggregated = Object.fromEntries(
+        Object.entries(dashboards).map(([key, rows]) => [key, aggregateTrendByWeek(rows)])
+    );
+
+    const snatchBest = Math.max(0, ...aggregated.snatch.map(d => d.e1rm));
+    const cjBest = Math.max(0, ...aggregated.cleanJerk.map(d => d.e1rm));
+    aggregated.total = [{ date: new Date().toISOString().split('T')[0], weekLabel: 'Current', e1rm: snatchBest + cjBest, volume: 0, intensity: 0, readiness: numberOrZero(recovery?.[0]?.score) }];
+    return aggregated;
 };
 
 export const getSmartRecommendations = ({ profile = {}, workouts = [], recovery = [] } = {}) => {

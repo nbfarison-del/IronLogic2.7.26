@@ -9,6 +9,7 @@ import {
     BarChart, Bar
 } from 'recharts';
 import { getOlympicProgressDashboard, getSmartRecommendations } from '../services/OlympicWeightliftingEngine';
+import { aggregateTrendByWeek, aggregateBodyWeightByWeek, aggregateDOTSByWeek } from '../utils/trends';
 import QualifyingTotals from '../components/QualifyingTotals';
 
 // DOTS score calculation
@@ -58,7 +59,7 @@ const Progress = () => {
     const { weights, workouts, recovery, profile, isLoading } = useData();
     const { unit } = useSettings();
     const [selectedExercise, setSelectedExercise] = useState('bb_squat');
-    const [activeTab, setActiveTab] = useState(() => new URLSearchParams(location.search).get('tab') || 'general');
+    const [activeTab, setActiveTab] = useState(() => new URLSearchParams(location.search).get('tab') || 'olympic');
 
     // List of exercises for comparison
     const exerciseList = useMemo(() => {
@@ -147,7 +148,7 @@ const Progress = () => {
         ['cleanJerk', 'Clean & Jerk Progress'],
         ['total', 'Total Progress'],
         ['frontSquat', 'Front Squat Progress'],
-        ['backSquat', 'Back Squat Progress']
+        ['highBarSquat', 'High Bar Squat Progress']
     ];
 
     if (isLoading) return <div className="card">Loading progress data...</div>;
