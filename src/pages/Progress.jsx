@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../context/DataContext';
-import { isWithinRecentDays } from '../utils/dateUtils';
 
 import { useSettings } from '../context/SettingsContext';
 import {
@@ -9,7 +8,7 @@ import {
     BarChart, Bar
 } from 'recharts';
 import { getOlympicProgressDashboard, getSmartRecommendations } from '../services/OlympicWeightliftingEngine';
-import { aggregateTrendByWeek, aggregateBodyWeightByWeek, aggregateDOTSByWeek } from '../utils/trends';
+import { aggregateTrendByWeek, aggregateBodyWeightByWeek, formatWeekLabel, getWeekStart } from '../utils/trends';
 import QualifyingTotals from '../components/QualifyingTotals';
 
 // DOTS score calculation
@@ -71,51 +70,38 @@ const Progress = () => {
     }, [workouts]);
 
     const e1rmData = useMemo(() => {
-        return workouts
+        const allData = workouts
             .filter(w => w.exerciseId === selectedExercise && w.estimated1RM)
-            .filter(w => isWithinRecentDays(w.date, 30))
-            .sort((a, b) => new Date(a.date) - new Date(b.date))
-            .map(w => ({
-                date: w.date,
-                e1rm: w.estimated1RM
-            }));
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        return aggregateTrendByWeek(allData).map(w => ({
+            date: w.date,
+            weekLabel: w.weekLabel,
+            e1rm: w.e1rm
+        }));
     }, [workouts, selectedExercise]);
 
     const tonnageData = useMemo(() => {
-        const weeks = {};
-        const now = new Date();
-        // Last 12 weeks
-        for (let i = 0; i < 12; i++) {
-            const d = new Date(now);
-            d.setDate(d.getDate() - (i * 7));
-            const weekStr = `Week -${i}`;
-            const weekKey = Math.floor(d.getTime() / (7 * 24 * 60 * 60 * 1000));
-            weeks[weekKey] = { name: weekStr, volume: 0 };
-        }
-
-        workouts.forEach(w => {
-            const d = new Date(w.date);
-            const weekKey = Math.floor(d.getTime() / (7 * 24 * 60 * 60 * 1000));
-            if (weeks[weekKey]) {
-                const vol = (w.weight || 0) * (w.reps || 0);
-                weeks[weekKey].volume += Math.round(vol);
-            }
-        });
-
-        return Object.values(weeks).reverse();
+        const allData = workouts.filter(w => w.weight && w.reps).sort((a, b) => new Date(a.date) - new Date(b.date));
+        return aggregateTrendByWeek(allData, { volume: 'sum' }).map(w => ({
+            name: w.weekLabel,
+            volume: w.volume
+        }));
     }, [workouts]);
 
     // DOTS Score Trend (keep existing logic but optimize)
     const dotsData = useMemo(() => {
-        if (weights.length === 0 || workouts.length === 0) return [];
+        if (!weights.length) return [];
         const sortedBw = [...weights].sort((a,b) => new Date(a.date) - new Date(b.date));
         const sortedWorkouts = [...workouts].sort((a,b) => new Date(a.date) - new Date(b.date));
         
         const data = [];
         const currentMaxes = { bb_squat: 0, bb_bench: 0, bb_deadlift: 0 };
-
+        
         sortedBw.forEach(bwEntry => {
             const bwDate = new Date(bwEntry.date);
+            const weekStart = getWeekStart(bwEntry.date);
+            
             sortedWorkouts.forEach(w => {
                 const wDate = new Date(w.date);
                 if (wDate <= bwDate && w.estimated1RM) {
@@ -133,12 +119,29 @@ const Progress = () => {
                 const dots = getDOTSScore(parseFloat(bwEntry.weight), total, true);
                 data.push({
                     date: bwEntry.date,
-                    dots: Math.round(dots * 10) / 10
+                    weekStart,
+                    dots
                 });
             }
         });
-        return data;
-    }, [workouts, weights]);
+        
+        // Aggregate by week: take the last (most recent) DOTS score per week
+        const weeklyData = new Map();
+        data.forEach(d => {
+            const key = d.weekStart || d.date;
+            if (!weeklyData.has(key)) weeklyData.set(key, d);
+            // Keep the entry with the latest date within the week
+            else if (new Date(d.date).getTime() > new Date(weeklyData.get(key).date).getTime()) {
+                weeklyData.set(key, d);
+            }
+        });
+        
+        return Array.from(weeklyData.values()).map(w => ({
+            date: w.date,
+            weekLabel: formatWeekLabel(w.weekStart || getWeekStart(w.date)),
+            dots: w.dots
+        }));
+    }, [weights, workouts]);
 
     const olympicDashboards = useMemo(() => getOlympicProgressDashboard(workouts, recovery), [workouts, recovery]);
     const olympicRecommendations = useMemo(() => getSmartRecommendations({ profile, workouts, recovery }).slice(0, 4), [profile, workouts, recovery]);
@@ -249,7 +252,7 @@ const Progress = () => {
                 {/* E1RM Trend Chart */}
                 <div className="glass-card" style={{ borderTop: '4px solid var(--primary)' }}>
                     <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        📈 {exerciseList.find(e => e.id === selectedExercise)?.name} Intensity (e1RM) &mdash; Last 30 Days
+                        📈 {exerciseList.find(e => e.id === selectedExercise)?.name} Intensity (e1RM) — 12-Week Trend
                     </h2>
                     <div style={{ height: '300px', width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
@@ -290,7 +293,7 @@ const Progress = () => {
                     </h2>
                     <div style={{ height: '250px', width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={weights}>
+                            <LineChart data={aggregateBodyWeightByWeek(weights)}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                 <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} />
                                 <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={10} />

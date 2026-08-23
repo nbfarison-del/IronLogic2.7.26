@@ -1,4 +1,4 @@
-import { getDateStr, parseWorkoutDate, toLocalDateStr } from './dateUtils';
+import { getDateStr, parseWorkoutDate } from './dateUtils';
 
 const AGGREGATORS = {
     max: (vals) => Math.max(...vals),
