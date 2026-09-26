@@ -15,6 +15,7 @@ import {
     getSmartRecommendations
 } from '../services/OlympicWeightliftingEngine';
 import { getDateStr, parseWorkoutDate } from '../utils/dateUtils';
+import { prescribeForToday } from '../services/MobilityPrescription';
 
 const getSetVolume = (workout) => {
     if (workout?.type === 'cardio') return 0;
@@ -26,8 +27,8 @@ const getSetVolume = (workout) => {
 };
 
 const tabs = [
-    { id: 'dashboard', label: 'Dashboard' },
     { id: 'mobility', label: 'Mobility' },
+    { id: 'dashboard', label: 'Dashboard' },
     { id: 'ironlogic-method', label: 'Method' }
 ];
 
@@ -74,10 +75,17 @@ const Home = () => {
         profile,
         plannedWorkouts,
         trainingMaxes,
+        mobilityLogs,
         isLoading: loading
     } = useData();
 
     const [activeTab, setActiveTab] = useState('dashboard');
+
+    // Mobility-first: today's prescribed 10-minute session, derived from the training plan
+    const mobilityRx = useMemo(
+        () => prescribeForToday({ plannedWorkouts: plannedWorkouts || [], mobilityLogs: mobilityLogs || [] }),
+        [plannedWorkouts, mobilityLogs]
+    );
 
     const todayStr = useMemo(() => getDateStr(new Date()), []);
     const todayPlan = useMemo(() => {
@@ -228,6 +236,34 @@ const Home = () => {
                         </div>
                     )}
 
+                    <section className="glass-card" style={{ marginBottom: '1.25rem', borderLeft: `4px solid ${mobilityRx.path.color}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                            <div style={{ flex: '1 1 220px' }}>
+                                <p className="page-kicker">Today&apos;s Mobility · ~10 min</p>
+                                <h2 style={{ margin: '0.2rem 0 0.4rem', fontSize: '1.25rem' }}>
+                                    {mobilityRx.path.icon} {mobilityRx.path.name}
+                                </h2>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0, lineHeight: 1.5 }}>
+                                    {mobilityRx.reason}
+                                </p>
+                            </div>
+                            {mobilityRx.alreadyDone ? (
+                                <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.95rem', whiteSpace: 'nowrap' }}>
+                                    ✓ Done today
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={() => setActiveTab('mobility')}
+                                    style={{ whiteSpace: 'nowrap' }}
+                                >
+                                    Start Session
+                                </button>
+                            )}
+                        </div>
+                    </section>
+
                     <div className="dashboard-hero">
                         <section className="glass-card hero-panel" style={{ flex: 2 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
@@ -351,7 +387,7 @@ const Home = () => {
                     </div>
                 </>
             ) : activeTab === 'mobility' ? (
-                <MobilityTab />
+                <MobilityTab prescription={mobilityRx} />
             ) : (
                 <IronLogicTab />
             )}

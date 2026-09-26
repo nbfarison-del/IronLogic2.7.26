@@ -12,7 +12,7 @@ const LAST_PATH_KEY = 'mobility_last_path';
 // ─────────────────────────────────────────
 // PATH SELECTION SCREEN
 // ─────────────────────────────────────────
-const PathSelectionView = ({ onSelect, mobilityLogs }) => {
+const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
     const lastPathId = localStorage.getItem(LAST_PATH_KEY);
     const recentLog = mobilityLogs[0];
 
@@ -25,6 +25,28 @@ const PathSelectionView = ({ onSelect, mobilityLogs }) => {
                 </p>
             </div>
 
+            {prescription && !prescription.alreadyDone && (
+                <div className="card" style={{
+                    marginBottom: '1.5rem',
+                    borderLeft: `5px solid ${prescription.path.color}`,
+                    background: 'rgba(var(--primary-rgb), 0.05)'
+                }}>
+                    <p className="page-kicker">Today&apos;s Prescription · {prescription.ruleLabel}</p>
+                    <h3 style={{ margin: '0.3rem 0 0.5rem', color: prescription.path.color }}>
+                        {prescription.path.icon} {prescription.path.name}
+                    </h3>
+                    <p style={{ color: '#aaa', fontSize: '0.88rem', margin: '0 0 1rem', lineHeight: 1.5 }}>
+                        {prescription.reason}
+                    </p>
+                    <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => onSelect(prescription.path)}
+                    >
+                        Start Prescribed Session
+                    </button>
+                </div>
+            )}
             {recentLog && (
                 <div style={{
                     marginBottom: '1.5rem', padding: '0.75rem 1rem',
@@ -434,7 +456,7 @@ const RecentHistory = ({ mobilityLogs, color }) => (
 // ─────────────────────────────────────────
 // ROOT COMPONENT
 // ─────────────────────────────────────────
-const MobilityTab = () => {
+const MobilityTab = ({ prescription }) => {
     const { user } = useAuth();
     const { mobilityLogs } = useData();
     const [view, setView] = useState('select');   // 'select' | 'session'
@@ -485,7 +507,7 @@ const MobilityTab = () => {
     };
 
     if (view === 'select') {
-        return <PathSelectionView onSelect={handleSelectPath} mobilityLogs={mobilityLogs} />;
+        return <PathSelectionView onSelect={handleSelectPath} mobilityLogs={mobilityLogs} prescription={prescription} />;
     }
 
     if (selectedPath.sessionType === 'timer') {
