@@ -5,6 +5,7 @@ import { mobilityPaths } from '../data/mobilityPaths';
 import * as firestoreService from '../services/firestoreService';
 import { seededShuffle, getDailySeed } from '../utils/randomUtils';
 import { useMobilityStreak } from '../hooks/useMobilityStreak';
+import { ShareStreakButton } from './MobilityShareCard';
 import mobilityHero from '../assets/mobility_hero.png';
 import logo from '../assets/logo.png';
 
@@ -28,13 +29,16 @@ const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
                     </p>
                 </div>
                 {streak.current > 0 && (
-                    <div style={{
-                        background: 'rgba(255,152,0,0.12)', border: '1px solid #ff980055',
-                        borderRadius: '12px', padding: '0.5rem 0.9rem',
-                        fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'nowrap'
-                    }}>
-                        🔥 {streak.current}-day streak
-                        <span style={{ fontWeight: 'normal', color: '#888', fontSize: '0.78rem' }}> · best {streak.longest}</span>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div style={{
+                            background: 'rgba(255,152,0,0.12)', border: '1px solid #ff980055',
+                            borderRadius: '12px', padding: '0.5rem 0.9rem',
+                            fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'nowrap'
+                        }}>
+                            🔥 {streak.current}-day streak
+                            <span style={{ fontWeight: 'normal', color: '#888', fontSize: '0.78rem' }}> · best {streak.longest}</span>
+                        </div>
+                        <ShareStreakButton streak={streak} pathName={recentLog?.pathName || 'Mobility'} label="Share" />
                     </div>
                 )}
             </div>
@@ -135,7 +139,7 @@ const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
 // ─────────────────────────────────────────
 // TIMER SESSION (Traditional + Maternal Prep)
 // ─────────────────────────────────────────
-const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete, focusIds = [] }) => {
+const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete, focusIds = [], streak }) => {
     const [program, setProgram] = useState([]);
     const [isActive, setIsActive] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
@@ -203,8 +207,9 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete, focusIds = []
                 <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
                 <h2 style={{ color: path.color }}>Session Complete!</h2>
                 <p style={{ color: '#aaa' }}>10 minutes of {path.name} logged. Great work!</p>
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem', flexWrap: 'wrap' }}>
                     <button className="btn" onClick={onBack}>← All Paths</button>
+                    <ShareStreakButton streak={streak} bump={1} pathName={path.name} />
                     <button className="btn btn-primary" onClick={buildProgram}>Do Another</button>
                 </div>
             </div>
@@ -314,7 +319,7 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete, focusIds = []
 // ─────────────────────────────────────────
 // REPS/CHECKLIST SESSION  (IronLogic paths)
 // ─────────────────────────────────────────
-const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
+const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete, streak }) => {
     const [completed, setCompleted] = useState(new Set());
     const [logged, setLogged] = useState(false);
 
@@ -346,7 +351,10 @@ const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
                         </p>
                     </div>
                     {logged ? (
-                        <div style={{ color: '#4caf50', fontWeight: 'bold', fontSize: '0.95rem' }}>✓ Logged!</div>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            <div style={{ color: '#4caf50', fontWeight: 'bold', fontSize: '0.95rem' }}>✓ Logged!</div>
+                            <ShareStreakButton streak={streak} bump={1} pathName={path.name} label="Share" />
+                        </div>
                     ) : (
                         <button
                             className="btn btn-primary"
@@ -491,6 +499,7 @@ const MobilityTab = ({ prescription }) => {
     const [view, setView] = useState('select');   // 'select' | 'session'
     const [selectedPath, setSelectedPath] = useState(null);
     const [fromPrescription, setFromPrescription] = useState(false);
+    const streak = useMobilityStreak(mobilityLogs);
 
     // Keep screen awake during mobility sessions
     useEffect(() => {
@@ -555,6 +564,7 @@ const MobilityTab = ({ prescription }) => {
                 onBack={handleBack}
                 onLogComplete={handleLogComplete}
                 focusIds={focusIds}
+                streak={streak}
             />
         );
     }
@@ -565,6 +575,7 @@ const MobilityTab = ({ prescription }) => {
             mobilityLogs={mobilityLogs}
             onBack={handleBack}
             onLogComplete={handleLogComplete}
+            streak={streak}
         />
     );
 };
