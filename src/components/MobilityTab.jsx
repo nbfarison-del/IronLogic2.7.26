@@ -4,6 +4,7 @@ import { useData } from '../context/DataContext';
 import { mobilityPaths } from '../data/mobilityPaths';
 import * as firestoreService from '../services/firestoreService';
 import { seededShuffle, getDailySeed } from '../utils/randomUtils';
+import { useMobilityStreak } from '../hooks/useMobilityStreak';
 import mobilityHero from '../assets/mobility_hero.png';
 import logo from '../assets/logo.png';
 
@@ -15,14 +16,27 @@ const LAST_PATH_KEY = 'mobility_last_path';
 const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
     const lastPathId = localStorage.getItem(LAST_PATH_KEY);
     const recentLog = mobilityLogs[0];
+    const streak = useMobilityStreak(mobilityLogs);
 
     return (
         <div>
-            <div style={{ marginBottom: '1.5rem' }}>
-                <h2 style={{ margin: 0 }}>Choose Your Path</h2>
-                <p style={{ color: '#888', margin: '0.4rem 0 0 0' }}>
-                    Select a mobility focus for today's 10-minute session.
-                </p>
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
+                <div>
+                    <h2 style={{ margin: 0 }}>Choose Your Path</h2>
+                    <p style={{ color: '#888', margin: '0.4rem 0 0 0' }}>
+                        Select a mobility focus for today's 10-minute session.
+                    </p>
+                </div>
+                {streak.current > 0 && (
+                    <div style={{
+                        background: 'rgba(255,152,0,0.12)', border: '1px solid #ff980055',
+                        borderRadius: '12px', padding: '0.5rem 0.9rem',
+                        fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'nowrap'
+                    }}>
+                        🔥 {streak.current}-day streak
+                        <span style={{ fontWeight: 'normal', color: '#888', fontSize: '0.78rem' }}> · best {streak.longest}</span>
+                    </div>
+                )}
             </div>
 
             {prescription && !prescription.alreadyDone && (

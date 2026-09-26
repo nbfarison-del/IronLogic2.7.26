@@ -16,6 +16,7 @@ import {
 } from '../services/OlympicWeightliftingEngine';
 import { getDateStr, parseWorkoutDate } from '../utils/dateUtils';
 import { prescribeForToday } from '../services/MobilityPrescription';
+import { useMobilityStreak } from '../hooks/useMobilityStreak';
 
 const getSetVolume = (workout) => {
     if (workout?.type === 'cardio') return 0;
@@ -86,6 +87,7 @@ const Home = () => {
         () => prescribeForToday({ plannedWorkouts: plannedWorkouts || [], mobilityLogs: mobilityLogs || [] }),
         [plannedWorkouts, mobilityLogs]
     );
+    const mobilityStreak = useMobilityStreak(mobilityLogs || []);
 
     const todayStr = useMemo(() => getDateStr(new Date()), []);
     const todayPlan = useMemo(() => {
@@ -239,7 +241,12 @@ const Home = () => {
                     <section className="glass-card" style={{ marginBottom: '1.25rem', borderLeft: `4px solid ${mobilityRx.path.color}` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                             <div style={{ flex: '1 1 220px' }}>
-                                <p className="page-kicker">Today&apos;s Mobility · ~10 min</p>
+                                <p className="page-kicker">
+                                    Today&apos;s Mobility · ~10 min
+                                    {mobilityStreak.current > 0 && (
+                                        <span> · 🔥 {mobilityStreak.current}-day streak</span>
+                                    )}
+                                </p>
                                 <h2 style={{ margin: '0.2rem 0 0.4rem', fontSize: '1.25rem' }}>
                                     {mobilityRx.path.icon} {mobilityRx.path.name}
                                 </h2>
