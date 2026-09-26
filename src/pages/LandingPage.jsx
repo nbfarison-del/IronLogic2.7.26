@@ -12,7 +12,7 @@ const LandingPage = () => {
                 </Link>
                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                     <Link to="/login" className="btn">Log In</Link>
-                    <Link to="/register" className="btn btn-primary">Start Trial</Link>
+                    <Link to="/register" className="btn btn-primary">Start Free</Link>
                 </div>
             </nav>
 
@@ -28,7 +28,7 @@ const LandingPage = () => {
                         recovery signals, and progress analysis in one calm system.
                     </p>
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1.5rem' }}>
-                        <Link to="/register" className="btn btn-primary">Start Your Trial</Link>
+                        <Link to="/register" className="btn btn-primary">Start Free</Link>
                         <Link to="/login" className="btn">Athlete Login</Link>
                     </div>
                 </div>

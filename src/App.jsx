@@ -61,36 +61,8 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
 };
 
 const SubscriptionGuard = ({ children }) => {
-  const { user, loading } = useAuth();
-  const [now] = useState(() => Date.now());
-
-  if (loading) return <AppLoading label="Checking subscription" />;
-
-  // New athletes get a 14-day trial
-  const trialStillActive = user?.trialExpiresAt ? (user.trialExpiresAt.toMillis ? user.trialExpiresAt.toMillis() : user.trialExpiresAt) > now : false;
-  
-  const isSubscriber = user?.subscriptionStatus === 'beta' || 
-                       user?.subscriptionStatus === 'active' || 
-                       user?.role === 'admin' || 
-                       trialStillActive;
-
-  if (!isSubscriber) {
-
-
-    return (
-      <div className="app-state">
-        <div className="app-state-panel">
-          <p className="app-state-eyebrow">Account Access</p>
-          <h1>Subscription Required</h1>
-          <p>Your trial has expired or you do not have an active subscription.</p>
-          <div className="app-state-actions">
-            <Link to="/profile" className="btn btn-primary">Open Profile</Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // IronLogic is free — no trial, no paywall. This guard is intentionally a
+  // no-op so the route definitions that reference it keep working unchanged.
   return children;
 };
 
