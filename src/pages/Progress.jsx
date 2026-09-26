@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 
 import { useSettings } from '../context/SettingsContext';
@@ -114,6 +115,7 @@ const Progress = () => {
                 <h1 style={{ margin: 0 }}>Performance Analytics</h1>
 
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <Link to="/import" className="btn" style={{ fontSize: '0.85rem' }}>📥 Import from RTS</Link>
                     <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Select Lift:</label>
                     <select
                         value={selectedExercise}

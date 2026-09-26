@@ -22,6 +22,7 @@ const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const WorkoutLog = lazy(() => import('./pages/WorkoutLog'));
 const Progress = lazy(() => import('./pages/Progress'));
+const RTSImport = lazy(() => import('./pages/RTSImport'));
 const Profile = lazy(() => import('./pages/Profile'));
 const CalendarView = lazy(() => import('./pages/CalendarView'));
 const Admin = lazy(() => import('./pages/Admin'));
@@ -162,6 +163,11 @@ function AppContent() {
           <Route path="/progress" element={
             <ProtectedRoute>
               <Progress />
+            </ProtectedRoute>
+          } />
+          <Route path="/import" element={
+            <ProtectedRoute>
+              <RTSImport />
             </ProtectedRoute>
           } />
           <Route path="/programs" element={
