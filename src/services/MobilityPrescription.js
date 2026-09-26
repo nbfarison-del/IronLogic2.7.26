@@ -56,6 +56,7 @@ export function prescribeMobility({ sessions = [], mobilityLogs = [], dateStr = 
         ruleLabel: rule.label,
         path,
         exercises: orderExercises(path, rule.focus),
+        focusIds: rule.focus || [],
         reason: rule.reason,
         isRestDay,
         alreadyDone,

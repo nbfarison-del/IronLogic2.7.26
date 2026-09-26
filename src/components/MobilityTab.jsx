@@ -41,7 +41,7 @@ const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
                     <button
                         type="button"
                         className="btn btn-primary"
-                        onClick={() => onSelect(prescription.path)}
+                        onClick={() => onSelect(prescription.path, true)}
                     >
                         Start Prescribed Session
                     </button>
@@ -121,7 +121,7 @@ const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
 // ─────────────────────────────────────────
 // TIMER SESSION (Traditional + Maternal Prep)
 // ─────────────────────────────────────────
-const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
+const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete, focusIds = [] }) => {
     const [program, setProgram] = useState([]);
     const [isActive, setIsActive] = useState(false);
     const [isFinished, setIsFinished] = useState(false);
@@ -133,8 +133,11 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
         const seed = getDailySeed();
 
         if (path.id === 'traditional' || path.id === 'maternal_prep') {
-            const shuffled = seededShuffle(path.exercises, seed);
-            exercises = shuffled.slice(0, 5);
+            // Prescribed focus exercises go first; the rest keep daily-seeded variety
+            const focusSet = new Set(focusIds);
+            const focus = path.exercises.filter(e => focusSet.has(e.id));
+            const rest = seededShuffle(path.exercises.filter(e => !focusSet.has(e.id)), seed);
+            exercises = [...focus, ...rest].slice(0, 5);
         } else {
             exercises = path.exercises;
         }
@@ -154,7 +157,7 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
         setTimeLeft(flat[0]?.duration || 120);
         setIsActive(false);
         setIsFinished(false);
-    }, [path]);
+    }, [path, focusIds]);
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => { buildProgram(); }, [buildProgram]);
@@ -243,6 +246,17 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
                     <p style={{ marginTop: '1.25rem', textAlign: 'center', color: '#aaa', maxWidth: '80%', lineHeight: 1.5, fontSize: '0.9rem' }}>
                         {currentExercise.description}
                     </p>
+                    <a
+                        href={currentExercise.demoUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(currentExercise.youtubeQuery || currentExercise.name)}`}
+                        target="_blank" rel="noreferrer"
+                        style={{
+                            marginTop: '0.75rem', color: '#ff4444', fontSize: '0.85rem',
+                            textDecoration: 'none', border: '1px solid #ff444455',
+                            padding: '0.5rem 0.9rem', borderRadius: '8px', whiteSpace: 'nowrap'
+                        }}
+                    >
+                        ▶ Watch demo
+                    </a>
                 </div>
 
                 {/* Exercise list */}
@@ -346,7 +360,7 @@ const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {path.exercises.map(ex => {
                     const done = completed.has(ex.id);
-                    const ytUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(ex.youtubeQuery || ex.name)}`;
+                    const demoUrl = ex.demoUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(ex.youtubeQuery || ex.name)}`;
                     return (
                         <div key={ex.id} className="card" style={{
                             borderLeft: `4px solid ${done ? '#4caf50' : path.color}`,
@@ -375,11 +389,11 @@ const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
                                     <a
-                                        href={ytUrl} target="_blank" rel="noreferrer"
+                                        href={demoUrl} target="_blank" rel="noreferrer"
                                         style={{
-                                            color: '#ff4444', fontSize: '0.78rem',
+                                            color: '#ff4444', fontSize: '0.85rem',
                                             textDecoration: 'none', border: '1px solid #ff444455',
-                                            padding: '0.3rem 0.55rem', borderRadius: '6px',
+                                            padding: '0.5rem 0.8rem', borderRadius: '8px',
                                             whiteSpace: 'nowrap'
                                         }}
                                     >
@@ -387,12 +401,13 @@ const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete }) => {
                                     </a>
                                     <button
                                         onClick={() => toggle(ex.id)}
+                                        aria-label={done ? `Mark ${ex.name} not done` : `Mark ${ex.name} done`}
                                         style={{
                                             background: done ? '#4caf50' : 'transparent',
                                             border: `2px solid ${done ? '#4caf50' : '#444'}`,
                                             color: done ? 'white' : '#666',
-                                            borderRadius: '50%', width: '36px', height: '36px',
-                                            cursor: 'pointer', fontSize: '1rem',
+                                            borderRadius: '50%', width: '48px', height: '48px',
+                                            cursor: 'pointer', fontSize: '1.25rem',
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                                             flexShrink: 0, transition: 'all 0.15s'
                                         }}
@@ -461,6 +476,7 @@ const MobilityTab = ({ prescription }) => {
     const { mobilityLogs } = useData();
     const [view, setView] = useState('select');   // 'select' | 'session'
     const [selectedPath, setSelectedPath] = useState(null);
+    const [fromPrescription, setFromPrescription] = useState(false);
 
     // Keep screen awake during mobility sessions
     useEffect(() => {
@@ -478,15 +494,17 @@ const MobilityTab = ({ prescription }) => {
         };
     }, [view]);
 
-    const handleSelectPath = path => {
+    const handleSelectPath = (path, viaPrescription = false) => {
         localStorage.setItem(LAST_PATH_KEY, path.id);
         setSelectedPath(path);
+        setFromPrescription(viaPrescription);
         setView('session');
     };
 
     const handleBack = () => {
         setView('select');
         setSelectedPath(null);
+        setFromPrescription(false);
     };
 
     const handleLogComplete = async (path, exerciseNames) => {
@@ -510,20 +528,26 @@ const MobilityTab = ({ prescription }) => {
         return <PathSelectionView onSelect={handleSelectPath} mobilityLogs={mobilityLogs} prescription={prescription} />;
     }
 
+    // When launched from the prescription, use its focus-ordered exercises
+    const useRxOrder = fromPrescription && prescription && prescription.path.id === selectedPath.id;
+    const sessionPath = useRxOrder ? { ...selectedPath, exercises: prescription.exercises } : selectedPath;
+    const focusIds = useRxOrder ? prescription.focusIds : [];
+
     if (selectedPath.sessionType === 'timer') {
         return (
             <TimerSession
-                path={selectedPath}
+                path={sessionPath}
                 mobilityLogs={mobilityLogs}
                 onBack={handleBack}
                 onLogComplete={handleLogComplete}
+                focusIds={focusIds}
             />
         );
     }
 
     return (
         <RepsSession
-            path={selectedPath}
+            path={sessionPath}
             mobilityLogs={mobilityLogs}
             onBack={handleBack}
             onLogComplete={handleLogComplete}
