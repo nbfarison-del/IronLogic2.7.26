@@ -3,6 +3,10 @@ import { mobilityExercises } from './mobilityExercises';
 // Each path has:
 //   sessionType: 'timer'  → countdown-based (like existing ROMWOD flow)
 //   sessionType: 'reps'   → checklist-based (IronLogic-style)
+//   sports:      which training-day types this path serves:
+//                'lift' | 'run' | 'cardio' | 'rest' | 'general'
+//   demoUrl:     optional direct link to a demo video (link-only, nothing hosted).
+//                Falls back to a YouTube search built from youtubeQuery/name.
 //
 // All paths are designed for ~10 minutes total.
 
@@ -18,6 +22,7 @@ export const mobilityPaths = [
         icon: '🧘',
         color: '#9c27b0',
         sessionType: 'timer',
+        sports: ['lift', 'rest', 'general'],
         exercises: mobilityExercises.filter(ex =>
             !ex.id.endsWith('_maternal') &&
             !['deep_birth_squat', 'adductor_rock_back', '90_90_rocks', 'standing_lunge', 'ql_doorway_stretch'].includes(ex.id)
@@ -38,6 +43,7 @@ export const mobilityPaths = [
         icon: '🦵',
         color: '#2196f3',
         sessionType: 'reps',
+        sports: ['lift', 'general'],
         exercises: [
             {
                 id: 'tibialis_raise',
@@ -96,6 +102,7 @@ export const mobilityPaths = [
         icon: '🚀',
         color: '#ff9800',
         sessionType: 'reps',
+        sports: ['lift', 'general'],
         exercises: [
             {
                 id: 'pogo_jumps',
@@ -162,6 +169,7 @@ export const mobilityPaths = [
         icon: '🌸',
         color: '#e91e8c',
         sessionType: 'timer',
+        sports: ['general'],
         exercises: [
             ...mobilityExercises.filter(ex => ex.id.endsWith('_maternal')),
             mobilityExercises.find(ex => ex.id === 'deep_birth_squat'),
@@ -170,5 +178,93 @@ export const mobilityPaths = [
             mobilityExercises.find(ex => ex.id === 'standing_lunge'),
             mobilityExercises.find(ex => ex.id === 'ql_doorway_stretch'),
         ].filter(Boolean),
+    },
+
+    // ─────────────────────────────────────────────
+    // RUN PREP  (reps, ~10 min)
+    // Runner's reset: shins, calves, hip flexors, hamstrings, ankles
+    // Tibialis Raise 2×25 ~2min + Bent-Knee Calf Raise 2×20 ~2min +
+    // Hip Flexor Rock-Back 2×10/s ~2min + Hamstring Scoop 2×12 ~2min +
+    // Ankle Rock-Over-Knee 2×15/s ~2min = ~10min
+    // ─────────────────────────────────────────────
+    {
+        id: 'run_prep',
+        name: 'Run Prep',
+        subtitle: "Runner's Reset",
+        description: 'Bulletproof the runner\'s chain — shins, calves, hips, and ankles — in ten minutes.',
+        icon: '🏃',
+        color: '#4caf50',
+        sessionType: 'reps',
+        sports: ['run', 'cardio'],
+        exercises: [
+            {
+                id: 'tibialis_raise_run',
+                name: 'Wall Tibialis Raise',
+                type: 'bilateral',
+                prescription: '2 × 25 reps',
+                estimatedMins: 2,
+                cue: 'Back against wall, feet out front. Lift toes toward knees. Your shin-splint insurance.',
+                youtubeQuery: 'knees over toes tibialis raise',
+                description: 'Strengthens the tibialis anterior — the first thing to fail on longer runs.',
+            },
+            {
+                id: 'bent_knee_calf_raise',
+                name: 'Bent-Knee Calf Raise',
+                type: 'bilateral',
+                prescription: '2 × 20 reps',
+                estimatedMins: 2,
+                cue: 'Slight knee bend, rise onto the balls of your feet. Slow lower. Feel the soleus, not the bounce.',
+                youtubeQuery: 'bent knee calf raise soleus running',
+                description: 'Loads the soleus, which handles up to 8x bodyweight on every running stride.',
+            },
+            {
+                id: 'hip_flexor_rock_back',
+                name: 'Hip Flexor Rock-Back',
+                type: 'unilateral',
+                prescription: '2 × 10 reps/side',
+                estimatedMins: 2,
+                cue: 'Half-kneeling. Squeeze the back glute, shift hips forward. Rock in and out of the stretch.',
+                youtubeQuery: 'half kneeling hip flexor stretch runners',
+                description: 'Opens hip flexors shortened by sitting — restores stride length.',
+            },
+            {
+                id: 'hamstring_scoop',
+                name: 'Hamstring Scoop',
+                type: 'bilateral',
+                prescription: '2 × 12 reps',
+                estimatedMins: 2,
+                cue: 'Soft knees, hinge at the hips, scoop arms along your legs. Hinge, don\'t round.',
+                youtubeQuery: 'standing hamstring mobility drill runners',
+                description: 'Dynamic hamstring length for a freer backside swing phase.',
+            },
+            {
+                id: 'ankle_rock_over_knee',
+                name: 'Ankle Rock-Over-Knee',
+                type: 'unilateral',
+                prescription: '2 × 15 reps/side',
+                estimatedMins: 2,
+                cue: 'Half-kneeling, knee over toes, heel pinned down. Drive the knee as far forward as it goes.',
+                youtubeQuery: 'knee over toes ankle mobility drill',
+                description: 'Restores ankle dorsiflexion — the joint that decides how your foot strikes.',
+            },
+        ],
+    },
+
+    // ─────────────────────────────────────────────
+    // CARDIO RECOVERY  (timer, 5 × 2-min = 10 min)
+    // Easy full-body downshift after conditioning, cycling, rowing, swimming
+    // ─────────────────────────────────────────────
+    {
+        id: 'cardio_recovery',
+        name: 'Cardio Recovery',
+        subtitle: 'Conditioning Cooldown',
+        description: 'A ten-minute full-body downshift after hard conditioning — breathe, lengthen, recover.',
+        icon: '🌊',
+        color: '#00bcd4',
+        sessionType: 'timer',
+        sports: ['cardio', 'run', 'rest'],
+        exercises: mobilityExercises.filter(ex =>
+            ['childs_pose', 'cat_cow_maternal', 'pigeon', 'puppy_dog', 'straddle'].includes(ex.id)
+        ),
     },
 ];
