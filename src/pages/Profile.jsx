@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -148,8 +149,16 @@ const Profile = () => {
     }
 
     return (
-        <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'left' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'left', paddingBottom: '5.5rem' }}>
             <h1>Lifter Profile</h1>
+            <div className="glass-card" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                <div>
+                    <p className="page-kicker" style={{ margin: 0 }}>Library</p>
+                    <div style={{ fontWeight: 700, marginTop: '0.2rem' }}>My Templates</div>
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Saved programs, exportable as JSON.</div>
+                </div>
+                <Link to="/templates" className="btn">Open</Link>
+            </div>
             <p style={{ color: '#aaa', marginBottom: '2rem' }}>
                 Enter your current tested 1 Rep Maxes. These will be used to track your progress against your daily sets.
             </p>

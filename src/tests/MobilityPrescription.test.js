@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { prescribeMobility } from '../services/MobilityPrescription';
+import { prescribeMobility, prescribeForToday, ruleIdForTrainingType } from '../services/MobilityPrescription';
 
 const logs = [];
 
@@ -61,5 +61,42 @@ describe('prescribeMobility', () => {
             dateStr: '2026-09-26',
         });
         expect(r.alreadyDone).toBe(true);
+    });
+});
+
+describe('trainingType chips', () => {
+    it('maps each chip to its rule', () => {
+        expect(ruleIdForTrainingType('rest')).toBe('rest_day');
+        expect(ruleIdForTrainingType('run')).toBe('run_day');
+        expect(ruleIdForTrainingType('cardio')).toBe('cardio_day');
+        expect(ruleIdForTrainingType('upper')).toBe('overhead_day');
+        expect(ruleIdForTrainingType('lower')).toBe('squat_day');
+        expect(ruleIdForTrainingType('olympic')).toBe('overhead_day');
+        expect(ruleIdForTrainingType('bogus')).toBe(null);
+    });
+
+    it('trainingType takes precedence over sessions', () => {
+        const r = prescribeMobility({
+            sessions: [{ name: 'Tempo Run', exercises: [] }],
+            trainingType: 'squat_day',
+            mobilityLogs: [],
+            dateStr: '2026-09-26',
+        });
+        expect(r.ruleId).toBe('squat_day');
+    });
+
+    it('rest chip marks a rest day', () => {
+        const r = prescribeForToday({ trainingType: 'rest', mobilityLogs: [] });
+        expect(r.ruleId).toBe('rest_day');
+        expect(r.isRestDay).toBe(true);
+    });
+
+    it('unknown chip falls back to session matching', () => {
+        const r = prescribeForToday({
+            trainingType: null,
+            plannedWorkouts: [{ date: '2026-09-26', name: 'Easy Run', exercises: [] }],
+            mobilityLogs: [],
+        });
+        expect(r.ruleId).toBe('run_day');
     });
 });

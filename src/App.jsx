@@ -1,7 +1,6 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
-import { Routes, Route, Navigate, Link, useParams } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { getUserProfile } from './services/firestoreService';
 import { DataProvider } from './context/DataContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { TimerProvider } from './context/TimerContext';
@@ -20,20 +19,16 @@ const Home = lazy(() => import('./pages/Home'));
 
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
-const WorkoutLog = lazy(() => import('./pages/WorkoutLog'));
+const Paths = lazy(() => import('./pages/Paths'));
 const Progress = lazy(() => import('./pages/Progress'));
-const RTSImport = lazy(() => import('./pages/RTSImport'));
 const Profile = lazy(() => import('./pages/Profile'));
-const CalendarView = lazy(() => import('./pages/CalendarView'));
+const Templates = lazy(() => import('./pages/Templates'));
 const Admin = lazy(() => import('./pages/Admin'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
-const Programs = lazy(() => import('./pages/Programs'));
-const ProPlanner = lazy(() => import('./pages/ProPlanner'));
 
 const Questionnaire = lazy(() => import('./pages/Questionnaire'));
 const OnboardingWizard = lazy(() => import('./pages/OnboardingWizard'));
-const CompetitionPeaking = lazy(() => import('./pages/CompetitionPeaking'));
 
 
 const ProtectedRoute = ({ children }) => {
@@ -61,53 +56,6 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
-const SubscriptionGuard = ({ children }) => {
-  // IronLogic is free — no trial, no paywall. This guard is intentionally a
-  // no-op so the route definitions that reference it keep working unchanged.
-  return children;
-};
-
-const CoachAthleteAccessGuard = ({ children }) => {
-  const { user, loading } = useAuth();
-  const { athleteId } = useParams();
-  const [accessState, setAccessState] = useState('checking');
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const verifyAccess = async () => {
-      if (loading) return;
-      if (!user || !athleteId) {
-        if (isMounted) setAccessState('denied');
-        return;
-      }
-
-      if (user.role === 'admin' && user.email === SUPER_ADMIN_EMAIL) {
-        if (isMounted) setAccessState('allowed');
-        return;
-      }
-
-      try {
-        const athleteProfile = await getUserProfile(athleteId);
-        const isAssignedCoach = athleteProfile?.coach_id === user.id || athleteProfile?.coachId === user.id;
-        if (isMounted) setAccessState(isAssignedCoach ? 'allowed' : 'denied');
-      } catch (error) {
-        console.error('Coach-athlete access check failed:', error);
-        if (isMounted) setAccessState('denied');
-      }
-    };
-
-    verifyAccess();
-    return () => {
-      isMounted = false;
-    };
-  }, [athleteId, loading, user]);
-
-  if (loading || accessState === 'checking') return <AppLoading label="Checking athlete access" />;
-  if (accessState !== 'allowed') return <Navigate to="/coach" replace />;
-  return children;
-};
-
 const AppLoading = ({ label = 'Loading' }) => (
   <div className="app-state">
     <div className="app-state-panel">
@@ -126,17 +74,14 @@ const NotFound = () => (
       <h1>That screen does not exist</h1>
       <p>The link may be outdated, or the page may have moved.</p>
       <div className="app-state-actions">
-        <Link to="/" className="btn btn-primary">Go to Dashboard</Link>
-        <Link to="/calendar" className="btn">Open Calendar</Link>
+        <Link to="/" className="btn btn-primary">Go Home</Link>
+        <Link to="/paths" className="btn">Browse Paths</Link>
       </div>
     </div>
   </div>
 );
 
 // ... inside App component ...
-const CoachDashboard = lazy(() => import('./pages/CoachDashboard'));
-const AdaptiveCoach = lazy(() => import('./pages/AdaptiveCoach'));
-const WeeklyCheckIn = lazy(() => import('./pages/WeeklyCheckIn'));
 
 function AppContent() {
   const { user } = useAuth();
@@ -155,9 +100,9 @@ function AppContent() {
           <Route path="/" element={user ? <Home /> : <LandingPage />} />
 
 
-          <Route path="/log" element={
+          <Route path="/paths" element={
             <ProtectedRoute>
-              <WorkoutLog />
+              <Paths />
             </ProtectedRoute>
           } />
           <Route path="/progress" element={
@@ -165,32 +110,14 @@ function AppContent() {
               <Progress />
             </ProtectedRoute>
           } />
-          <Route path="/import" element={
+          <Route path="/templates" element={
             <ProtectedRoute>
-              <RTSImport />
-            </ProtectedRoute>
-          } />
-          <Route path="/programs" element={
-            <ProtectedRoute>
-              <Programs />
-            </ProtectedRoute>
-          } />
-
-          <Route path="/checkin" element={
-            <ProtectedRoute>
-              <SubscriptionGuard>
-                <WeeklyCheckIn />
-              </SubscriptionGuard>
+              <Templates />
             </ProtectedRoute>
           } />
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />
-            </ProtectedRoute>
-          } />
-          <Route path="/calendar" element={
-            <ProtectedRoute>
-              <CalendarView />
             </ProtectedRoute>
           } />
           <Route path="/questionnaire" element={
@@ -202,70 +129,6 @@ function AppContent() {
             <ProtectedRoute>
               <OnboardingWizard />
             </ProtectedRoute>
-          } />
-          <Route path="/peaking" element={
-            <ProtectedRoute>
-              <CompetitionPeaking />
-            </ProtectedRoute>
-          } />
-          <Route path="/olympic-lifting" element={
-            <ProtectedRoute>
-              <WorkoutLog />
-            </ProtectedRoute>
-          } />
-
-          {/* Role-Specific Routes */}
-          <Route path="/coach" element={
-            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-              <SubscriptionGuard>
-                <CoachDashboard />
-              </SubscriptionGuard>
-            </RoleProtectedRoute>
-          } />
-          <Route path="/coach/plan/:athleteId" element={
-            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-              <SubscriptionGuard>
-                <CoachAthleteAccessGuard>
-                  <ProPlanner />
-                </CoachAthleteAccessGuard>
-              </SubscriptionGuard>
-            </RoleProtectedRoute>
-          } />
-          <Route path="/coach/adaptive/:athleteId" element={
-            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-              <SubscriptionGuard>
-                <CoachAthleteAccessGuard>
-                  <AdaptiveCoach />
-                </CoachAthleteAccessGuard>
-              </SubscriptionGuard>
-            </RoleProtectedRoute>
-          } />
-          <Route path="/coach/athlete/:athleteId" element={
-            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-              <SubscriptionGuard>
-                <CoachAthleteAccessGuard>
-                  <WorkoutLog />
-                </CoachAthleteAccessGuard>
-              </SubscriptionGuard>
-            </RoleProtectedRoute>
-          } />
-          <Route path="/calendar/:athleteId" element={
-            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-              <SubscriptionGuard>
-                <CoachAthleteAccessGuard>
-                  <CalendarView />
-                </CoachAthleteAccessGuard>
-              </SubscriptionGuard>
-            </RoleProtectedRoute>
-          } />
-          <Route path="/coach/checkin/:athleteId" element={
-            <RoleProtectedRoute allowedRoles={['coach', 'admin']}>
-              <SubscriptionGuard>
-                <CoachAthleteAccessGuard>
-                  <WeeklyCheckIn />
-                </CoachAthleteAccessGuard>
-              </SubscriptionGuard>
-            </RoleProtectedRoute>
           } />
           <Route path="/admin" element={
             <RoleProtectedRoute allowedRoles={['admin']}>

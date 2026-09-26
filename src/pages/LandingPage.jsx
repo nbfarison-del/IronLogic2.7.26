@@ -21,34 +21,35 @@ const LandingPage = () => {
                 style={{ backgroundImage: `linear-gradient(90deg, rgba(10,11,15,0.95) 0%, rgba(10,11,15,0.78) 48%, rgba(10,11,15,0.35) 100%), url(${dashboardHero})` }}
             >
                 <div className="landing-hero-content">
-                    <p className="page-kicker">Beta v2.7.26</p>
-                    <h1>IronLogic</h1>
+                    <p className="page-kicker">Daily mobility, prescribed</p>
+                    <h1>Ten minutes a day. Every day.</h1>
                     <p>
-                        A performance workspace for lifters and coaches who want training logs, program templates,
-                        recovery signals, and progress analysis in one calm system.
+                        IronLogic prescribes a 10-minute mobility session matched to your training —
+                        run, lift, or rest — then keeps your streak alive and lets you share it.
+                        Free forever. No programming, no logging, no noise.
                     </p>
                     <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '1.5rem' }}>
                         <Link to="/register" className="btn btn-primary">Start Free</Link>
-                        <Link to="/login" className="btn">Athlete Login</Link>
+                        <Link to="/login" className="btn">Log In</Link>
                     </div>
                 </div>
             </section>
 
             <section className="landing-feature-band">
                 <div className="glass-card">
-                    <p className="page-kicker">Plan</p>
-                    <h3>Template-driven programming</h3>
-                    <p>Apply full training blocks to the calendar and keep every session structured.</p>
+                    <p className="page-kicker">Prescribed</p>
+                    <h3>Matched to your training</h3>
+                    <p>Tell the app what you trained — one tap — and get the right 10-minute session for it.</p>
                 </div>
                 <div className="glass-card">
-                    <p className="page-kicker">Track</p>
-                    <h3>Clear daily logging</h3>
-                    <p>Capture work sets, body metrics, readiness notes, and milestones without clutter.</p>
+                    <p className="page-kicker">Streaks</p>
+                    <h3>Consistency you can see</h3>
+                    <p>Daily streaks, weekly dots, and 28-day adherence keep the habit honest.</p>
                 </div>
                 <div className="glass-card">
-                    <p className="page-kicker">Analyze</p>
-                    <h3>Performance visibility</h3>
-                    <p>Use weekly volume, e1RM changes, and recovery signals to make better adjustments.</p>
+                    <p className="page-kicker">Shareable</p>
+                    <h3>Post your streak</h3>
+                    <p>Turn a hard-earned streak into a card worth sharing — accountability built in.</p>
                 </div>
             </section>
         </div>

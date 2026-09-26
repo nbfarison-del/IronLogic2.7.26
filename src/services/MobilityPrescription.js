@@ -28,23 +28,48 @@ function sessionText(sessions) {
 }
 
 /**
+ * Training-type chips shown on the home screen. Each maps to a prescription
+ * rule id. This is the only training input the app needs — one tap, not a log.
+ */
+export const TRAINING_TYPES = [
+    { key: 'rest', label: 'Rest', ruleId: 'rest_day' },
+    { key: 'run', label: 'Run', ruleId: 'run_day' },
+    { key: 'cardio', label: 'Cardio', ruleId: 'cardio_day' },
+    { key: 'upper', label: 'Upper', ruleId: 'overhead_day' },
+    { key: 'lower', label: 'Lower', ruleId: 'squat_day' },
+    { key: 'olympic', label: 'Olympic', ruleId: 'overhead_day' },
+];
+
+/** Map a training-type chip key to its prescription rule id. */
+export function ruleIdForTrainingType(key) {
+    return TRAINING_TYPES.find(t => t.key === key)?.ruleId || null;
+}
+
+/**
  * Prescribe today's mobility session.
  *
  * @param {Object} args
  * @param {Array}  args.sessions     planned workouts for the day (may be empty)
+ * @param {string} [args.trainingType] rule id from TRAINING_TYPES; takes precedence over sessions
  * @param {Array}  args.mobilityLogs all mobility log entries ({ date })
  * @param {string} [args.dateStr]    YYYY-MM-DD; defaults to today
  * @returns {{ ruleId, ruleLabel, path, exercises, reason, isRestDay, alreadyDone }}
  */
-export function prescribeMobility({ sessions = [], mobilityLogs = [], dateStr = getDateStr(new Date()) }) {
-    const isRestDay = sessions.length === 0;
+export function prescribeMobility({ sessions = [], trainingType = null, mobilityLogs = [], dateStr = getDateStr(new Date()) }) {
     let rule;
+    let isRestDay = false;
 
-    if (isRestDay) {
-        rule = prescriptionRules.find(r => r.id === 'rest_day');
+    if (trainingType) {
+        rule = prescriptionRules.find(r => r.id === trainingType);
+        isRestDay = trainingType === 'rest_day';
     } else {
-        const text = sessionText(sessions);
-        rule = prescriptionRules.find(r => r.id !== 'rest_day' && r.match.some(rx => rx.test(text)));
+        isRestDay = sessions.length === 0;
+        if (isRestDay) {
+            rule = prescriptionRules.find(r => r.id === 'rest_day');
+        } else {
+            const text = sessionText(sessions);
+            rule = prescriptionRules.find(r => r.id !== 'rest_day' && r.match.some(rx => rx.test(text)));
+        }
     }
     rule = rule || defaultPrescription;
 
@@ -63,9 +88,10 @@ export function prescribeMobility({ sessions = [], mobilityLogs = [], dateStr = 
     };
 }
 
-/** Convenience: prescribe for today from DataContext-shaped data. */
-export function prescribeForToday({ plannedWorkouts = [], mobilityLogs = [] }) {
+/** Convenience: prescribe for today from a training-type chip + mobility logs. */
+export function prescribeForToday({ trainingType = null, plannedWorkouts = [], mobilityLogs = [] }) {
     const today = getDateStr(new Date());
     const sessions = plannedWorkouts.filter(p => p.date === today);
-    return prescribeMobility({ sessions, mobilityLogs, dateStr: today });
+    const ruleId = trainingType ? ruleIdForTrainingType(trainingType) : null;
+    return prescribeMobility({ sessions, trainingType: ruleId, mobilityLogs, dateStr: today });
 }

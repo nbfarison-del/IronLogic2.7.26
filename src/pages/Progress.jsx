@@ -1,222 +1,119 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
+import { useMobilityStreak } from '../hooks/useMobilityStreak';
+import { ShareStreakButton } from '../components/MobilityShareCard';
+import { getDateStr } from '../utils/dateUtils';
 
-import { useSettings } from '../context/SettingsContext';
-import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts';
-import { aggregateTrendByWeek } from '../utils/trends';
-import QualifyingTotals from '../components/QualifyingTotals';
+/**
+ * Progress is now mobility-only: streaks, sessions, minutes, and adherence.
+ * All lifting analytics were removed in the mobility-first reshape.
+ */
+const Progress = () => {
+    const { mobilityLogs } = useData();
+    const logs = mobilityLogs || [];
+    const streak = useMobilityStreak(logs);
+    const recentLog = logs[0];
 
-const WhyRec = ({ rec, defaultOpen }) => {
-    const [open, setOpen] = useState(defaultOpen || false);
+    const stats = useMemo(() => {
+        const days = new Set(logs.map(l => l.date));
+        const totalMinutes = logs.reduce((sum, l) => sum + (Number(l.duration) || 10), 0);
+
+        // Sessions per path
+        const byPath = {};
+        for (const l of logs) {
+            const name = l.pathName || 'Mobility';
+            byPath[name] = (byPath[name] || 0) + 1;
+        }
+        const topPaths = Object.entries(byPath).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+        // Last 28 days adherence (fraction of days with a session)
+        const adherence = [];
+        for (let i = 27; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            adherence.push({ date: getDateStr(d), done: days.has(getDateStr(d)) });
+        }
+        const adherenceRate = adherence.filter(a => a.done).length / 28;
+
+        // This month count
+        const monthPrefix = getDateStr(new Date()).slice(0, 7);
+        const thisMonth = logs.filter(l => (l.date || '').startsWith(monthPrefix)).length;
+
+        return { totalSessions: logs.length, totalMinutes, topPaths, adherence, adherenceRate, thisMonth };
+    }, [logs]);
+
     return (
-        <div className="card" style={{ padding: '0.85rem', background: 'rgba(var(--primary-rgb), 0.04)', borderLeft: '3px solid var(--primary)' }}>
-            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{rec.text}</div>
-            <button
-                type="button"
-                onClick={() => setOpen(!open)}
-                style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.25rem 0',
-                    fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                    marginTop: '0.35rem'
-                }}
-            >
-                <span style={{ display: 'inline-block', transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>&#9656;</span>
-                {open ? 'Hide' : 'Why?'}
-            </button>
-            {open && (
-                <div style={{ marginTop: '0.5rem', padding: '0.65rem 0.75rem', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                    <div><strong>DMAIC:</strong> Define {rec.dmaic?.define || 'athlete profile'} &rarr; Measure {rec.dmaic?.measure || 'readiness/recovery'} &rarr; Analyze {rec.dmaic?.analyze || 'training data'} &rarr; <strong>Improve</strong> (this recommendation) &rarr; Control (monitor outcome)</div>
-                    {rec.dmaic?.evidence && <div style={{ marginTop: '0.3rem' }}><strong>Evidence:</strong> {rec.dmaic.evidence}</div>}
-                    <div style={{ marginTop: '0.3rem', fontSize: '0.78rem', color: 'var(--text-subtle)' }}>
-                        Confidence: High | Source: IronLogic DMAIC Cycle | Phase: Improve
-                    </div>
+        <div className="page-container" style={{ paddingBottom: '5.5rem' }}>
+            <p className="page-kicker">Progress</p>
+            <h1 style={{ margin: '0 0 1.25rem', fontSize: '1.6rem' }}>Mobility consistency</h1>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div className="glass-card" style={{ textAlign: 'center', padding: '1rem 0.5rem' }}>
+                    <div style={{ fontSize: '1.7rem', fontWeight: 800, color: 'var(--primary)' }}>{streak.current}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>day streak</div>
+                </div>
+                <div className="glass-card" style={{ textAlign: 'center', padding: '1rem 0.5rem' }}>
+                    <div style={{ fontSize: '1.7rem', fontWeight: 800 }}>{stats.totalSessions}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>sessions</div>
+                </div>
+                <div className="glass-card" style={{ textAlign: 'center', padding: '1rem 0.5rem' }}>
+                    <div style={{ fontSize: '1.7rem', fontWeight: 800 }}>{stats.totalMinutes}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>minutes</div>
+                </div>
+                <div className="glass-card" style={{ textAlign: 'center', padding: '1rem 0.5rem' }}>
+                    <div style={{ fontSize: '1.7rem', fontWeight: 800 }}>{Math.round(stats.adherenceRate * 100)}%</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>28-day adherence</div>
+                </div>
+            </div>
+
+            {streak.current > 1 && (
+                <div style={{ marginBottom: '1.25rem' }}>
+                    <ShareStreakButton streak={streak} pathName={recentLog?.pathName || 'Mobility'} />
                 </div>
             )}
-        </div>
-    );
-};
 
-const numberOrZero = (value) => {
-    const parsed = parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const Progress = () => {
-    const { workouts, isLoading } = useData();
-    const { unit } = useSettings();
-    const [selectedExercise, setSelectedExercise] = useState('bb_squat');
-
-    // List of exercises the user has actually logged
-    const exerciseList = useMemo(() => {
-        const unique = {};
-        workouts.forEach(w => {
-            if (w.exerciseId && w.exerciseName) unique[w.exerciseId] = w.exerciseName;
-        });
-        return Object.entries(unique).map(([id, name]) => ({ id, name }));
-    }, [workouts]);
-
-    // Weekly e1RM trend for the selected exercise, limited to last 12 weeks
-    const e1rmData = useMemo(() => {
-        if (!selectedExercise) return [];
-        const allData = workouts
-            .filter(w => w.exerciseId === selectedExercise && w.estimated1RM)
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        const aggregated = aggregateTrendByWeek(allData);
-        // Show only the last 12 weeks of data
-        const recent = aggregated.slice(-12);
-        return recent.map(w => ({
-            date: w.date,
-            weekLabel: w.weekLabel,
-            e1rm: w.e1rm
-        }));
-    }, [workouts, selectedExercise]);
-
-    // Summary stats for the selected exercise
-    const exerciseWorkouts = useMemo(() => {
-        return workouts.filter(w => w.exerciseId === selectedExercise);
-    }, [workouts, selectedExercise]);
-
-    const best1RM = useMemo(() => {
-        if (!exerciseWorkouts.length) return 0;
-        return Math.max(...exerciseWorkouts.map(w => numberOrZero(w.estimated1RM || w.weight)));
-    }, [exerciseWorkouts]);
-
-    const totalVolume = useMemo(() => {
-        if (!exerciseWorkouts.length) return 0;
-        return exerciseWorkouts.reduce((sum, w) => sum + numberOrZero(w.weight) * numberOrZero(w.reps), 0);
-    }, [exerciseWorkouts]);
-
-    const prCount = useMemo(() => {
-        if (!exerciseWorkouts.length) return 0;
-        const maxSoFar = [];
-        let count = 0;
-        const sorted = [...exerciseWorkouts].sort((a, b) => new Date(a.date) - new Date(b.date));
-        sorted.forEach(w => {
-            const current = numberOrZero(w.estimated1RM || w.weight);
-            const previousMax = maxSoFar.length ? Math.max(...maxSoFar) : 0;
-            if (current > previousMax) {
-                count++;
-            }
-            maxSoFar.push(current);
-        });
-        return count;
-    }, [exerciseWorkouts]);
-
-    if (isLoading) return <div className="card">Loading progress data...</div>;
-
-    return (
-        <div className="animate-in" style={{ textAlign: 'left', paddingBottom: '5rem', maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <h1 style={{ margin: 0 }}>Performance Analytics</h1>
-
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <Link to="/import" className="btn" style={{ fontSize: '0.85rem' }}>📥 Import from RTS</Link>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Select Lift:</label>
-                    <select
-                        value={selectedExercise}
-                        onChange={(e) => setSelectedExercise(e.target.value)}
-                        style={{
-                            padding: '0.5rem', borderRadius: '8px', background: '#222', color: 'white', border: '1px solid #444'
-                        }}
-                    >
-                        {exerciseList.map(ex => (
-                            <option key={ex.id} value={ex.id}>{ex.name}</option>
-                        ))}
-                    </select>
+            <section className="glass-card" style={{ marginBottom: '1.25rem' }}>
+                <p className="page-kicker">Last 28 days</p>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: '0.6rem' }}>
+                    {stats.adherence.map(a => (
+                        <span
+                            key={a.date}
+                            title={a.date}
+                            style={{
+                                width: 14, height: 14, borderRadius: 4,
+                                background: a.done ? 'var(--primary)' : 'var(--border)',
+                                opacity: a.done ? 1 : 0.45,
+                            }}
+                        />
+                    ))}
                 </div>
-            </div>
-
-            <div style={{ marginBottom: '2rem' }}>
-                {/* e1RM Trend Chart */}
-                <div className="glass-card" style={{ borderTop: '4px solid var(--primary)' }}>
-                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        📈 {exerciseList.find(e => e.id === selectedExercise)?.name} Intensity (e1RM) — 12-Week Trend
-                    </h2>
-                    <div style={{ height: '300px', width: '100%' }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={e1rmData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                                <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={10} />
-                                <YAxis stroke="var(--text-muted)" domain={['auto', 'auto']} fontSize={10} />
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(9, 9, 11, 0.9)', border: '1px solid var(--border-glass)', borderRadius: '12px' }} />
-                                <Line type="stepAfter" dataKey="e1rm" stroke="var(--primary)" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
-                <div className="glass-card">
-                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        🏆 Best e1RM
-                    </h2>
-                    <div>
-                        <div style={{ fontSize: '3rem', fontWeight: 300, color: 'var(--primary)' }}>
-                            {best1RM > 0 ? `${Math.round(best1RM)} ${unit}` : 'Awaiting data'}
-                        </div>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                            {exerciseWorkouts.length > 0 ? `• ${exerciseWorkouts.length} sessions logged` : ''}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="glass-card">
-                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        🧱 Total Volume
-                    </h2>
-                    <div>
-                        <div style={{ fontSize: '3rem', fontWeight: 300, color: 'var(--primary)' }}>
-                            {totalVolume > 0 ? totalVolume.toLocaleString() : '0'}
-                        </div>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                            {exerciseWorkouts.length > 0 ? `• ${exerciseWorkouts.length} sessions` : ''}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="glass-card">
-                    <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        🏅 PRs
-                    </h2>
-                    <div>
-                        <div style={{ fontSize: '3rem', fontWeight: 300, color: 'var(--primary)' }}>
-                            {prCount}
-                        </div>
-                        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                            {exerciseWorkouts.length > 0 ? `• New personal bests` : ''}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <section className="glass-card" style={{ marginTop: '2rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    <div>
-                        <p className="page-kicker">IronLogic Coach</p>
-                        <h2 style={{ marginTop: 0 }}>Adaptation Insights</h2>
-                    </div>
-                </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: 0 }}>
-                    IronLogic analyzes your training data through the DMAIC framework to generate coaching recommendations.
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0.7rem 0 0' }}>
+                    {stats.thisMonth} session{stats.thisMonth === 1 ? '' : 's'} this month
+                    {streak.longest > 0 && <> · longest streak {streak.longest} days</>}
                 </p>
-                <div style={{ display: 'grid', gap: '0.65rem' }}>
-                    {workouts.length > 0 && workouts.length < 5 ? (
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                            Log more sessions to generate coaching insights.
-                        </div>
-                    ) : (
-                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                            Log training sessions to generate coaching insights.
-                        </div>
-                    )}
-                </div>
             </section>
+
+            {stats.topPaths.length > 0 && (
+                <section className="glass-card" style={{ marginBottom: '1.25rem' }}>
+                    <p className="page-kicker">Favorite paths</p>
+                    {stats.topPaths.map(([name, count]) => (
+                        <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.45rem 0', borderBottom: '1px solid var(--border)', fontSize: '0.9rem' }}>
+                            <span>{name}</span>
+                            <span style={{ color: 'var(--text-muted)' }}>{count}×</span>
+                        </div>
+                    ))}
+                </section>
+            )}
+
+            {stats.totalSessions === 0 && (
+                <section className="glass-card" style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                    <p style={{ color: 'var(--text-muted)', margin: '0 0 1rem' }}>
+                        No mobility sessions yet. Ten minutes is all it takes to start the streak.
+                    </p>
+                    <Link to="/paths" className="btn btn-primary">Start your first session</Link>
+                </section>
+            )}
         </div>
     );
 };
