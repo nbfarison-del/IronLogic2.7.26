@@ -120,8 +120,15 @@ const Home = () => {
                     <WeekStrip mobilityLogs={mobilityLogs || []} />
                 </div>
                 {streak.current > 1 && (
-                    <div style={{ marginTop: '0.9rem' }}>
+                    <div style={{ marginTop: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.9rem', flexWrap: 'wrap' }}>
                         <ShareStreakButton streak={streak} pathName={recentLog?.pathName || 'Mobility'} />
+                        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }} title="A missed day won't break your streak while a freeze is banked. One freeze per week.">
+                            {streak.freezeUsedThisWeek
+                                ? '🛡 Freeze used — streak saved'
+                                : streak.freezesAvailable > 0
+                                    ? '🛡 1 streak freeze banked'
+                                    : null}
+                        </span>
                     </div>
                 )}
             </section>

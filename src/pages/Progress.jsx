@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../context/DataContext';
 import { useMobilityStreak } from '../hooks/useMobilityStreak';
-import { ShareStreakButton } from '../components/MobilityShareCard';
+import { ShareStreakButton, ShareWeekButton } from '../components/MobilityShareCard';
 import { getDateStr } from '../utils/dateUtils';
 
 /**
@@ -72,6 +72,10 @@ const Progress = () => {
                     <ShareStreakButton streak={streak} pathName={recentLog?.pathName || 'Mobility'} />
                 </div>
             )}
+
+            <div style={{ marginBottom: '1.25rem', display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <ShareWeekButton mobilityLogs={logs} />
+            </div>
 
             <section className="glass-card" style={{ marginBottom: '1.25rem' }}>
                 <p className="page-kicker">Last 28 days</p>
