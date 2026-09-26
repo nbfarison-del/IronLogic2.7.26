@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useData } from '../context/DataContext';
 import RecoveryTracker from '../components/RecoveryTracker';
+import MobilityInsightsCard from '../components/MobilityInsightsCard';
 import WeightTracker from '../components/WeightTracker';
 import GoalTracker from '../components/GoalTracker';
 import MobilityTab from '../components/MobilityTab';
@@ -270,6 +271,8 @@ const Home = () => {
                             )}
                         </div>
                     </section>
+
+                    <MobilityInsightsCard mobilityLogs={mobilityLogs || []} workouts={workouts || []} />
 
                     <div className="dashboard-hero">
                         <section className="glass-card hero-panel" style={{ flex: 2 }}>
