@@ -1,8 +1,8 @@
 :root {
-  --primary: #fbbf24;
-  --primary-rgb: 251, 191, 36;
-  --primary-glow: rgba(251, 191, 36, 0.22);
-  --primary-hover: #f59e0b;
+  --primary: #cdf138;
+  --primary-rgb: 205, 241, 56;
+  --primary-glow: rgba(205, 241, 56, 0.22);
+  --primary-hover: #b7dd28;
   --secondary: #38bdf8;
   --bg-dark: #0a0b0f;
   --bg-page: #0d0e13;
@@ -130,14 +130,14 @@ a {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary), #f59e0b);
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
   color: #161006 !important;
   border: none;
   box-shadow: 0 10px 26px rgba(var(--primary-rgb), 0.16);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #fcd34d, var(--primary));
+  background: linear-gradient(135deg, var(--primary-hover), var(--primary));
   box-shadow: 0 14px 30px rgba(var(--primary-rgb), 0.2);
 }
 
@@ -722,7 +722,7 @@ nav {
 /* PR Highlighting */
 .pr-card {
   border-left: 4px solid var(--primary) !important;
-  background: linear-gradient(90deg, rgba(251, 191, 36, 0.05) 0%, transparent 100%);
+  background: linear-gradient(90deg, rgba(205, 241, 56, 0.05) 0%, transparent 100%);
 }
 
 /* Custom Grids */
@@ -832,13 +832,13 @@ nav {
 
 .pro-session-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(251, 191, 36, 0.3);
+  border-color: rgba(205, 241, 56, 0.3);
   box-shadow: 0 10px 20px -5px rgba(0,0,0,0.5);
 }
 
 .pro-session-card.selected {
   border-color: var(--primary);
-  background: rgba(251, 191, 36, 0.05);
+  background: rgba(205, 241, 56, 0.05);
   box-shadow: 0 0 20px var(--primary-glow);
 }
 
@@ -863,7 +863,7 @@ nav {
 .pro-input:focus {
   outline: none;
   border-color: var(--primary);
-  background: rgba(251, 191, 36, 0.15);
+  background: rgba(205, 241, 56, 0.15);
   box-shadow: 0 0 0 2px var(--primary-glow);
 }
 

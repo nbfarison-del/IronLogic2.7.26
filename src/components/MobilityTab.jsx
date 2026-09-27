@@ -5,9 +5,10 @@ import { mobilityPaths } from '../data/mobilityPaths';
 import * as firestoreService from '../services/firestoreService';
 import { seededShuffle, getDailySeed } from '../utils/randomUtils';
 import { useMobilityStreak } from '../hooks/useMobilityStreak';
+import { openExternal } from '../utils/openExternal';
 import { ShareStreakButton } from './MobilityShareCard';
 import { PathIcon } from './PathIcon';
-import { Flame, Check, Circle } from 'lucide-react';
+import { Flame, Check, Circle, Play, Lightbulb } from 'lucide-react';
 import mobilityHero from '../assets/mobility_hero.png';
 import logo from '../assets/logo.png';
 
@@ -33,11 +34,11 @@ const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
                 {streak.current > 0 && (
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                         <div style={{
-                            background: 'rgba(255,152,0,0.12)', border: '1px solid #ff980055',
+                            background: 'rgba(var(--primary-rgb), 0.12)', border: '1px solid rgba(var(--primary-rgb), 0.35)',
                             borderRadius: '12px', padding: '0.5rem 0.9rem',
                             fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'nowrap'
                         }}>
-                            <Flame size={15} color="#ff9800" style={{ verticalAlign: '-2px' }} /> {streak.current}-day streak
+                            <Flame size={15} color="var(--primary)" style={{ verticalAlign: '-2px' }} /> {streak.current}-day streak
                             <span style={{ fontWeight: 'normal', color: '#888', fontSize: '0.78rem' }}> · best {streak.longest}</span>
                         </div>
                         <ShareStreakButton streak={streak} pathName={recentLog?.pathName || 'Mobility'} label="Share" />
@@ -267,17 +268,19 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete, focusIds = []
                     <p style={{ marginTop: '1.25rem', textAlign: 'center', color: '#aaa', maxWidth: '80%', lineHeight: 1.5, fontSize: '0.9rem' }}>
                         {currentExercise.description}
                     </p>
-                    <a
-                        href={currentExercise.demoUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(currentExercise.youtubeQuery || currentExercise.name)}`}
-                        target="_blank" rel="noreferrer"
+                    <button
+                        type="button"
+                        onClick={() => openExternal(currentExercise.demoUrl || `https://www.youtube.com/results?search_query=${encodeURIComponent(currentExercise.youtubeQuery || currentExercise.name)}`)}
                         style={{
                             marginTop: '0.75rem', color: '#ff4444', fontSize: '0.85rem',
-                            textDecoration: 'none', border: '1px solid #ff444455',
-                            padding: '0.5rem 0.9rem', borderRadius: '8px', whiteSpace: 'nowrap'
+                            background: 'none', cursor: 'pointer',
+                            border: '1px solid #ff444455',
+                            padding: '0.5rem 0.9rem', borderRadius: '8px', whiteSpace: 'nowrap',
+                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem'
                         }}
                     >
-                        ▶ Watch demo
-                    </a>
+                        <Play size={14} /> Watch demo
+                    </button>
                 </div>
 
                 {/* Exercise list */}
@@ -405,24 +408,27 @@ const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete, streak }) => {
                                         <span style={{ fontSize: '0.72rem', color: '#555' }}>~{ex.estimatedMins}min</span>
                                     </div>
                                     {ex.cue && (
-                                        <p style={{ color: '#999', fontSize: '0.83rem', margin: '0 0 0.35rem 0', fontStyle: 'italic', lineHeight: 1.4 }}>
-                                            💡 {ex.cue}
+                                        <p style={{ color: '#999', fontSize: '0.83rem', margin: '0 0 0.35rem 0', fontStyle: 'italic', lineHeight: 1.4, display: 'flex', gap: '0.35rem', alignItems: 'flex-start' }}>
+                                            <Lightbulb size={14} style={{ flexShrink: 0, marginTop: '0.15rem', color: 'var(--primary)' }} /> {ex.cue}
                                         </p>
                                     )}
                                     <p style={{ color: '#666', fontSize: '0.8rem', margin: 0, lineHeight: 1.4 }}>{ex.description}</p>
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
-                                    <a
-                                        href={demoUrl} target="_blank" rel="noreferrer"
+                                    <button
+                                        type="button"
+                                        onClick={() => openExternal(demoUrl)}
                                         style={{
                                             color: '#ff4444', fontSize: '0.85rem',
-                                            textDecoration: 'none', border: '1px solid #ff444455',
+                                            background: 'none', cursor: 'pointer',
+                                            border: '1px solid #ff444455',
                                             padding: '0.5rem 0.8rem', borderRadius: '8px',
-                                            whiteSpace: 'nowrap'
+                                            whiteSpace: 'nowrap', display: 'inline-flex',
+                                            alignItems: 'center', gap: '0.35rem'
                                         }}
                                     >
-                                        ▶ Watch
-                                    </a>
+                                        <Play size={14} /> Watch
+                                    </button>
                                     <button
                                         onClick={() => toggle(ex.id)}
                                         aria-label={done ? `Mark ${ex.name} not done` : `Mark ${ex.name} done`}

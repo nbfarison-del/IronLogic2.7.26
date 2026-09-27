@@ -92,10 +92,11 @@ describe('trainingType chips', () => {
     });
 
     it('unknown chip falls back to session matching', () => {
-        const r = prescribeForToday({
+        const r = prescribeMobility({
+            sessions: [{ date: '2026-09-26', name: 'Easy Run', exercises: [] }],
             trainingType: null,
-            plannedWorkouts: [{ date: '2026-09-26', name: 'Easy Run', exercises: [] }],
             mobilityLogs: [],
+            dateStr: '2026-09-26',
         });
         expect(r.ruleId).toBe('run_day');
     });

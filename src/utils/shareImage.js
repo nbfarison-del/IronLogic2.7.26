@@ -34,14 +34,14 @@ export async function generateStreakImage({ streakDays, pathName, dateLabel }) {
     try { ctx.letterSpacing = '18px'; } catch { /* unsupported */ }
     ctx.fillText('IRONLOGIC', W / 2, 150);
     try { ctx.letterSpacing = '0px'; } catch { /* unsupported */ }
-    ctx.fillStyle = '#fbbf24';
+    ctx.fillStyle = '#cdf138';
     ctx.fillRect(W / 2 - 70, 185, 140, 6);
 
     ctx.fillStyle = '#ffffff';
     ctx.font = `800 190px ${DISPLAY}`;
     ctx.fillText(`${streakDays}`, W / 2, 660);
     ctx.font = `700 72px ${DISPLAY}`;
-    ctx.fillStyle = '#ff9800';
+    ctx.fillStyle = '#cdf138';
     ctx.fillText(streakDays === 1 ? 'DAY STREAK' : 'DAY STREAK', W / 2, 760);
 
     ctx.fillStyle = '#c9c9de';
@@ -85,7 +85,7 @@ export async function generateWeekImage({ weekDays, weekLabel }) {
     try { ctx.letterSpacing = '18px'; } catch { /* unsupported */ }
     ctx.fillText('IRONLOGIC', W / 2, 150);
     try { ctx.letterSpacing = '0px'; } catch { /* unsupported */ }
-    ctx.fillStyle = '#fbbf24';
+    ctx.fillStyle = '#cdf138';
     ctx.fillRect(W / 2 - 70, 185, 140, 6);
 
     ctx.fillStyle = '#c9c9de';
