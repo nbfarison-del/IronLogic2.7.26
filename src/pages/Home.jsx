@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Flame, Check, ShieldCheck } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useMobilityRx } from '../hooks/useMobilityRx';
 import { useMobilityStreak } from '../hooks/useMobilityStreak';
 import TrainingTypeSelector from '../components/TrainingTypeSelector';
+import { PathIcon } from '../components/PathIcon';
 import { ShareStreakButton } from '../components/MobilityShareCard';
 import { getDateStr } from '../utils/dateUtils';
 
@@ -71,17 +73,17 @@ const Home = () => {
             <section className="glass-card" style={{ marginBottom: '1.25rem', borderLeft: `4px solid ${rx.path.color}` }}>
                 <p className="page-kicker">
                     Today&apos;s Mobility · ~10 min · {rx.ruleLabel}
-                    {streak.current > 0 && <span> · 🔥 {streak.current}-day streak</span>}
+                    {streak.current > 0 && <span> · <Flame size={13} style={{ verticalAlign: '-2px' }} /> {streak.current}-day streak</span>}
                 </p>
                 <h2 style={{ margin: '0.2rem 0 0.4rem', fontSize: '1.35rem' }}>
-                    {rx.path.icon} {rx.path.name}
+                    <PathIcon icon={rx.path.icon} size={24} /> {rx.path.name}
                 </h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', margin: '0 0 1rem', lineHeight: 1.55 }}>
                     {rx.reason}
                 </p>
                 <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
                     {rx.alreadyDone ? (
-                        <div style={{ fontWeight: 700, color: 'var(--primary)' }}>✓ Done today — streak intact</div>
+                        <div style={{ fontWeight: 700, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><Check size={17} /> Done today — streak intact</div>
                     ) : (
                         <button type="button" className="btn btn-primary" onClick={() => navigate('/paths')}>
                             Start Session
@@ -122,11 +124,12 @@ const Home = () => {
                 {streak.current > 1 && (
                     <div style={{ marginTop: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.9rem', flexWrap: 'wrap' }}>
                         <ShareStreakButton streak={streak} pathName={recentLog?.pathName || 'Mobility'} />
-                        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }} title="A missed day won't break your streak while a freeze is banked. One freeze per week.">
+                        <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }} title="A missed day won't break your streak while a freeze is banked. One freeze per week.">
+                            <ShieldCheck size={15} style={{ color: streak.freezeUsedThisWeek ? 'var(--accent-success)' : 'var(--text-muted)' }} />
                             {streak.freezeUsedThisWeek
-                                ? '🛡 Freeze used — streak saved'
+                                ? 'Freeze used — streak saved'
                                 : streak.freezesAvailable > 0
-                                    ? '🛡 1 streak freeze banked'
+                                    ? '1 streak freeze banked'
                                     : null}
                         </span>
                     </div>

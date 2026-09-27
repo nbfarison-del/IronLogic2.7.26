@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Share2 } from 'lucide-react';
 import { generateStreakImage, generateWeekImage } from '../utils/shareImage';
 import { getDateStr } from '../utils/dateUtils';
 
@@ -46,7 +47,7 @@ export const ShareStreakButton = ({ streak, pathName, bump = 0, label = 'Share s
             disabled={busy}
             style={{ whiteSpace: 'nowrap', opacity: busy ? 0.6 : 1 }}
         >
-            {busy ? '…' : `📤 ${label}`}
+            {busy ? '…' : (<><Share2 size={15} style={{ verticalAlign: '-2px', marginRight: '0.35rem' }} />{label}</>)}
         </button>
     );
 };
@@ -101,7 +102,7 @@ export const ShareWeekButton = ({ mobilityLogs = [], label = 'Share week' }) => 
             disabled={busy}
             style={{ whiteSpace: 'nowrap', opacity: busy ? 0.6 : 1 }}
         >
-            {busy ? '…' : `📤 ${label}`}
+            {busy ? '…' : (<><Share2 size={15} style={{ verticalAlign: '-2px', marginRight: '0.35rem' }} />{label}</>)}
         </button>
     );
 };

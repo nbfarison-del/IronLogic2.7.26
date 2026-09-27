@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Target, Flame, Share2 } from 'lucide-react';
 import logo from '../assets/logo.png';
 import dashboardHero from '../assets/dashboard_hero.png';
 
@@ -22,7 +23,7 @@ const LandingPage = () => {
             >
                 <div className="landing-hero-content">
                     <p className="page-kicker">Daily mobility, prescribed</p>
-                    <h1>Ten minutes a day. Every day.</h1>
+                    <h1>Ten minutes a day.<br /><span className="hero-accent">Every day.</span></h1>
                     <p>
                         IronLogic prescribes a 10-minute mobility session matched to your training —
                         run, lift, or rest — then keeps your streak alive and lets you share it.
@@ -37,16 +38,19 @@ const LandingPage = () => {
 
             <section className="landing-feature-band">
                 <div className="glass-card">
+                    <div className="feature-icon"><Target size={22} /></div>
                     <p className="page-kicker">Prescribed</p>
                     <h3>Matched to your training</h3>
                     <p>Tell the app what you trained — one tap — and get the right 10-minute session for it.</p>
                 </div>
                 <div className="glass-card">
+                    <div className="feature-icon"><Flame size={22} /></div>
                     <p className="page-kicker">Streaks</p>
                     <h3>Consistency you can see</h3>
                     <p>Daily streaks, weekly dots, and 28-day adherence keep the habit honest.</p>
                 </div>
                 <div className="glass-card">
+                    <div className="feature-icon"><Share2 size={22} /></div>
                     <p className="page-kicker">Shareable</p>
                     <h3>Post your streak</h3>
                     <p>Turn a hard-earned streak into a card worth sharing — accountability built in.</p>

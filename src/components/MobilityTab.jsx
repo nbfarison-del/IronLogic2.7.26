@@ -6,6 +6,8 @@ import * as firestoreService from '../services/firestoreService';
 import { seededShuffle, getDailySeed } from '../utils/randomUtils';
 import { useMobilityStreak } from '../hooks/useMobilityStreak';
 import { ShareStreakButton } from './MobilityShareCard';
+import { PathIcon } from './PathIcon';
+import { Flame, Check, Circle } from 'lucide-react';
 import mobilityHero from '../assets/mobility_hero.png';
 import logo from '../assets/logo.png';
 
@@ -35,7 +37,7 @@ const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
                             borderRadius: '12px', padding: '0.5rem 0.9rem',
                             fontSize: '0.9rem', fontWeight: 'bold', whiteSpace: 'nowrap'
                         }}>
-                            🔥 {streak.current}-day streak
+                            <Flame size={15} color="#ff9800" style={{ verticalAlign: '-2px' }} /> {streak.current}-day streak
                             <span style={{ fontWeight: 'normal', color: '#888', fontSize: '0.78rem' }}> · best {streak.longest}</span>
                         </div>
                         <ShareStreakButton streak={streak} pathName={recentLog?.pathName || 'Mobility'} label="Share" />
@@ -51,7 +53,7 @@ const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
                 }}>
                     <p className="page-kicker">Today&apos;s Prescription · {prescription.ruleLabel}</p>
                     <h3 style={{ margin: '0.3rem 0 0.5rem', color: prescription.path.color }}>
-                        {prescription.path.icon} {prescription.path.name}
+                        <PathIcon icon={prescription.path.icon} size={22} /> {prescription.path.name}
                     </h3>
                     <p style={{ color: '#aaa', fontSize: '0.88rem', margin: '0 0 1rem', lineHeight: 1.5 }}>
                         {prescription.reason}
@@ -119,7 +121,7 @@ const PathSelectionView = ({ onSelect, mobilityLogs, prescription }) => {
                                         Last Used
                                     </div>
                                 )}
-                                <div style={{ fontSize: '2rem', marginBottom: '0.6rem' }}>{path.icon}</div>
+                                <div style={{ marginBottom: '0.6rem', color: path.color }}><PathIcon icon={path.icon} size={34} /></div>
                                 <h3 style={{ margin: '0 0 0.2rem 0', color: path.color }}>{path.name}</h3>
                                 <div style={{ fontSize: '0.78rem', color: '#777', marginBottom: '0.6rem' }}>{path.subtitle}</div>
                                 <p style={{ color: '#aaa', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>{path.description}</p>
@@ -228,7 +230,7 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete, focusIds = []
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', padding: '0 0 0.4rem 0', fontSize: '0.85rem' }}>← All Paths</button>
-                        <h2 style={{ margin: 0, color: path.color }}>{path.icon} {path.name}</h2>
+                        <h2 style={{ margin: 0, color: path.color }}><PathIcon icon={path.icon} size={26} /> {path.name}</h2>
                         <p style={{ color: '#888', margin: '0.2rem 0 0 0', fontSize: '0.9rem' }}>
                             10-Minute Routine · {formatTime(totalTimeLeft)} remaining
                         </p>
@@ -302,7 +304,7 @@ const TimerSession = ({ path, mobilityLogs, onBack, onLogComplete, focusIds = []
                                             {ex.type === 'unilateral' ? '1:00 Each Side' : '2:00 Total'}
                                         </div>
                                     </div>
-                                    {isDone && <span style={{ color: '#4caf50', fontSize: '1rem' }}>✓</span>}
+                                    {isDone && <Check size={16} color="#4caf50" />}
                                     {isCurrent && <span style={{ color: path.color, fontSize: '0.78rem', fontWeight: 'bold' }}>Now</span>}
                                 </div>
                             );
@@ -345,14 +347,14 @@ const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete, streak }) => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', padding: '0 0 0.4rem 0', fontSize: '0.85rem' }}>← All Paths</button>
-                        <h2 style={{ margin: 0, color: path.color }}>{path.icon} {path.name}</h2>
+                        <h2 style={{ margin: 0, color: path.color }}><PathIcon icon={path.icon} size={26} /> {path.name}</h2>
                         <p style={{ color: '#888', margin: '0.2rem 0 0 0', fontSize: '0.9rem' }}>
                             {path.subtitle} · ~{totalMins} Minutes · {completed.size}/{path.exercises.length} done
                         </p>
                     </div>
                     {logged ? (
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            <div style={{ color: '#4caf50', fontWeight: 'bold', fontSize: '0.95rem' }}>✓ Logged!</div>
+                            <div style={{ color: '#4caf50', fontWeight: 'bold', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Check size={16} /> Logged!</div>
                             <ShareStreakButton streak={streak} bump={1} pathName={path.name} label="Share" />
                         </div>
                     ) : (
@@ -434,7 +436,7 @@ const RepsSession = ({ path, mobilityLogs, onBack, onLogComplete, streak }) => {
                                             flexShrink: 0, transition: 'all 0.15s'
                                         }}
                                     >
-                                        {done ? '✓' : '○'}
+                                        {done ? <Check size={15} color="#4caf50" /> : <Circle size={13} color="#555" />}
                                     </button>
                                 </div>
                             </div>
@@ -480,7 +482,7 @@ const RecentHistory = ({ mobilityLogs, color }) => (
                             <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{log.pathName || 'Mobility Session'}</div>
                             <div style={{ fontSize: '0.78rem', color: '#888' }}>{log.date}</div>
                         </div>
-                        <div style={{ color, fontWeight: 'bold', fontSize: '0.85rem' }}>Done ✓</div>
+                        <div style={{ color, fontWeight: 'bold', fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>Done <Check size={14} /></div>
                     </div>
                 ))}
             </div>
